@@ -1,2 +1,4 @@
 User-agent: *
+Allow: /
 Disallow: /salon.html
+Sitemap: https://kucerazdenek78-jpg.github.io/Thaimost/sitemap.xml
