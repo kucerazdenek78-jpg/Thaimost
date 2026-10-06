@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 120" fill="none">
+  <!-- Orange left bracket -->
+  <rect x="10" y="18" width="10" height="84" fill="#E8650A" rx="2"/>
+  <rect x="10" y="18" width="34" height="10" fill="#E8650A" rx="2"/>
+  <rect x="10" y="92" width="34" height="10" fill="#E8650A" rx="2"/>
+
+  <!-- Door outline (dark) -->
+  <rect x="44" y="22" width="54" height="76" rx="2" stroke="#1a2035" stroke-width="5" fill="none"/>
+  <!-- Door panel inner line -->
+  <line x1="56" y1="28" x2="56" y2="92" stroke="#1a2035" stroke-width="3"/>
+  <!-- Door knob -->
+  <circle cx="88" cy="62" r="4" fill="#1a2035"/>
+  <!-- Door bottom triangle / perspective -->
+  <line x1="44" y1="98" x2="36" y2="106" stroke="#1a2035" stroke-width="3"/>
+  <line x1="98" y1="98" x2="106" y2="106" stroke="#1a2035" stroke-width="3"/>
+  <line x1="36" y1="106" x2="106" y2="106" stroke="#1a2035" stroke-width="3"/>
+
+  <!-- Orange right bracket -->
+  <rect x="102" y="18" width="10" height="84" fill="#E8650A" rx="2"/>
+  <rect x="78" y="18" width="34" height="10" fill="#E8650A" rx="2"/>
+  <rect x="78" y="92" width="34" height="10" fill="#E8650A" rx="2"/>
+
+  <!-- Text: BEZPECNE -->
+  <text x="126" y="58" font-family="'Arial Black', 'Franklin Gothic Heavy', sans-serif" font-weight="900" font-size="30" fill="#1a2035" letter-spacing="1">BEZPECNE</text>
+  <!-- Text: DVERE -->
+  <text x="126" y="92" font-family="'Arial Black', 'Franklin Gothic Heavy', sans-serif" font-weight="900" font-size="38" fill="#1a2035" letter-spacing="1">DVERE</text>
+  <!-- Text: .cz -->
+  <text x="128" y="113" font-family="'Arial Black', 'Franklin Gothic Heavy', sans-serif" font-weight="700" font-size="18" fill="#1a2035" letter-spacing="2">.cz</text>
+</svg>

@@ -199,9 +199,13 @@ header.nav{position:sticky;top:0;z-index:50;background:rgba(248,242,233,.88);bac
 /* partneři + patička */
 .partners{padding:56px 0;background:var(--paper);border-top:1px solid var(--line)}
 .partners-in{display:flex;align-items:center;justify-content:center;gap:48px;flex-wrap:wrap}
-.partners span{font-size:.75rem;letter-spacing:.22em;text-transform:uppercase;color:var(--muted);font-weight:700}
-.partners img{height:54px;width:auto;filter:grayscale(1);opacity:.75;transition:.25s}
-.partners a:hover img{filter:none;opacity:1}
+.partners-in>span{font-size:.75rem;letter-spacing:.22em;text-transform:uppercase;color:var(--muted);font-weight:700}
+.partner{display:flex;align-items:center;gap:14px;text-decoration:none;padding:12px 22px;border-radius:16px;border:1px solid var(--line);background:#fff;transition:.25s}
+.partner:hover{transform:translateY(-2px);box-shadow:var(--shadow);border-color:transparent}
+.partner img{height:56px;width:auto;flex:none}
+.p-txt{text-align:left}
+.p-txt b{display:block;font-family:"Cormorant Garamond",serif;font-size:1.45rem;line-height:1.1;color:#1f403c}
+.p-txt small{font-size:.78rem;color:var(--muted)}
 footer{background:var(--teak);color:rgba(248,242,233,.7);padding:56px 0 30px;font-size:.9rem}
 .f-grid{display:grid;grid-template-columns:1.4fr 1fr 1fr;gap:40px;margin-bottom:36px}
 footer .logo{color:var(--cream)}
@@ -237,6 +241,7 @@ footer a:hover{color:#fff}
   .row2,.seg{grid-template-columns:1fr}
   .hero-facts{gap:22px}
   .stamp-row{gap:8px}
+  .partners-in{gap:18px}
   .eyebrow{letter-spacing:.14em;font-size:.72rem}
   .sv-img{aspect-ratio:21/8}
   .sv-body{padding:18px 20px 20px}
