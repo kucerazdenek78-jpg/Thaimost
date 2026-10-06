@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="cs">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Vystavení poukazu – Thai Most (pro salon)</title>
+<link rel="icon" href="assets/img/favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;0,700;1,500&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/css/style.css">
+<style>
+  section{padding:40px 0 80px}
+  .tbl{width:100%;border-collapse:collapse;font-size:.88rem;background:var(--paper);border-radius:14px;overflow:hidden}
+  .tbl th,.tbl td{padding:10px 12px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}
+  .tbl th{background:var(--sand);font-size:.75rem;text-transform:uppercase;letter-spacing:.1em;color:var(--bark)}
+  .tbl td code{font-weight:800}
+  .st{display:inline-block;padding:3px 10px;border-radius:999px;font-size:.75rem;font-weight:700}
+  .st-ok{background:#e3efe8;color:#2f5446}.st-use{background:#eee;color:#777}.st-exp{background:#f6e1db;color:#a3321f}
+  .tbl button{font:inherit;font-size:.8rem;border:1px solid var(--line);background:#fff;border-radius:8px;padding:4px 8px;cursor:pointer;margin:2px}
+  .bar{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin:18px 0}
+  .bar input{flex:1;min-width:200px;font:inherit;padding:11px 14px;border:1.5px solid var(--line);border-radius:12px}
+  .quick{display:flex;gap:6px;margin-top:6px}
+  .quick button{font:inherit;font-size:.8rem;border:1px solid var(--line);background:#fff;border-radius:8px;padding:5px 10px;cursor:pointer}
+  .note{background:#fff7e6;border:1px solid #ecd9ac;border-radius:12px;padding:12px 14px;font-size:.85rem;color:#6b4d33;margin-top:14px}
+  .tblwrap{overflow-x:auto}
+</style>
+</head>
+<body>
+<header class="nav">
+  <div class="wrap nav-in">
+    <a href="index.html" class="logo"><span><b>Thai Most</b><small>vystavení poukazů</small></span></a>
+    <a href="index.html" class="btn btn-ghost" style="display:inline-flex">← Na web</a>
+  </div>
+</header>
+
+<section>
+  <div class="wrap">
+    <span class="eyebrow">Pro salon</span>
+    <h1 class="h2">Vystavit dárkový poukaz</h1>
+    <p class="lead">Vyplňte údaje, zkontrolujte náhled a dejte „Uložit a vytisknout“. V tisku zvolte „Uložit jako PDF“, pokud poukaz posíláte e-mailem.</p>
+
+    <div class="v-wrap">
+      <form class="v-form" id="f" novalidate>
+        <div class="seg">
+          <label><input type="radio" name="typ" value="hodnota" checked><b>Na částku</b></label>
+          <label><input type="radio" name="typ" value="sluzba"><b>Na masáž</b></label>
+        </div>
+        <div class="field" id="bH"><label for="hodnota">Hodnota (Kč)</label><input id="hodnota" type="number" min="100" step="10" value="1000"></div>
+        <div id="bS" style="display:none">
+          <div class="field"><label for="sel">Procedura</label><select id="sel"></select></div>
+          <div class="field"><label for="var">Varianta</label><select id="var"></select></div>
+        </div>
+        <div class="row2">
+          <div class="field"><label for="komu">Pro</label><input id="komu" maxlength="40"></div>
+          <div class="field"><label for="od">Od</label><input id="od" maxlength="40"></div>
+        </div>
+        <div class="field"><label for="ven">Přání</label><textarea id="ven" maxlength="120"></textarea></div>
+        <div class="row2">
+          <div class="field"><label for="plat">Platnost do</label><input id="plat" type="date">
+            <div class="quick"><button type="button" data-m="3">+3 měs.</button><button type="button" data-m="6">+6 měs.</button><button type="button" data-m="12">+12 měs.</button></div>
+          </div>
+          <div class="field"><label for="kod">Kód poukazu</label><input id="kod" readonly>
+            <div class="quick"><button type="button" id="novy">Nový kód</button></div>
+          </div>
+        </div>
+        <div class="row2">
+          <div class="field"><label for="obj">Objednatel / č. objednávky</label><input id="obj" placeholder="nepovinné"></div>
+          <div class="field"><label for="zapl">Zaplaceno</label><select id="zapl"><option>hotově</option><option>kartou</option><option>převodem</option><option>nezaplaceno</option></select></div>
+        </div>
+        <div class="field"><label>Motiv</label>
+          <div class="motivy" id="motivy">
+            <button type="button" class="on" data-m="teak" style="background:#2b1e16"></button>
+            <button type="button" data-m="jade" style="background:#2f5446"></button>
+            <button type="button" data-m="rose" style="background:#b98a76"></button>
+          </div>
+        </div>
+        <div class="err" id="err"></div>
+        <button class="btn btn-dark" type="submit" style="width:100%;margin-top:8px">Uložit a vytisknout</button>
+        <button class="btn btn-ghost" type="button" id="jenTisk" style="width:100%;margin-top:8px">Jen vytisknout (bez uložení)</button>
+      </form>
+      <div>
+        <div class="cap" style="font-size:.8rem;text-transform:uppercase;letter-spacing:.2em;color:var(--muted);margin-bottom:14px;font-weight:700">Náhled</div>
+        <div id="tisk"></div>
+        <div class="note">Evidence poukazů se ukládá <b>jen v tomto prohlížeči na tomto zařízení</b>. Pravidelně ji zálohujte tlačítkem „Export CSV“. QR kód na poukazu obsahuje kód poukazu pro rychlé ověření.</div>
+      </div>
+    </div>
+
+    <h2 class="h2" style="margin-top:70px;font-size:2.2rem">Evidence a ověření poukazu</h2>
+    <div class="bar">
+      <input id="hledat" placeholder="Hledat kód, jméno…">
+      <button class="btn btn-ghost" id="csv" type="button">Export CSV</button>
+      <label class="btn btn-ghost" style="cursor:pointer">Import CSV<input type="file" id="imp" accept=".csv" hidden></label>
+    </div>
+    <div class="tblwrap"><table class="tbl"><thead><tr><th>Kód</th><th>Vystaven</th><th>Poukaz</th><th>Pro / od</th><th>Platnost</th><th>Platba</th><th>Stav</th><th></th></tr></thead><tbody id="tb"></tbody></table></div>
+  </div>
+</section>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"></script>
+<script src="assets/js/data.js"></script>
+<script src="assets/js/voucher.js"></script>
+<script src="assets/js/salon.js"></script>
+</body>
+</html>
