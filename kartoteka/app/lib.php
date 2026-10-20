@@ -62,6 +62,11 @@ function vyzaduj_prihlaseni(): array
     if (!$u) { header('Location: /?r=login'); exit; }
     return $u;
 }
+/** Role: admin (vše) · hlavni (hlavní pracovník – upravuje masérky) · recepce. */
+function je_admin(?array $u = null): bool { return (($u ?? uzivatel())['role'] ?? '') === 'admin'; }
+function smi_upravit_tym(?array $u = null): bool { return in_array(($u ?? uzivatel())['role'] ?? '', ['admin', 'hlavni'], true); }
+function vyzaduj_admina(): void { if (!je_admin()) { http_response_code(403); exit('Tuto akci smí jen admin.'); } }
+function vyzaduj_tym(): void { if (!smi_upravit_tym()) { http_response_code(403); exit('Tuto akci smí jen admin nebo hlavní pracovník.'); } }
 function kdo(): string { return uzivatel()['jmeno'] ?? 'web'; }
 
 function csrf(): string
@@ -252,10 +257,11 @@ const STAVY_POUKAZU = [
 ];
 
 // ---------- E-maily ----------
-function posli_email(string $komu, string $predmet, string $text): void
+function posli_email(string $komu, string $predmet, string $text, ?array $priloha = null): void
 {
     if (!filter_var($komu, FILTER_VALIDATE_EMAIL)) return;
-    q('INSERT INTO emaily(komu,predmet,text) VALUES(?,?,?)', [$komu, $predmet, $text]);
+    q('INSERT INTO emaily(komu,predmet,text,priloha_nazev,priloha_mime,priloha_obsah) VALUES(?,?,?,?,?,?)',
+        [$komu, $predmet, $text, $priloha['nazev'] ?? '', $priloha['mime'] ?? '', $priloha['obsah'] ?? '']);
     $id = (int)db()->lastInsertId();
     odesli_frontu($id);
 }
@@ -269,7 +275,8 @@ function odesli_frontu(?int $jenId = null): void
                    : q("SELECT * FROM emaily WHERE stav<>'odeslano' ORDER BY id LIMIT 20")->fetchAll();
     foreach ($rows as $e) {
         try {
-            smtp_send($smtp, $e['komu'], $e['predmet'], $e['text']);
+            smtp_send($smtp, $e['komu'], $e['predmet'], $e['text'],
+                $e['priloha_obsah'] !== '' ? ['nazev' => $e['priloha_nazev'], 'mime' => $e['priloha_mime'], 'obsah' => $e['priloha_obsah']] : null);
             q("UPDATE emaily SET stav='odeslano', odeslano=?, chyba='' WHERE id=?", [nyni(), $e['id']]);
         } catch (Throwable $ex) {
             q("UPDATE emaily SET stav='chyba', chyba=? WHERE id=?", [mb_substr($ex->getMessage(), 0, 300), $e['id']]);

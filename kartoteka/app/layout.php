@@ -11,6 +11,8 @@ function hlavicka(string $titul, string $aktivni = ''): void
         'kalendar' => 'Kalendář',
         'zakaznici' => 'Zákazníci',
         'poukazy' => 'Poukazy' . ($poukazyCekaji ? " <b class=\"cnt\">$poukazyCekaji</b>" : ''),
+        'tym' => 'Tým',
+        'smeny' => 'Směny',
         'nastaveni' => 'Nastavení',
     ];
     ?><!doctype html>
@@ -18,7 +20,7 @@ function hlavicka(string $titul, string $aktivni = ''): void
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex, nofollow">
 <title><?= h($titul) ?> · Kartotéka Thai Most</title>
-<link rel="stylesheet" href="/style.css?v=1">
+<link rel="stylesheet" href="/style.css?v=2">
 </head><body>
 <?php if ($u): ?>
 <header class="top">

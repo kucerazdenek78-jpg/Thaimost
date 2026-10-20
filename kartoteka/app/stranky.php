@@ -3,6 +3,7 @@
 require __DIR__ . '/stranky_zakaznici.php';
 require __DIR__ . '/stranky_poukazy.php';
 require __DIR__ . '/stranky_nastaveni.php';
+require __DIR__ . '/stranky_tym.php';
 
 function stranka_login(): void
 {

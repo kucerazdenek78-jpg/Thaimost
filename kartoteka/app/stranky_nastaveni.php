@@ -25,7 +25,7 @@ function stranka_nastaveni(array $u): void
             $login = trim($_POST['login'] ?? ''); $heslo = $_POST['heslo'] ?? '';
             if ($login !== '' && strlen($heslo) >= 8) {
                 q('INSERT INTO uzivatele(login,jmeno,heslo_hash,role) VALUES(?,?,?,?) ON CONFLICT(login) DO UPDATE SET heslo_hash=excluded.heslo_hash, jmeno=excluded.jmeno, role=excluded.role',
-                    [$login, trim($_POST['jmeno'] ?? '') ?: $login, password_hash($heslo, PASSWORD_DEFAULT), $_POST['role'] === 'admin' ? 'admin' : 'recepce']);
+                    [$login, trim($_POST['jmeno'] ?? '') ?: $login, password_hash($heslo, PASSWORD_DEFAULT), array_key_exists($_POST['role'] ?? '', ROLE) ? $_POST['role'] : 'recepce']);
                 flash("Uživatel $login uložen.");
             } else flash('Login a heslo (aspoň 8 znaků).', 'err');
         } elseif ($akce === 'odeslat_emaily') {
@@ -65,22 +65,7 @@ function stranka_nastaveni(array $u): void
           <button class="btn primary">Uložit</button>
         </form>
 
-        <form method="post" class="card">
-          <?= csrf_pole() ?><input type="hidden" name="akce" value="maserky">
-          <h2>Masérky</h2>
-          <table class="tbl plain">
-            <tr><th>Jméno</th><th>Pořadí</th><th>Barva</th><th>Účet na spropitné</th><th>Aktivní</th></tr>
-            <?php foreach ($maserky as $m): ?>
-              <tr><td><input name="m[<?= $m['id'] ?>][jmeno]" value="<?= h($m['jmeno']) ?>"></td>
-                  <td><input type="number" name="m[<?= $m['id'] ?>][poradi]" value="<?= $m['poradi'] ?>" style="width:4em"></td>
-                  <td><input type="color" name="m[<?= $m['id'] ?>][barva]" value="<?= h($m['barva']) ?>"></td>
-                  <td><input name="m[<?= $m['id'] ?>][ucet]" value="<?= h($m['ucet']) ?>" placeholder="jen se souhlasem"></td>
-                  <td><input type="checkbox" name="m[<?= $m['id'] ?>][aktivni]" value="1" <?= $m['aktivni'] ? 'checked' : '' ?>></td></tr>
-            <?php endforeach ?>
-            <tr><td colspan="5"><input name="nova_maserka" placeholder="+ přidat masérku (jméno)"></td></tr>
-          </table>
-          <button class="btn">Uložit masérky</button>
-        </form>
+        <section class="card"><h2>Masérky a recepční</h2><p>Správa masérek (zaměření, výkonnost, spokojenost), recepčních a směn je v menu <a href="/?r=maserky">Tým</a> a <a href="/?r=smeny">Směny</a>.</p></section>
 
         <form method="post" class="card">
           <?= csrf_pole() ?><input type="hidden" name="akce" value="cenik">
@@ -112,7 +97,7 @@ function stranka_nastaveni(array $u): void
             <label>Login<input name="login" required></label>
             <label>Jméno<input name="jmeno"></label>
             <label>Heslo (nové / změna)<input name="heslo" type="password" minlength="8" required></label>
-            <label>Role<select name="role"><?= moznosti(['recepce' => 'recepce', 'admin' => 'admin'], 'recepce') ?></select></label>
+            <label>Role<select name="role"><?= moznosti(ROLE, 'recepce') ?></select></label>
             <button class="btn">Uložit uživatele</button>
           </form>
           <?php endif ?>

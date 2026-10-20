@@ -1,7 +1,8 @@
 <?php
 // Minimální SMTP klient (SSL na 465 nebo STARTTLS na 587), bez externích knihoven.
 
-function smtp_send(array $c, string $to, string $subject, string $body): void
+/** $priloha = ['nazev' => 'smeny.ics', 'mime' => 'text/calendar; method=PUBLISH', 'obsah' => '...'] (volitelná) */
+function smtp_send(array $c, string $to, string $subject, string $body, ?array $priloha = null): void
 {
     $port = (int)($c['port'] ?? 465);
     $host = ($port === 465 ? 'ssl://' : 'tcp://') . $c['host'] . ':' . $port;
@@ -40,7 +41,18 @@ function smtp_send(array $c, string $to, string $subject, string $body): void
     $cmd("RCPT TO:<$to>", [250, 251]);
     $cmd('DATA', [354]);
 
+    $msg = smtp_sestav($c, $from, $to, $subject, $body, $priloha);
+    fwrite($s, $msg . "\r\n.\r\n");
+    $cmd('', [250]);
+    $cmd('QUIT', [221]);
+    fclose($s);
+}
+
+/** Sestaví celou MIME zprávu (text, případně s přílohou). */
+function smtp_sestav(array $c, string $from, string $to, string $subject, string $body, ?array $priloha): string
+{
     $enc = fn(string $t) => '=?UTF-8?B?' . base64_encode($t) . '?=';
+    $hranice = '=_tm_' . bin2hex(random_bytes(8));
     $headers = [
         'From: ' . $enc($c['from_name'] ?? 'Thai Most') . " <$from>",
         "To: <$to>",
@@ -48,12 +60,19 @@ function smtp_send(array $c, string $to, string $subject, string $body): void
         'Date: ' . date('r'),
         'Message-ID: <' . bin2hex(random_bytes(8)) . '@masage.dvere.app>',
         'MIME-Version: 1.0',
-        'Content-Type: text/plain; charset=UTF-8',
-        'Content-Transfer-Encoding: base64',
     ];
-    $msg = implode("\r\n", $headers) . "\r\n\r\n" . chunk_split(base64_encode($body));
-    fwrite($s, $msg . "\r\n.\r\n");
-    $cmd('', [250]);
-    $cmd('QUIT', [221]);
-    fclose($s);
+    if ($priloha && $priloha['obsah'] !== '') {
+        $headers[] = "Content-Type: multipart/mixed; boundary=\"$hranice\"";
+        $msg = implode("\r\n", $headers) . "\r\n\r\n"
+            . "--$hranice\r\nContent-Type: text/plain; charset=UTF-8\r\nContent-Transfer-Encoding: base64\r\n\r\n" . chunk_split(base64_encode($body))
+            . "--$hranice\r\nContent-Type: " . $priloha['mime'] . '; charset=UTF-8; name="' . $priloha['nazev'] . "\"\r\n"
+            . 'Content-Disposition: attachment; filename="' . $priloha['nazev'] . "\"\r\nContent-Transfer-Encoding: base64\r\n\r\n"
+            . chunk_split(base64_encode($priloha['obsah']))
+            . "--$hranice--\r\n";
+    } else {
+        $headers[] = 'Content-Type: text/plain; charset=UTF-8';
+        $headers[] = 'Content-Transfer-Encoding: base64';
+        $msg = implode("\r\n", $headers) . "\r\n\r\n" . chunk_split(base64_encode($body));
+    }
+    return $msg;
 }

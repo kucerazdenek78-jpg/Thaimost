@@ -26,11 +26,27 @@ function q(string $sql, array $p = []): PDOStatement
 function q1(string $sql, array $p = []): ?array { $r = q($sql, $p)->fetch(); return $r ?: null; }
 function qv(string $sql, array $p = []) { $r = q($sql, $p)->fetchColumn(); return $r === false ? null : $r; }
 
+const DB_VERZE = 2;
+
+/** Migrace běží v jedné transakci a po získání zámku se verze ověří znovu (souběžné první požadavky). */
 function migrate(PDO $pdo): void
 {
-    $ver = (int)$pdo->query('PRAGMA user_version')->fetchColumn();
-    if ($ver >= 1) return;
+    if ((int)$pdo->query('PRAGMA user_version')->fetchColumn() >= DB_VERZE) return;
+    $pdo->exec('BEGIN IMMEDIATE');
+    try {
+        $ver = (int)$pdo->query('PRAGMA user_version')->fetchColumn();
+        if ($ver < 1) migrate_v1($pdo);
+        if ($ver < 2) migrate_v2($pdo);
+        $pdo->exec('PRAGMA user_version = ' . DB_VERZE);
+        $pdo->exec('COMMIT');
+    } catch (Throwable $e) {
+        if ($pdo->inTransaction()) $pdo->exec('ROLLBACK');
+        throw $e;
+    }
+}
 
+function migrate_v1(PDO $pdo): void
+{
     $pdo->exec(<<<SQL
     CREATE TABLE uzivatele (
         id INTEGER PRIMARY KEY, login TEXT UNIQUE NOT NULL, jmeno TEXT NOT NULL,
@@ -134,8 +150,50 @@ function migrate(PDO $pdo): void
     $sm = $pdo->prepare('INSERT INTO maserky(jmeno,poradi,barva) VALUES(?,?,?)');
     $barvy = ['#b07a3a', '#5b8a72', '#7a5ea8', '#c0605a', '#3f7fae'];
     for ($i = 1; $i <= 5; $i++) $sm->execute(["Masérka $i", $i, $barvy[$i - 1]]);
+}
 
-    $pdo->exec('PRAGMA user_version = 1');
+/** v2: tým – profily masérek a recepčních, hodnocení spokojenosti, směny recepčních, přílohy e-mailů. */
+function migrate_v2(PDO $pdo): void
+{
+    $pdo->exec(<<<SQL
+    ALTER TABLE maserky ADD COLUMN telefon TEXT NOT NULL DEFAULT '';
+    ALTER TABLE maserky ADD COLUMN email TEXT NOT NULL DEFAULT '';
+    ALTER TABLE maserky ADD COLUMN zamereni TEXT NOT NULL DEFAULT '';        -- štítky oddělené čárkou (např. šíje, thajská, sportovní)
+    ALTER TABLE maserky ADD COLUMN preference TEXT NOT NULL DEFAULT '';      -- co dělá ráda / pro koho se hodí / co nedělá
+    ALTER TABLE maserky ADD COLUMN poznamka_interni TEXT NOT NULL DEFAULT '';
+    ALTER TABLE maserky ADD COLUMN nastup TEXT;
+
+    CREATE TABLE hodnoceni_maserek (
+        id INTEGER PRIMARY KEY, maserka_id INTEGER NOT NULL REFERENCES maserky(id),
+        rezervace_id INTEGER REFERENCES rezervace(id),
+        znamka INTEGER NOT NULL CHECK (znamka BETWEEN 1 AND 5),
+        komentar TEXT NOT NULL DEFAULT '', zdroj TEXT NOT NULL DEFAULT 'recepce',  -- recepce | tablet
+        kdo TEXT NOT NULL DEFAULT '', cas TEXT NOT NULL DEFAULT (datetime('now','localtime'))
+    );
+    CREATE INDEX hodn_maserka ON hodnoceni_maserek(maserka_id);
+
+    ALTER TABLE uzivatele ADD COLUMN telefon TEXT NOT NULL DEFAULT '';
+    ALTER TABLE uzivatele ADD COLUMN email TEXT NOT NULL DEFAULT '';
+    ALTER TABLE uzivatele ADD COLUMN poznamka TEXT NOT NULL DEFAULT '';
+    ALTER TABLE uzivatele ADD COLUMN barva TEXT NOT NULL DEFAULT '#5b8a72';
+    ALTER TABLE uzivatele ADD COLUMN ical_token TEXT NOT NULL DEFAULT '';
+
+    CREATE TABLE smeny (
+        id INTEGER PRIMARY KEY, uzivatel_id INTEGER NOT NULL REFERENCES uzivatele(id),
+        datum TEXT NOT NULL, od TEXT NOT NULL, do_ TEXT NOT NULL,
+        stav TEXT NOT NULL DEFAULT 'navrzeno',          -- navrzeno | schvaleno | odmitnuto | zruseno
+        poznamka TEXT NOT NULL DEFAULT '', navrhl TEXT NOT NULL DEFAULT '', schvalil TEXT NOT NULL DEFAULT '',
+        verze INTEGER NOT NULL DEFAULT 0, odeslano TEXT,
+        vytvoreno TEXT NOT NULL DEFAULT (datetime('now','localtime')), zmeneno TEXT
+    );
+    CREATE INDEX smeny_datum ON smeny(datum);
+    CREATE INDEX smeny_uziv ON smeny(uzivatel_id);
+
+    ALTER TABLE emaily ADD COLUMN priloha_nazev TEXT NOT NULL DEFAULT '';
+    ALTER TABLE emaily ADD COLUMN priloha_mime TEXT NOT NULL DEFAULT '';
+    ALTER TABLE emaily ADD COLUMN priloha_obsah TEXT NOT NULL DEFAULT '';
+    SQL);
+    $pdo->exec("INSERT OR IGNORE INTO nastaveni(klic,hodnota) VALUES('ical_vse_token','" . bin2hex(random_bytes(16)) . "')");
 }
 
 function nastaveni(string $k, $default = null)
