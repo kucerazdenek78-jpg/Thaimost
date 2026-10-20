@@ -1,0 +1,28 @@
+# Kartotéka Thai Most – kontejner „masaze“ na Synology (Container Manager → Projekt).
+# Složku kartoteka/ nahrajte na NAS např. do /volume1/docker/masaze/ a v Container Manageru
+# vytvořte projekt z tohoto souboru.
+#
+# Cloudflare tunel (formulare-nas) posílá masage.dvere.app na http://masaze:3000,
+# proto musí kontejner být ve STEJNÉ Docker síti jako kontejner cloudflared.
+# Název té sítě zjistíte v Container Manageru → Síť (nebo `docker network ls`) a doplňte níže.
+
+services:
+  masaze:
+    image: php:8.3-cli
+    container_name: masaze
+    restart: unless-stopped
+    working_dir: /app
+    command: php -S 0.0.0.0:3000 -t public public/router.php
+    environment:
+      - PHP_CLI_SERVER_WORKERS=4
+      - TZ=Europe/Prague
+    volumes:
+      - ./:/app
+    networks:
+      - tunel
+    # Port ven se NEpublikuje – kartotéka je dostupná jen přes tunel.
+
+networks:
+  tunel:
+    external: true
+    name: DOPLNIT_NAZEV_SITE_CLOUDFLARED

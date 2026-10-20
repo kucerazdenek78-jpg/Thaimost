@@ -21,6 +21,9 @@ window.THAI = {
     mapa: "https://www.google.com/maps?q=Slovensk%C3%A9ho+n%C3%A1rodn%C3%ADho+povst%C3%A1n%C3%AD+2654%2F26,+Most&output=embed"
   },
 
+  /* Kartotéka salonu (NAS). Sem web posílá žádosti o termín a objednávky poukazů. */
+  api: "https://masage.dvere.app",
+
   /* Platby poukazů převodem – ÚČET DOPLNIT.
      Dokud je cislo_uctu prázdné, web nabízí jen platbu v salonu
      a QR platbu nezobrazuje. Formát: "123456789/0100" */

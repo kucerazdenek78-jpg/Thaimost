@@ -358,7 +358,7 @@
 </head>
 <body>
 
-<div class="topbar">Konzultace, objednávky a storno přijímáme pouze telefonicky na <a href="tel:+420778429329">+420 778 429 329</a></div>
+<div class="topbar">Objednávky přijímáme telefonicky na <a href="tel:+420778429329">+420 778 429 329</a> nebo <a href="#objednat">online</a>. Storno prosím vždy telefonicky.</div>
 
 <header class="nav">
   <div class="wrap nav-in">
@@ -371,10 +371,11 @@
       <li><a href="#sluzby">Služby a ceník</a></li>
       <li><a href="#bonus">Bonus program</a></li>
       <li><a href="#poukazy">Dárkové poukazy</a></li>
+      <li><a href="#objednat">Objednat se</a></li>
       <li><a href="#kontakt">Kontakt</a></li>
     </ul>
-    <a href="tel:+420778429329" class="btn btn-dark">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1 1 .4 1.9.7 2.8a2 2 0 0 1-.5 2.1L8 9.9a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.4c.9.3 1.8.6 2.8.7a2 2 0 0 1 1.7 2z"/></svg>
+    <a href="#objednat" class="btn btn-dark">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 2v3M16 2v3M3 9h18M5 5h14a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2z"/></svg>
       Objednat se
     </a>
     <button class="burger" id="burger" aria-label="Menu" aria-expanded="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7h18M3 12h18M3 17h18"/></svg></button>
@@ -426,7 +427,7 @@
       <div>
         <span class="eyebrow">Služby a ceník</span>
         <h2 class="h2">Masáže a rituály</h2>
-        <p class="lead">Ke všem procedurám karafa vody zdarma. Objednávky pouze telefonicky na +420 778 429 329.</p>
+        <p class="lead">Ke všem procedurám karafa vody zdarma. Objednat se můžete <a href="#objednat">online</a> nebo na +420 778 429 329.</p>
       </div>
       <div class="tabs" role="tablist">
         <button class="on" data-kat="vse">Vše</button>
@@ -540,6 +541,7 @@
             <select id="platba"><option value="salon">V salonu při vyzvednutí</option></select>
           </div>
           <div class="field"><label for="pozn">Poznámka</label><input id="pozn" placeholder="např. potřebuji do pátku"></div>
+          <input type="text" id="web" name="web" tabindex="-1" autocomplete="off" style="position:absolute;left:-9999px" aria-hidden="true">
           <label class="check"><input type="checkbox" id="gdpr"> Souhlasím se zpracováním uvedených údajů za účelem vyřízení objednávky poukazu.</label>
           <div class="err" id="err"></div>
           <button class="btn btn-dark" type="submit" style="width:100%">Odeslat objednávku poukazu</button>
@@ -563,11 +565,59 @@
   </div>
 </section>
 
+<section id="objednat" class="booking">
+  <div class="wrap">
+    <span class="eyebrow">Objednání</span>
+    <h2 class="h2">Objednejte se online</h2>
+    <p class="lead">Napište nám, jakou masáž a kdy by se vám hodila. Recepce vám zavolá nebo napíše a termín s vámi domluví – objednávka je potvrzená až po naší odpovědi.</p>
+    <div class="b-wrap">
+      <form class="v-form" id="bForm" novalidate>
+        <div class="step">
+          <div class="step-h"><i>1</i>Co a kdy</div>
+          <div class="field"><label for="bSluzba">Masáž / procedura *</label><select id="bSluzba" required><option value="">— vyberte —</option></select></div>
+          <div class="row2">
+            <div class="field"><label for="bDen">Který den by se hodil</label><input id="bDen" type="date"></div>
+            <div class="field"><label for="bOkno">Část dne</label>
+              <select id="bOkno"><option value="kdykoli">kdykoli</option><option value="dopoledne">dopoledne (9–12)</option><option value="odpoledne">odpoledne (12–17)</option><option value="vecer">večer (17–20)</option></select></div>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-h"><i>2</i>Kontakt</div>
+          <div class="row2">
+            <div class="field"><label for="bJmeno">Jméno *</label><input id="bJmeno" autocomplete="given-name" required></div>
+            <div class="field"><label for="bPrijmeni">Příjmení *</label><input id="bPrijmeni" autocomplete="family-name" required></div>
+          </div>
+          <div class="row2">
+            <div class="field"><label for="bTel">Telefon *</label><input id="bTel" type="tel" autocomplete="tel" required placeholder="777 123 456"></div>
+            <div class="field"><label for="bMail">E-mail <span class="hint">(pro potvrzení)</span></label><input id="bMail" type="email" autocomplete="email"></div>
+          </div>
+          <div class="field"><label for="bPozn">Poznámka</label><input id="bPozn" placeholder="např. raději silnější tlak, přijdeme dva"></div>
+          <input type="text" id="bWeb" tabindex="-1" autocomplete="off" style="position:absolute;left:-9999px" aria-hidden="true">
+          <label class="check"><input type="checkbox" id="bGdpr"> Souhlasím se zpracováním uvedených údajů za účelem domluvení termínu.</label>
+          <div class="err" id="bErr"></div>
+          <button type="submit" class="btn btn-gold">Odeslat</button>
+          <span class="hint" style="margin-left:12px">Spěcháte? Zavolejte <a href="tel:+420778429329">+420 778 429 329</a>.</span>
+        </div>
+        <div class="done" id="bDone"></div>
+      </form>
+      <aside class="b-side">
+        <h3>Jak to probíhá</h3>
+        <ol>
+          <li>Pošlete nám, co a kdy byste chtěli.</li>
+          <li>Recepce se vám ozve (obvykle tentýž den v otevírací době) a domluví přesný čas.</li>
+          <li>Termín je závazný až po našem potvrzení.</li>
+        </ol>
+        <p class="small">Otevřeno Po–Pá 9–20 h, víkendy po domluvě. Změny a storno prosím telefonicky.</p>
+      </aside>
+    </div>
+  </div>
+</section>
+
 <section id="kontakt">
   <div class="wrap">
     <span class="eyebrow">Kontakt</span>
     <h2 class="h2">Najdete nás v Mostě</h2>
-    <p class="lead">Konzultace, objednávky a storno přijímáme POUZE telefonicky – ne e-mailem, přes Facebook ani Instagram.</p>
+    <p class="lead">Objednat se můžete <a href="#objednat">online</a> nebo telefonicky. Konzultace, změny a storno prosím vždy telefonicky – ne e-mailem, přes Facebook ani Instagram.</p>
     <div class="contact-grid">
       <div class="c-card">
         <h3>Objednávky</h3>
@@ -627,6 +677,7 @@
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"></script>
 <script src="assets/js/data.js"></script>
+<script src="assets/js/api.js"></script>
 <script src="assets/js/voucher.js"></script>
 <script src="assets/js/main.js"></script>
 </body>

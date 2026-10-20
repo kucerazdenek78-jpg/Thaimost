@@ -1,0 +1,340 @@
+[
+ {
+  "kod": "tradicni",
+  "nazev": "Tradiční thajská masáž",
+  "kat": "masaze",
+  "poradi": 0,
+  "varianty": [
+   {
+    "popis": "60 min",
+    "minuty": 60,
+    "cena": 790,
+    "poradi": 0
+   },
+   {
+    "popis": "90 min",
+    "minuty": 90,
+    "cena": 1100,
+    "poradi": 1
+   },
+   {
+    "popis": "120 min",
+    "minuty": 120,
+    "cena": 1600,
+    "poradi": 2
+   }
+  ]
+ },
+ {
+  "kod": "hlava",
+  "nazev": "Masáž hlavy a šíje",
+  "kat": "masaze",
+  "poradi": 1,
+  "varianty": [
+   {
+    "popis": "30 min",
+    "minuty": 30,
+    "cena": 430,
+    "poradi": 0
+   },
+   {
+    "popis": "60 min",
+    "minuty": 60,
+    "cena": 790,
+    "poradi": 1
+   }
+  ]
+ },
+ {
+  "kod": "zada",
+  "nazev": "Masáž zad a krku",
+  "kat": "masaze",
+  "poradi": 2,
+  "varianty": [
+   {
+    "popis": "30 min",
+    "minuty": 30,
+    "cena": 430,
+    "poradi": 0
+   },
+   {
+    "popis": "60 min",
+    "minuty": 60,
+    "cena": 790,
+    "poradi": 1
+   }
+  ]
+ },
+ {
+  "kod": "olej",
+  "nazev": "Thajská olejová masáž",
+  "kat": "masaze",
+  "poradi": 3,
+  "varianty": [
+   {
+    "popis": "60 min",
+    "minuty": 60,
+    "cena": 790,
+    "poradi": 0
+   },
+   {
+    "popis": "90 min",
+    "minuty": 90,
+    "cena": 1100,
+    "poradi": 1
+   }
+  ]
+ },
+ {
+  "kod": "aroma",
+  "nazev": "Aroma masáž",
+  "kat": "masaze",
+  "poradi": 4,
+  "varianty": [
+   {
+    "popis": "60 min",
+    "minuty": 60,
+    "cena": 850,
+    "poradi": 0
+   }
+  ]
+ },
+ {
+  "kod": "detska",
+  "nazev": "Dětská masáž",
+  "kat": "masaze",
+  "poradi": 5,
+  "varianty": [
+   {
+    "popis": "40 min",
+    "minuty": 40,
+    "cena": 450,
+    "poradi": 0
+   }
+  ]
+ },
+ {
+  "kod": "lymfa-oblicej",
+  "nazev": "Lymfatická masáž obličeje a dekoltu",
+  "kat": "masaze",
+  "poradi": 6,
+  "varianty": [
+   {
+    "popis": "30 min",
+    "minuty": 30,
+    "cena": 430,
+    "poradi": 0
+   },
+   {
+    "popis": "60 min",
+    "minuty": 60,
+    "cena": 790,
+    "poradi": 1
+   }
+  ]
+ },
+ {
+  "kod": "poporodni",
+  "nazev": "Poporodní masáž",
+  "kat": "masaze",
+  "poradi": 7,
+  "varianty": [
+   {
+    "popis": "60 min",
+    "minuty": 60,
+    "cena": 790,
+    "poradi": 0
+   }
+  ]
+ },
+ {
+  "kod": "oblicej",
+  "nazev": "Masáž obličeje",
+  "kat": "masaze",
+  "poradi": 8,
+  "varianty": [
+   {
+    "popis": "60 min",
+    "minuty": 60,
+    "cena": 900,
+    "poradi": 0
+   }
+  ]
+ },
+ {
+  "kod": "nohy",
+  "nazev": "Masáž nohou",
+  "kat": "masaze",
+  "poradi": 9,
+  "varianty": [
+   {
+    "popis": "60 min",
+    "minuty": 60,
+    "cena": 790,
+    "poradi": 0
+   },
+   {
+    "popis": "60 min s bylinnými sáčky",
+    "minuty": 60,
+    "cena": 1100,
+    "poradi": 1
+   }
+  ]
+ },
+ {
+  "kod": "bylinna",
+  "nazev": "Bylinná masáž",
+  "kat": "masaze",
+  "poradi": 10,
+  "varianty": [
+   {
+    "popis": "90 min",
+    "minuty": 90,
+    "cena": 1600,
+    "poradi": 0
+   },
+   {
+    "popis": "120 min",
+    "minuty": 120,
+    "cena": 1850,
+    "poradi": 1
+   }
+  ]
+ },
+ {
+  "kod": "siam",
+  "nazev": "Siam massage",
+  "kat": "masaze",
+  "poradi": 11,
+  "varianty": [
+   {
+    "popis": "120 min",
+    "minuty": 120,
+    "cena": 1880,
+    "poradi": 0
+   }
+  ]
+ },
+ {
+  "kod": "ventosa",
+  "nazev": "Ventosa masáž (baňkování)",
+  "kat": "masaze",
+  "poradi": 12,
+  "varianty": [
+   {
+    "popis": "90 min",
+    "minuty": 90,
+    "cena": 1250,
+    "poradi": 0
+   }
+  ]
+ },
+ {
+  "kod": "lava",
+  "nazev": "Masáž obličeje lávovými kameny",
+  "kat": "masaze",
+  "poradi": 13,
+  "varianty": [
+   {
+    "popis": "30 min",
+    "minuty": 30,
+    "cena": 570,
+    "poradi": 0
+   },
+   {
+    "popis": "60 min",
+    "minuty": 60,
+    "cena": 950,
+    "poradi": 1
+   }
+  ]
+ },
+ {
+  "kod": "lymfa-telo",
+  "nazev": "Ruční lymfatická masáž celého těla",
+  "kat": "masaze",
+  "poradi": 14,
+  "varianty": [
+   {
+    "popis": "60 min",
+    "minuty": 60,
+    "cena": 790,
+    "poradi": 0
+   }
+  ]
+ },
+ {
+  "kod": "tehotenska",
+  "nazev": "Těhotenská masáž",
+  "kat": "masaze",
+  "poradi": 15,
+  "varianty": [
+   {
+    "popis": "60 min",
+    "minuty": 60,
+    "cena": 790,
+    "poradi": 0
+   }
+  ]
+ },
+ {
+  "kod": "whirlpool",
+  "nazev": "Whirlpool a sauna",
+  "kat": "wellness",
+  "poradi": 16,
+  "varianty": [
+   {
+    "popis": "Sauna + sprcha",
+    "minuty": null,
+    "cena": 400,
+    "poradi": 0
+   },
+   {
+    "popis": "90 min whirlpool",
+    "minuty": 90,
+    "cena": 1100,
+    "poradi": 1
+   },
+   {
+    "popis": "90 min whirlpool + sauna",
+    "minuty": 90,
+    "cena": 1150,
+    "poradi": 2
+   },
+   {
+    "popis": "120 min párová (2 asistentky + šampaňské + whirlpool + sauna)",
+    "minuty": 120,
+    "cena": 2600,
+    "poradi": 3
+   }
+  ]
+ },
+ {
+  "kod": "fiji",
+  "nazev": "Fiji rituál",
+  "kat": "wellness",
+  "poradi": 17,
+  "varianty": [
+   {
+    "popis": "90 min",
+    "minuty": 90,
+    "cena": 1500,
+    "poradi": 0
+   }
+  ]
+ },
+ {
+  "kod": "cukr",
+  "nazev": "Cukrový vánek z ráje",
+  "kat": "wellness",
+  "poradi": 18,
+  "varianty": [
+   {
+    "popis": "90 min",
+    "minuty": 90,
+    "cena": 1500,
+    "poradi": 0
+   }
+  ]
+ }
+]

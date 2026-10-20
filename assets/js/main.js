@@ -158,19 +158,94 @@ Poznámka: ${$("#pozn").value.trim() || "-"}`;
       qr = `<div class="qrpay">${svg}<div><b>QR platba</b><br>Částka: ${V.kc(cena())}<br>Účet: ${V.esc(D.platba.cislo_uctu || iban)}<br>VS: ${vs}<br><span class="hint">Naskenujte v aplikaci banky.</span></div></div>`;
     }
     const done = $("#done");
-    done.innerHTML = `<span class="eyebrow">Hotovo</span><h3>Objednávka č. ${vs}</h3>
-      <p>Otevřeli jsme vám e-mail s objednávkou – stačí ho <b>odeslat</b>. Pokud se e-mail neotevřel, použijte tlačítko níže nebo objednávku zkopírujte, případně zavolejte.</p>
-      ${qr}
-      <div class="sum">${V.esc(text)}</div>
-      <div class="btns">
-        <a class="btn btn-dark" href="${mailto}">Odeslat e-mailem</a>
-        <button class="btn btn-ghost" type="button" id="copy">Kopírovat</button>
-        <a class="btn btn-gold" href="tel:+420778429329">Zavolat</a>
-      </div>`;
-    $("#copy").onclick = () => navigator.clipboard?.writeText(text).then(() => { $("#copy").textContent = "Zkopírováno ✓"; });
-    $("#vPreviewWrap").style.display = "none";
-    done.style.display = "block";
-    done.scrollIntoView({ behavior: "smooth", block: "start" });
-    window.location.href = mailto;
+    const btn = e.submitter || $("#vForm button[type=submit]");
+    if (btn) { btn.disabled = true; btn.textContent = "Odesílám…"; }
+
+    /* 1) do kartotéky salonu (NAS); 2) když to nejde, nouzově e-mailem */
+    const payload = {
+      jmeno: $("#jmeno").value.trim(), telefon: $("#tel").value.trim(), email: $("#mail").value.trim(),
+      hodnota: cena(), sluzba: d.typ === "sluzba" ? d.sluzba + " (" + d.varianta + ")" : "",
+      komu: d.komu, od: d.od, venovani: d.venovani, prevzeti: $("#prevzeti").selectedOptions[0].text,
+      platba: $("#platba").selectedOptions[0].text, poznamka: $("#pozn").value.trim(), cislo: vs, gdpr: 1,
+      web: $("#web") ? $("#web").value : ""
+    };
+    window.ThaiApi.post("/api/poukaz", payload).then(r => {
+      if (!r.ok) throw new Error(r.chyba || "chyba");
+      done.innerHTML = `<span class="eyebrow">Hotovo</span><h3>Objednávka č. ${vs} přijata</h3>
+        <p>Děkujeme! Salon se vám ozve na telefon <b>${V.esc(payload.telefon)}</b>${payload.email ? ` nebo e-mail <b>${V.esc(payload.email)}</b>` : ""} a domluví převzetí${platba === "prevod" ? " – platbu proveďte podle QR níže" : ""}.</p>
+        ${qr}
+        <div class="sum">${V.esc(text)}</div>
+        <div class="btns"><a class="btn btn-gold" href="tel:+420778429329">Zavolat</a></div>`;
+    }).catch(() => {
+      done.innerHTML = `<span class="eyebrow">Hotovo</span><h3>Objednávka č. ${vs}</h3>
+        <p>Objednávku se nepodařilo odeslat automaticky. Otevřeli jsme vám e-mail s objednávkou – stačí ho <b>odeslat</b>. Pokud se neotevřel, použijte tlačítko níže nebo objednávku zkopírujte, případně zavolejte.</p>
+        ${qr}
+        <div class="sum">${V.esc(text)}</div>
+        <div class="btns">
+          <a class="btn btn-dark" href="${mailto}">Odeslat e-mailem</a>
+          <button class="btn btn-ghost" type="button" id="copy">Kopírovat</button>
+          <a class="btn btn-gold" href="tel:+420778429329">Zavolat</a>
+        </div>`;
+      $("#copy").onclick = () => navigator.clipboard?.writeText(text).then(() => { $("#copy").textContent = "Zkopírováno ✓"; });
+      window.location.href = mailto;
+    }).finally(() => {
+      $("#vPreviewWrap").style.display = "none";
+      done.style.display = "block";
+      done.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+  });
+})();
+
+/* Objednat se online – žádost o termín do kartotéky salonu */
+(function () {
+  const $ = s => document.querySelector(s);
+  const form = $("#bForm"); if (!form) return;
+  const D = window.THAI, sel = $("#bSluzba");
+
+  // nabídka služeb: z kartotéky (aktuální ceník), při výpadku z data.js
+  function naplnZData() {
+    D.sluzby.forEach(s => s.ceny.forEach(([pop, c], i) => {
+      const o = document.createElement("option"); o.value = ""; o.dataset.local = s.id + ":" + i;
+      o.textContent = `${s.nazev} – ${pop} – ${Number(c).toLocaleString("cs-CZ")} Kč`; sel.appendChild(o);
+    }));
+  }
+  window.ThaiApi.get("/api/sluzby").then(r => {
+    if (!r.ok) throw 0;
+    r.varianty.forEach(v => {
+      const o = document.createElement("option"); o.value = v.id;
+      o.textContent = `${v.nazev} – ${v.popis} – ${Number(v.cena).toLocaleString("cs-CZ")} Kč`; sel.appendChild(o);
+    });
+  }).catch(() => { naplnZData(); form.dataset.offline = "1"; });
+
+  const den = $("#bDen"); if (den) den.min = new Date().toISOString().slice(0, 10);
+
+  form.addEventListener("submit", e => {
+    e.preventDefault();
+    const err = $("#bErr"), chyby = [];
+    if (!sel.value && !form.dataset.offline) chyby.push("vyberte masáž");
+    if (!$("#bJmeno").value.trim()) chyby.push("vyplňte jméno");
+    if (!$("#bPrijmeni").value.trim()) chyby.push("vyplňte příjmení");
+    if ($("#bTel").value.replace(/\D/g, "").length < 9) chyby.push("vyplňte telefon");
+    if (!$("#bGdpr").checked) chyby.push("potvrďte souhlas");
+    if (chyby.length) { err.textContent = "Prosím " + chyby.join(", ") + "."; err.style.display = "block"; return; }
+    err.style.display = "none";
+    const btn = form.querySelector("button[type=submit]"); btn.disabled = true; btn.textContent = "Odesílám…";
+    const done = $("#bDone");
+    const hotovo = html => { done.innerHTML = html; done.style.display = "block"; done.scrollIntoView({ behavior: "smooth", block: "start" }); };
+    window.ThaiApi.post("/api/zajem", {
+      varianta_id: sel.value, den: den.value, okno: $("#bOkno").value,
+      jmeno: $("#bJmeno").value.trim(), prijmeni: $("#bPrijmeni").value.trim(), telefon: $("#bTel").value.trim(),
+      email: $("#bMail").value.trim(), poznamka: $("#bPozn").value.trim(), gdpr: 1, web: $("#bWeb").value
+    }).then(r => {
+      if (!r.ok) throw new Error(r.chyba || "chyba");
+      form.querySelectorAll(".step").forEach(x => x.style.display = "none");
+      hotovo(`<span class="eyebrow">Přijato</span><h3>Děkujeme, ozveme se vám</h3>
+        <p>Recepce vám zavolá na <b>${window.Voucher.esc($("#bTel").value.trim())}</b> a domluví přesný čas. Termín je závazný až po našem potvrzení.</p>
+        <div class="btns"><a class="btn btn-gold" href="tel:+420778429329">Zavolat hned</a></div>`);
+    }).catch(ex => {
+      btn.disabled = false; btn.textContent = "Odeslat";
+      hotovo(`<span class="eyebrow">Nepodařilo se</span><h3>${window.Voucher.esc(ex.message === "timeout" || ex.message === "Failed to fetch" ? "Objednávání je dočasně nedostupné" : ex.message)}</h3>
+        <p>Zavolejte nám prosím na <a href="tel:+420778429329">+420 778 429 329</a>, rádi vám termín domluvíme.</p>`);
+    });
   });
 })();

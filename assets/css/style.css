@@ -255,3 +255,10 @@ footer a:hover{color:#fff}
   #tisk{position:fixed;inset:0;display:grid;place-items:center}
   #tisk .voucher{width:200mm;box-shadow:none;-webkit-print-color-adjust:exact;print-color-adjust:exact}
 }
+
+/* Objednání online */
+.booking{background:var(--paper)}
+.b-wrap{display:grid;grid-template-columns:1.2fr .8fr;gap:48px;align-items:start;margin-top:40px}
+.b-side{background:var(--cream);border-radius:22px;padding:28px 30px;border:1px solid var(--line)}
+.b-side h3{margin:0 0 12px}.b-side ol{padding-left:20px;margin:0 0 14px}.b-side li{margin-bottom:8px}
+@media(max-width:860px){.b-wrap{grid-template-columns:1fr;gap:24px}}

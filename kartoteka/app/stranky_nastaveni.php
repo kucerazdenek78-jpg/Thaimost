@@ -1,0 +1,138 @@
+<?php
+// Nastavení: masérky, ceník, prahy štítků, uživatelé, fronta e-mailů.
+
+function stranka_nastaveni(array $u): void
+{
+    if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+        $akce = $_POST['akce'] ?? '';
+        if ($akce === 'nastaveni') {
+            foreach (['rezim_webu', 'oteviraci_od', 'oteviraci_do', 'prah_staly_navstev', 'prah_spici_dni', 'prah_nespolehlivy', 'bonus_po', 'bonus_pocita_poukaz'] as $k)
+                if (isset($_POST[$k])) q('INSERT INTO nastaveni(klic,hodnota) VALUES(?,?) ON CONFLICT(klic) DO UPDATE SET hodnota=excluded.hodnota', [$k, trim($_POST[$k])]);
+            flash('Nastavení uloženo.');
+        } elseif ($akce === 'maserky') {
+            foreach ($_POST['m'] ?? [] as $id => $m) {
+                if ((int)$id > 0) q('UPDATE maserky SET jmeno=?, aktivni=?, poradi=?, barva=?, ucet=? WHERE id=?',
+                    [trim($m['jmeno']), !empty($m['aktivni']) ? 1 : 0, (int)$m['poradi'], $m['barva'] ?: '#b07a3a', trim($m['ucet'] ?? ''), (int)$id]);
+            }
+            if (trim($_POST['nova_maserka'] ?? '') !== '')
+                q('INSERT INTO maserky(jmeno,poradi) VALUES(?, (SELECT COALESCE(MAX(poradi),0)+1 FROM maserky))', [trim($_POST['nova_maserka'])]);
+            flash('Masérky uloženy.');
+        } elseif ($akce === 'cenik') {
+            foreach ($_POST['v'] ?? [] as $id => $v)
+                q('UPDATE varianty SET cena=?, minuty=?, aktivni=? WHERE id=?', [(int)$v['cena'], $v['minuty'] !== '' ? (int)$v['minuty'] : null, !empty($v['aktivni']) ? 1 : 0, (int)$id]);
+            flash('Ceník uložen.');
+        } elseif ($akce === 'uzivatel' && $u['role'] === 'admin') {
+            $login = trim($_POST['login'] ?? ''); $heslo = $_POST['heslo'] ?? '';
+            if ($login !== '' && strlen($heslo) >= 8) {
+                q('INSERT INTO uzivatele(login,jmeno,heslo_hash,role) VALUES(?,?,?,?) ON CONFLICT(login) DO UPDATE SET heslo_hash=excluded.heslo_hash, jmeno=excluded.jmeno, role=excluded.role',
+                    [$login, trim($_POST['jmeno'] ?? '') ?: $login, password_hash($heslo, PASSWORD_DEFAULT), $_POST['role'] === 'admin' ? 'admin' : 'recepce']);
+                flash("Uživatel $login uložen.");
+            } else flash('Login a heslo (aspoň 8 znaků).', 'err');
+        } elseif ($akce === 'odeslat_emaily') {
+            odesli_frontu(); flash('Fronta e-mailů zpracována.');
+        }
+        presmeruj('/?r=nastaveni');
+    }
+    $n = q('SELECT klic,hodnota FROM nastaveni')->fetchAll(PDO::FETCH_KEY_PAIR);
+    $maserky = q('SELECT * FROM maserky ORDER BY poradi')->fetchAll();
+    $cenik = q('SELECT v.*, s.nazev FROM varianty v JOIN sluzby s ON s.id=v.sluzba_id ORDER BY s.poradi, v.poradi')->fetchAll();
+    $uziv = q('SELECT login,jmeno,role,aktivni FROM uzivatele ORDER BY login')->fetchAll();
+    $smtp = !empty(cfg()['smtp']['host']);
+
+    hlavicka('Nastavení', 'nastaveni'); ?>
+    <h1>Nastavení</h1>
+    <div class="cols">
+      <div>
+        <form method="post" class="card">
+          <?= csrf_pole() ?><input type="hidden" name="akce" value="nastaveni">
+          <h2>Web a provoz</h2>
+          <label>Rezervační formulář na webu<select name="rezim_webu"><?= moznosti(['zajem' => 'Zájem – zákazník napíše, kdy by se hodilo, recepce domluví', 'terminy' => 'Volné termíny – zákazník vidí volné časy (zatím nepoužívat)'], $n['rezim_webu']) ?></select></label>
+          <div class="grid3">
+            <label>Otevřeno od<input type="time" name="oteviraci_od" value="<?= h($n['oteviraci_od']) ?>"></label>
+            <label>do<input type="time" name="oteviraci_do" value="<?= h($n['oteviraci_do']) ?>"></label>
+          </div>
+          <h2>Štítky zákazníků</h2>
+          <div class="grid3">
+            <label>⭐ Stálý: návštěv za 6 měs.<input type="number" name="prah_staly_navstev" value="<?= h($n['prah_staly_navstev']) ?>"></label>
+            <label>💤 Spící: dní bez návštěvy<input type="number" name="prah_spici_dni" value="<?= h($n['prah_spici_dni']) ?>"></label>
+            <label>⚠️ Nespolehlivý: nepřišel ×<input type="number" name="prah_nespolehlivy" value="<?= h($n['prah_nespolehlivy']) ?>"></label>
+          </div>
+          <h2>Bonus</h2>
+          <div class="grid3">
+            <label>Zdarma po kolika zaplacených<input type="number" name="bonus_po" value="<?= h($n['bonus_po']) ?>"></label>
+            <label>Masáž na poukaz se počítá<select name="bonus_pocita_poukaz"><?= moznosti(['0' => 'ne', '1' => 'ano'], $n['bonus_pocita_poukaz']) ?></select></label>
+          </div>
+          <button class="btn primary">Uložit</button>
+        </form>
+
+        <form method="post" class="card">
+          <?= csrf_pole() ?><input type="hidden" name="akce" value="maserky">
+          <h2>Masérky</h2>
+          <table class="tbl plain">
+            <tr><th>Jméno</th><th>Pořadí</th><th>Barva</th><th>Účet na spropitné</th><th>Aktivní</th></tr>
+            <?php foreach ($maserky as $m): ?>
+              <tr><td><input name="m[<?= $m['id'] ?>][jmeno]" value="<?= h($m['jmeno']) ?>"></td>
+                  <td><input type="number" name="m[<?= $m['id'] ?>][poradi]" value="<?= $m['poradi'] ?>" style="width:4em"></td>
+                  <td><input type="color" name="m[<?= $m['id'] ?>][barva]" value="<?= h($m['barva']) ?>"></td>
+                  <td><input name="m[<?= $m['id'] ?>][ucet]" value="<?= h($m['ucet']) ?>" placeholder="jen se souhlasem"></td>
+                  <td><input type="checkbox" name="m[<?= $m['id'] ?>][aktivni]" value="1" <?= $m['aktivni'] ? 'checked' : '' ?>></td></tr>
+            <?php endforeach ?>
+            <tr><td colspan="5"><input name="nova_maserka" placeholder="+ přidat masérku (jméno)"></td></tr>
+          </table>
+          <button class="btn">Uložit masérky</button>
+        </form>
+
+        <form method="post" class="card">
+          <?= csrf_pole() ?><input type="hidden" name="akce" value="cenik">
+          <h2>Ceník <span class="muted small">(názvy a popisy se mění na webu v data.js)</span></h2>
+          <table class="tbl plain">
+            <tr><th>Služba</th><th>Varianta</th><th>Minut</th><th>Kč</th><th>Aktivní</th></tr>
+            <?php foreach ($cenik as $c): ?>
+              <tr><td><?= h($c['nazev']) ?></td><td><?= h($c['popis']) ?></td>
+                  <td><input type="number" name="v[<?= $c['id'] ?>][minuty]" value="<?= h($c['minuty'] ?? '') ?>" style="width:4.5em"></td>
+                  <td><input type="number" name="v[<?= $c['id'] ?>][cena]" value="<?= $c['cena'] ?>" style="width:5.5em"></td>
+                  <td><input type="checkbox" name="v[<?= $c['id'] ?>][aktivni]" value="1" <?= $c['aktivni'] ? 'checked' : '' ?>></td></tr>
+            <?php endforeach ?>
+          </table>
+          <button class="btn">Uložit ceník</button>
+        </form>
+      </div>
+      <div>
+        <section class="card side">
+          <h3>E-maily</h3>
+          <p class="small"><?= $smtp ? 'SMTP nastaveno: ' . h(cfg()['smtp']['host']) : '<b class="warn">SMTP není nastaveno</b> – e-maily se jen ukládají do fronty.' ?><br>
+          Upozornění chodí na <b><?= h(cfg()['email_salon']) ?></b> (config.php).</p>
+          <form method="post" class="inline"><?= csrf_pole() ?><input type="hidden" name="akce" value="odeslat_emaily"><button class="btn">Odeslat frontu</button> <a class="btn" href="/?r=emaily">Zobrazit frontu</a></form>
+        </section>
+        <section class="card side">
+          <h3>Uživatelé</h3>
+          <?php foreach ($uziv as $x): ?><p><?= h($x['jmeno']) ?> <span class="muted small">(<?= h($x['login']) ?>, <?= h($x['role']) ?>)</span></p><?php endforeach ?>
+          <?php if ($u['role'] === 'admin'): ?>
+          <form method="post"><?= csrf_pole() ?><input type="hidden" name="akce" value="uzivatel">
+            <label>Login<input name="login" required></label>
+            <label>Jméno<input name="jmeno"></label>
+            <label>Heslo (nové / změna)<input name="heslo" type="password" minlength="8" required></label>
+            <label>Role<select name="role"><?= moznosti(['recepce' => 'recepce', 'admin' => 'admin'], 'recepce') ?></select></label>
+            <button class="btn">Uložit uživatele</button>
+          </form>
+          <?php endif ?>
+        </section>
+      </div>
+    </div>
+    <?php paticka();
+}
+
+function stranka_emaily(array $u): void
+{
+    $rows = q('SELECT * FROM emaily ORDER BY id DESC LIMIT 100')->fetchAll();
+    hlavicka('E-maily', 'nastaveni'); ?>
+    <h1>Fronta e-mailů</h1>
+    <table class="tbl">
+      <tr><th>Kdy</th><th>Komu</th><th>Předmět</th><th>Stav</th></tr>
+      <?php foreach ($rows as $e): ?>
+        <tr><td class="small"><?= h(datum_cz($e['vytvoreno'])) ?></td><td><?= h($e['komu']) ?></td><td><?= h($e['predmet']) ?><details><summary class="muted small">text</summary><pre><?= h($e['text']) ?></pre></details></td>
+            <td><?= h($e['stav']) ?><?= $e['chyba'] ? '<br><span class="warn small">' . h($e['chyba']) . '</span>' : '' ?></td></tr>
+      <?php endforeach ?>
+    </table>
+    <?php paticka();
+}
