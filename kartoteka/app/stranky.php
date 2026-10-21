@@ -44,7 +44,7 @@ function stranka_dnes(array $u): void
         FROM rezervace r JOIN zakaznici z ON z.id=r.zakaznik_id LEFT JOIN varianty v ON v.id=r.varianta_id
         LEFT JOIN sluzby s ON s.id=v.sluzba_id WHERE r.stav='zadost' ORDER BY r.vytvoreno")->fetchAll();
     $dnes = date('Y-m-d');
-    $plan = q("SELECT r.*, z.jmeno, z.prijmeni, z.telefon, z.pref_tlak, z.pref_text, z.zdravi_text, z.zdravi_souhlas,
+    $plan = q("SELECT r.*, z.jmeno, z.prijmeni, z.telefon, z.pref_tlak, z.pref_text, z.zdravi_text, z.zdravi_text_en, z.zdravi_souhlas,
         s.nazev AS sluzba, v.popis AS var_popis, m.jmeno AS maserka
         FROM rezervace r JOIN zakaznici z ON z.id=r.zakaznik_id LEFT JOIN varianty v ON v.id=r.varianta_id
         LEFT JOIN sluzby s ON s.id=v.sluzba_id LEFT JOIN maserky m ON m.id=r.maserka_id
@@ -88,7 +88,7 @@ function stranka_dnes(array $u): void
             <?php if ($r['platba']): ?> · <?= h(PLATBY[$r['platba']]) ?><?php endif ?>
             <?php $pref = trim(($r['pref_tlak'] ? 'tlak ' . TLAK[$r['pref_tlak']] . '. ' : '') . $r['pref_text']);
                   if ($pref): ?><br><span class="pref">💬 <?= h(mb_strimwidth($pref, 0, 140, '…')) ?></span><?php endif ?>
-            <?php if ($r['zdravi_text'] && $r['zdravi_souhlas']): ?><br><span class="pref warn">⚕ <?= h(mb_strimwidth($r['zdravi_text'], 0, 120, '…')) ?></span><?php endif ?>
+            <?php if ($r['zdravi_text'] && $r['zdravi_souhlas']): ?><br><span class="pref warn">⚕ <?= h(mb_strimwidth($r['zdravi_text'], 0, 120, '…')) ?></span><?php if (!$r['zdravi_text_en']): ?> <span class="pref warn" title="Masérka na tabletu uvidí zdraví jen česky">🇬🇧 chybí anglicky</span><?php endif ?><?php endif ?>
           </div>
         </a>
       <?php endforeach ?>

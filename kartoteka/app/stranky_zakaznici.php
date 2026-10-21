@@ -82,7 +82,8 @@ function stranka_zakaznik(array $u): void
              $zdravi, $zdraviSouhlas ? trim($p['zdravi_text_en'] ?? '') : '', $zdraviSouhlas, !empty($p['volny_termin']) ? 1 : 0, trim($p['volny_kdy'] ?? ''), !empty($p['blokovany']) ? 1 : 0,
              max(0, (int)($p['pocatecni_razitka'] ?? 0)), $id]);
         zapis_log('zakaznik_uprava', "#$id");
-        flash('Uloženo.');
+        if ($zdravi !== '' && trim($p['zdravi_text_en'] ?? '') === '') flash('Uloženo. ⚠ Doplňte anglickou verzi zdravotního upozornění – masérka na tabletu jinak uvidí jen češtinu.', 'err');
+        else flash('Uloženo.');
         presmeruj("/?r=zakaznik&id=$id");
     }
 
@@ -120,6 +121,7 @@ function stranka_zakaznik(array $u): void
           <label class="check"><input type="checkbox" name="zdravi_souhlas" value="1" <?= $z['zdravi_souhlas'] ? 'checked' : '' ?>> Zákazník souhlasí, že si zdravotní informaci zapíšeme<?= $z['zdravi_souhlas'] ? ' (od ' . h(datum_cz($z['zdravi_souhlas'], false)) . ')' : '' ?></label>
           <label><textarea name="zdravi_text" rows="2" placeholder="např. operované koleno – nešlapat, těhotná, vysoký tlak"><?= h($z['zdravi_text']) ?></textarea></label>
           <label>🇬🇧 English version for the therapist (tablet) <span class="muted small">– důležité, ať je správně</span><textarea name="zdravi_text_en" rows="2" lang="en" placeholder="e.g. operated knee – do not walk on it, pregnant, high blood pressure"><?= h($z['zdravi_text_en']) ?></textarea></label>
+          <?php if ($z['zdravi_text'] && !$z['zdravi_text_en']): ?><p class="warn small">⚠ Chybí anglická verze – masérka na tabletu uvidí zdravotní upozornění jen česky.</p><?php endif ?>
 
           <h2>Pro recepci</h2>
           <label class="check"><input type="checkbox" name="volny_termin" value="1" <?= $z['volny_termin'] ? 'checked' : '' ?>> ⏱ Vezme i uvolněný termín na poslední chvíli</label>
