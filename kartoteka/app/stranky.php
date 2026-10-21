@@ -335,7 +335,7 @@ function stranka_rezervace(array $u): void
             flash('Stav změněn: ' . STAVY[$novy]);
             presmeruj("/?r=rezervace&id=$id");
         } elseif ($akce === 'poznamka') {
-            q('UPDATE rezervace SET poznamka_masaz=?, zmeneno=?, zmenil=? WHERE id=?', [trim($_POST['poznamka_masaz'] ?? ''), nyni(), kdo(), $id]);
+            q('UPDATE rezervace SET poznamka_masaz=?, poznamka_en=?, zmeneno=?, zmenil=? WHERE id=?', [trim($_POST['poznamka_masaz'] ?? ''), trim($_POST['poznamka_en'] ?? ''), nyni(), kdo(), $id]);
             if (!empty($_POST['do_preferenci']) && trim($_POST['poznamka_masaz'] ?? '') !== '') {
                 $z = q1('SELECT pref_text FROM zakaznici WHERE id=?', [$r['zakaznik_id']]);
                 $novy = trim(trim($z['pref_text']) . "\n" . date('j. n. Y') . ': ' . trim($_POST['poznamka_masaz']));
@@ -404,6 +404,7 @@ function stranka_rezervace(array $u): void
           <h2>Poznámka k masáži</h2>
           <p class="muted small">Co se dělalo, jak to klient hodnotil, na co si příště dát pozor.</p>
           <textarea name="poznamka_masaz" rows="3"><?= h($r['poznamka_masaz']) ?></textarea>
+          <label>🇬🇧 English note for the therapist (tablet) <span class="muted small">– nahradí na tabletu všechny poznámky (zákazníka, k masáži, interní)</span><textarea name="poznamka_en" rows="2" lang="en"><?= h($r['poznamka_en']) ?></textarea></label>
           <label class="check"><input type="checkbox" name="do_preferenci" value="1"> Uložit i do trvalých preferencí zákazníka</label>
           <button class="btn">Uložit poznámku</button>
         </form>

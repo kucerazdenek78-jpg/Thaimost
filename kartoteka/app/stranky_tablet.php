@@ -107,6 +107,11 @@ function tablet_karta(array $r): void
     $s = q("SELECT s.*, m.nazev FROM sezeni s JOIN mistnosti m ON m.id=s.mistnost_id WHERE s.rezervace_id=? ORDER BY s.id DESC LIMIT 1", [$r['id']])->fetch();
     if ($s && in_array($s['stav'], ['cekani', 'bezi', 'konec'], true)) sezeni_aktivni((int)$s['mistnost_id']);
     $s = $s ? q1('SELECT s.*, m.nazev FROM sezeni s JOIN mistnosti m ON m.id=s.mistnost_id WHERE s.id=?', [$s['id']]) : null;
+    $z = q1('SELECT * FROM zakaznici WHERE id=?', [$r['zakaznik_id']]) ?: [];
+    $chybi = [];
+    if (trim($z['zdravi_text'] ?? '') !== '' && trim($z['zdravi_text_en'] ?? '') === '') $chybi[] = 'zdravotní upozornění';
+    if (trim($z['pref_text'] ?? '') !== '' && trim($z['pref_text_en'] ?? '') === '') $chybi[] = 'preference';
+    if ((trim($r['poznamka_zakaznik']) . trim($r['poznamka_masaz']) . trim($z['poznamka_interni'] ?? '')) !== '' && trim($r['poznamka_en']) === '') $chybi[] = 'poznámky';
     if (!$mist && !$s) return; ?>
     <section class="card">
       <h2>Tablet v masérně</h2>
@@ -115,6 +120,7 @@ function tablet_karta(array $r): void
           <?= $s['start'] ? ' · start ' . h(substr($s['start'], 11, 5)) : '' ?><?= $s['stav'] === 'bezi' ? ' · konec ' . h(substr((string)$s['plan_konec'], 11, 5)) : '' ?>
           <?= $s['neni_ona'] ? ' <b class="warn">masérka hlásí, že to není ona!</b>' : '' ?></p>
       <?php endif ?>
+      <?php if ($chybi): ?><p class="warn small">⚠ Pro masérku chybí anglický text: <?= h(implode(', ', $chybi)) ?>. Na tabletu se do doplnění ukáže česky. Doplňte ručně v <a href="/?r=zakaznik&id=<?= (int)$r['zakaznik_id'] ?>">kartě zákazníka</a> (zdraví, preference) a v poznámce k masáži níže.</p><?php endif ?>
       <?php if (!$s || !in_array($s['stav'], ['bezi', 'konec'], true)): ?>
       <form method="post" class="inline"><?= csrf_pole() ?><input type="hidden" name="akce" value="tablet_poslat">
         <label>Masérna<select name="mistnost_id"><?php foreach ($mist as $m): ?><option value="<?= $m['id'] ?>" <?= $s && (int)$s['mistnost_id'] === (int)$m['id'] ? 'selected' : '' ?>><?= h($m['nazev']) ?></option><?php endforeach ?></select></label>
@@ -154,6 +160,9 @@ function sezeni_payload(array $m, ?array $s): array
         $out['preference'] = trim($z['pref_text']);
         $out['poznamky'] = array_values(array_filter([trim($r['poznamka_zakaznik']), trim($r['poznamka_masaz']), trim($z['poznamka_interni'])], fn($x) => $x !== ''));
         $out['upozorneni'] = trim($z['zdravi_text']);
+        $out['upozorneni_en'] = trim($z['zdravi_text_en']);
+        $out['preference_en'] = trim($z['pref_text_en']);
+        $out['poznamky_en'] = trim($r['poznamka_en']);
     }
     if ($s['stav'] === 'bezi') {
         $out['start'] = strtotime((string)$s['start']);
@@ -280,7 +289,7 @@ h1{font-size:5.5vmin;margin:0;font-weight:500}h2{font-size:3.6vmin;margin:0;font
 .stars{display:flex;gap:2vmin}.stars button{background:none;border:0;font-size:13vmin;color:#4a6862;padding:0;line-height:1}.stars button.on{color:var(--acc)}
 .qr{background:#fff;border-radius:2vmin;padding:1.6vmin;width:34vmin;height:34vmin}.qr svg{width:100%;height:100%;display:block}
 .chips{display:flex;gap:1.6vmin;justify-content:center;margin-top:1.4vmin}.chip{border:.3vmin solid #4a6862;background:transparent;color:var(--tx);border-radius:2vmin;padding:1vmin 2.4vmin;font-size:3vmin}.chip.on{background:var(--acc);color:#2b2108;border-color:var(--acc)}
-header .r{display:flex;align-items:center}.lg{margin-left:2.4vmin;border:.3vmin solid #4a6862;background:transparent;color:var(--mut);border-radius:2vmin;padding:1vmin 2.2vmin;font-size:2.5vmin;touch-action:none;-webkit-touch-callout:none;-webkit-user-select:none;user-select:none}.lg.on{background:var(--acc);color:#2b2108;border-color:var(--acc)}.lg[hidden]{display:none}
+header .r{display:flex;align-items:center}.lg{margin-left:2.4vmin;border:.3vmin solid #4a6862;background:transparent;color:var(--mut);border-radius:2vmin;padding:1vmin 2.2vmin;font-size:2.5vmin;touch-action:none;-webkit-touch-callout:none;-webkit-user-select:none;user-select:none}.lg.on{background:var(--acc);color:#2b2108;border-color:var(--acc)}.lg[hidden]{display:none}.czt{display:inline-block;margin-left:1.2vmin;padding:.2vmin 1.2vmin;border:.25vmin solid #8a7a52;border-radius:1.2vmin;color:#e2b765;font-size:2vmin;text-transform:none;letter-spacing:0}
 #snd{position:fixed;inset:0;background:#000b;display:none;align-items:center;justify-content:center;z-index:9;font-size:4vmin;text-align:center;padding:8vmin}
 #off{position:fixed;left:50%;transform:translateX(-50%);bottom:1.2vmin;background:#4b2420;color:#fff;padding:.6vmin 2vmin;border-radius:2vmin;font-size:2.2vmin;display:none}
 .fade{animation:f .8s ease}@keyframes f{from{opacity:0;transform:translateY(1vmin)}to{opacity:1;transform:none}}
@@ -339,10 +348,10 @@ function spayd(){const sp=S.spropitne;return 'SPD*1.0*ACC:'+sp.iban+(tip?'*AM:'+
 const TX={
  en:{ready:'Room ready',next:'Waiting for the next massage',on_duty:'Therapist on duty',check:'Please check that this is you.',yes:n=>'Yes, I am '+n,no:'That is not me',
   notified:'Reception has been notified. Please wait – they will send the booking again.',cust:'Customer',mas:'Massage',warn:'⚠ Caution – health and restrictions',pref:'Customer preferences',press:'Pressure',notes:'Notes',
-  now:'Now',start:'▶ Start massage',left:'remaining',endsat:'ends at',early:'End early: hold here for 2 s',free:'Notes are shown as written by reception (in Czech).',lg:'Hold = česky'},
+  now:'Now',start:'▶ Start massage',left:'remaining',endsat:'ends at',early:'End early: hold here for 2 s',cz:'Czech original – no English text entered',lg:'Hold = česky'},
  cs:{ready:'Masérna je připravena',next:'Čekáme na další masáž',on_duty:'Dnes zde masíruje',check:'Zkontrolujte, že jde o vás.',yes:n=>'Ano, jsem '+n,no:'Nejsem to já',
   notified:'Recepce byla upozorněna. Počkejte prosím, pošle masáž znovu.',cust:'Zákazník',mas:'Masáž',warn:'⚠ Pozor – zdraví a omezení',pref:'Preference zákazníka',press:'Tlak',notes:'Poznámky',
-  now:'Teď',start:'▶ Zahájit masáž',left:'zbývá',endsat:'konec v',early:'Ukončit dřív: podržte tady 2 s',free:'',lg:'Česky'}
+  now:'Teď',start:'▶ Zahájit masáž',left:'zbývá',endsat:'konec v',early:'Ukončit dřív: podržte tady 2 s',cz:'',lg:'Česky'}
 };
 const tx=()=>TX[hold?'cs':'en'];
 
@@ -359,14 +368,17 @@ function render(){
      +(S.neni_ona?'<div class="card warn" style="margin-bottom:3vmin"><div class="v">'+X.notified+'</div></div>':'')
      +'<div class="row"><button class="btn ok" id="b1">'+esc(X.yes(S.maserka))+'</button><button class="btn sec" id="b2">'+X.no+'</button></div></div>';
   }else if(S.stav==='cekani'){
-    const volny=!!(S.upozorneni||S.preference||(S.poznamky||[]).length);
+    /* texty od recepce: angličtina (psaná ručně), není-li, česky s poznámkou; podržení tlačítka = český originál */
+    const T2=(cs,en)=>hold?{t:cs,cz:false}:(en?{t:en,cz:false}:{t:cs,cz:!!cs});
+    const tag=c=>c&&X.cz?'<span class="czt">'+esc(X.cz)+'</span>':'';
+    const uz=T2(S.upozorneni,S.upozorneni_en), pf=T2(S.preference,S.preference_en);
+    const pozn=hold?(S.poznamky||[]):(S.poznamky_en?[S.poznamky_en]:(S.poznamky||[])), poznCz=!hold&&!S.poznamky_en&&pozn.length>0;
     h='<div class="grid fade"><div class="card"><div class="k">'+X.cust+'</div><div class="v">'+esc(S.prijmeni)+'</div></div>'
      +'<div class="card"><div class="k">'+X.mas+'</div><div class="v">'+esc(masaz)+(/min/.test(masaz)?'':' · '+S.minuty+' min')+'</div></div>'
-     +(S.upozorneni?'<div class="card warn wide"><div class="k">'+X.warn+'</div><div class="v">'+esc(S.upozorneni)+'</div></div>':'')
-     +((tlak||S.preference)?'<div class="card wide"><div class="k">'+X.pref+'</div><div class="t">'+(tlak?X.press+': <b>'+esc(tlak)+'</b>\n':'')+esc(S.preference)+'</div></div>':'')
-     +((S.poznamky||[]).length?'<div class="card wide"><div class="k">'+X.notes+'</div><div class="t">'+S.poznamky.map(esc).join('\n')+'</div></div>':'')
-     +'</div>'+(volny&&X.free?'<div class="mut small" style="opacity:.7">'+X.free+'</div>':'')
-     +'<div class="row"><div class="mut small">'+X.now+' <b id="cl2"></b></div><button class="btn ok" id="b3">'+X.start+'</button></div>';
+     +(uz.t?'<div class="card warn wide"><div class="k">'+X.warn+tag(uz.cz)+'</div><div class="v">'+esc(uz.t)+'</div></div>':'')
+     +((tlak||pf.t)?'<div class="card wide"><div class="k">'+X.pref+tag(pf.cz)+'</div><div class="t">'+(tlak?X.press+': <b>'+esc(tlak)+'</b>\n':'')+esc(pf.t)+'</div></div>':'')
+     +(pozn.length?'<div class="card wide"><div class="k">'+X.notes+tag(poznCz)+'</div><div class="t">'+pozn.map(esc).join('\n')+'</div></div>':'')
+     +'</div><div class="row"><div class="mut small">'+X.now+' <b id="cl2"></b></div><button class="btn ok" id="b3">'+X.start+'</button></div>';
   }else if(S.stav==='bezi'){
     h='<div class="mut small fade">'+esc(S.prijmeni)+' · '+esc(masaz)+'</div><div class="ring fade"><svg viewBox="0 0 100 100"><circle cx="50" cy="50" r="46" fill="none" stroke="#264743" stroke-width="2"/><circle id="pr" cx="50" cy="50" r="46" fill="none" stroke="#e2b765" stroke-width="2.4" stroke-linecap="round" stroke-dasharray="289" stroke-dashoffset="0"/></svg>'
      +'<div class="in"><div class="mut small">'+X.left+'</div><div class="huge" id="cd"></div><div class="mut small" style="margin-top:1.6vmin">'+X.endsat+' <b>'+hhmm(S.konec*1000)+'</b> · '+X.now.toLowerCase()+' <span id="cl2"></span></div></div></div>'

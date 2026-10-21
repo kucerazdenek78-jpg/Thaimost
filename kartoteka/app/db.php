@@ -26,7 +26,7 @@ function q(string $sql, array $p = []): PDOStatement
 function q1(string $sql, array $p = []): ?array { $r = q($sql, $p)->fetch(); return $r ?: null; }
 function qv(string $sql, array $p = []) { $r = q($sql, $p)->fetchColumn(); return $r === false ? null : $r; }
 
-const DB_VERZE = 4;
+const DB_VERZE = 5;
 
 /** Migrace běží v jedné transakci a po získání zámku se verze ověří znovu (souběžné první požadavky). */
 function migrate(PDO $pdo): void
@@ -39,6 +39,7 @@ function migrate(PDO $pdo): void
         if ($ver < 2) migrate_v2($pdo);
         if ($ver < 3) migrate_v3($pdo);
         if ($ver < 4) migrate_v4($pdo);
+        if ($ver < 5) migrate_v5($pdo);
         $pdo->exec('PRAGMA user_version = ' . DB_VERZE);
         $pdo->exec('COMMIT');
     } catch (Throwable $e) {
@@ -152,6 +153,16 @@ function migrate_v1(PDO $pdo): void
     $sm = $pdo->prepare('INSERT INTO maserky(jmeno,poradi,barva) VALUES(?,?,?)');
     $barvy = ['#b07a3a', '#5b8a72', '#7a5ea8', '#c0605a', '#3f7fae'];
     for ($i = 1; $i <= 5; $i++) $sm->execute(["Masérka $i", $i, $barvy[$i - 1]]);
+}
+
+/** v5: anglické verze textů pro masérky na tabletu (píše recepce ručně). */
+function migrate_v5(PDO $pdo): void
+{
+    $pdo->exec(<<<SQL
+    ALTER TABLE zakaznici ADD COLUMN pref_text_en TEXT NOT NULL DEFAULT '';
+    ALTER TABLE zakaznici ADD COLUMN zdravi_text_en TEXT NOT NULL DEFAULT '';
+    ALTER TABLE rezervace ADD COLUMN poznamka_en TEXT NOT NULL DEFAULT '';
+    SQL);
 }
 
 /** v2: tým – profily masérek a recepčních, hodnocení spokojenosti, směny recepčních, přílohy e-mailů. */

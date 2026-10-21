@@ -10,7 +10,7 @@ Do každé masérny tablet. Workflow:
 6. Na obrazovce QR kód pro spropitné (masérce) + hodnocení spokojenosti (hvězdy). Hodnocení se eviduje; **jednou týdně se odměňuje masérka s nejlepším skóre**.
 Chce návrh i funkční systém, postavený na workflow a úkolech.
 
-## Stav 2026-10-21: úkoly 1–4 a 6 hotovy; lokální test celého toku prošel (78 kontrol: tok, soukromí, token, oprávnění, žebříček, QR/IBAN), vzhled zkontrolován na 1280×800 i 800×1280 (opraven přetékající odpočet, zobrazuje se pražský čas). Zbývá úkol 5 (nasazení update.zip na NAS – dělá uživatel) a vyzkoušení znělky a vzhledu na skutečném tabletu.
+## Stav 2026-10-21: úkoly 1–4 a 6 hotovy a otestovány lokálně (87 kontrol), tablet anglicky + hold = česky, ruční anglické texty (migrace v5); zbývá úkol 5 (nasazení update.zip na NAS – dělá uživatel) a vyzkoušení znělky a vzhledu na skutečném tabletu.
 
 ## Co je hotové
 - `app/db.php`: `DB_VERZE = 4`, `migrate_v4` (tabulky `mistnosti`, `sezeni`, `odmeny`, nastavení `odmena_min_hodnoceni`, `spropitne_ucet`).
