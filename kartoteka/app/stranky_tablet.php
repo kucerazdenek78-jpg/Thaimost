@@ -223,7 +223,7 @@ const TABLET_HTML = <<<'HTML'
 <!doctype html>
 <html lang="cs"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
-<meta name="robots" content="noindex, nofollow"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-capable" content="yes">
+<link rel="icon" href="data:,"><meta name="robots" content="noindex, nofollow"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-capable" content="yes">
 <title>__NAZEV__ · Thai Most</title>
 <style>
 :root{--bg:#10201f;--bg2:#183432;--card:#1d3b38;--tx:#f3efe6;--mut:#a9bdb7;--acc:#e2b765;--ok:#7fc8a0;--bad:#ef7b6c}
@@ -235,7 +235,7 @@ header b{color:var(--acc);font-weight:600}
 main{flex:1;display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center;gap:2vmin;min-height:0}
 h1{font-size:5.5vmin;margin:0;font-weight:500}h2{font-size:3.6vmin;margin:0;font-weight:500;color:var(--acc)}
 .big{font-size:14vmin;font-weight:300;letter-spacing:.02em;font-variant-numeric:tabular-nums;line-height:1}
-.huge{font-size:24vmin;font-weight:200;font-variant-numeric:tabular-nums;line-height:1}
+.huge{font-size:17vmin;font-weight:200;font-variant-numeric:tabular-nums;line-height:1}
 .mut{color:var(--mut)}.small{font-size:2.6vmin}
 .btn{border:0;border-radius:3vmin;padding:2.4vmin 6vmin;font-size:4vmin;font-weight:600;background:var(--acc);color:#2b2108;min-width:30vmin}
 .btn.sec{background:transparent;color:var(--mut);border:.3vmin solid #4a6862;font-weight:400}
@@ -268,7 +268,7 @@ const T="__TOKEN__";
 let S={stav:'idle'},off=0,ctx=null,klic='',tip=100,zvukUz=false,znelaPro=0,online=true;
 const $=s=>document.querySelector(s), esc=t=>String(t??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const now=()=>Date.now()+off;
-const hhmm=(ms,sec)=>{const d=new Date(ms);const p=n=>String(n).padStart(2,'0');return p(d.getHours())+':'+p(d.getMinutes())+(sec?':'+p(d.getSeconds()):'')};
+const hhmm=(ms,sec)=>{try{return new Date(ms).toLocaleTimeString('cs-CZ',{timeZone:'Europe/Prague',hour:'2-digit',minute:'2-digit',second:sec?'2-digit':undefined,hour12:false})}catch(e){const d=new Date(ms),p=n=>String(n).padStart(2,'0');return p(d.getHours())+':'+p(d.getMinutes())+(sec?':'+p(d.getSeconds()):'')}};
 async function api(akce,data){const r=await fetch('/?r=tablet_api',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(Object.assign({t:T,akce:akce,sezeni_id:S.sezeni_id||0},data||{}))});if(!r.ok&&r.status===403){document.body.innerHTML='<p style="padding:8vmin">Tablet není spárovaný (neplatný odkaz).</p>';throw 0}return r.json()}
 async function poll(akce,data){try{const j=await api(akce||'stav',data);if(j.ok){off=j.ted*1000-Date.now();S=j;render()}setOnline(true)}catch(e){setOnline(false)}}
 function setOnline(v){online=v;$('#off').style.display=v?'none':'block'}
