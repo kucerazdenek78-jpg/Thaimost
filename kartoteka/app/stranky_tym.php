@@ -7,7 +7,7 @@ const DNY_CZ = ['po', 'út', 'st', 'čt', 'pá', 'so', 'ne'];
 
 function tym_nav(string $aktivni): void
 {
-    $p = ['maserky' => 'Masérky', 'recepcni' => 'Recepční a kontakty'];
+    $p = ['maserky' => 'Masérky', 'recepcni' => 'Recepční a kontakty', 'masterny' => 'Masérny a tablety', 'odmena' => 'Odměna týdne'];
     echo '<p class="subnav">';
     foreach ($p as $k => $t) echo '<a href="/?r=' . $k . '"' . ($aktivni === $k ? ' class="on"' : '') . '>' . $t . '</a> ';
     echo '</p>';

@@ -82,8 +82,8 @@ function tablet_poslat(array $r, int $mistnost): ?string
     if ($akt && $akt['stav'] !== 'cekani') return "V masérně „{$m['nazev']}“ právě probíhá jiná masáž.";
     if ($akt) q("UPDATE sezeni SET stav='zruseno', zavreno=? WHERE id=?", [nyni(), $akt['id']]);
     q("UPDATE sezeni SET stav='zruseno', zavreno=? WHERE rezervace_id=? AND stav='cekani'", [nyni(), $r['id']]);
-    q('INSERT INTO sezeni(mistnost_id,rezervace_id,maserka_id,minuty,poslal) VALUES(?,?,?,?,?)',
-        [$mistnost, $r['id'], $r['maserka_id'], rezervace_minuty($r), kdo()]);
+    q('INSERT INTO sezeni(mistnost_id,rezervace_id,maserka_id,minuty,poslal,poslano) VALUES(?,?,?,?,?,?)',
+        [$mistnost, $r['id'], $r['maserka_id'], rezervace_minuty($r), kdo(), nyni()]);
     zapis_log('tablet_poslano', "rez #{$r['id']} → {$m['nazev']}");
     return null;
 }
@@ -124,12 +124,17 @@ function sezeni_payload(array $m, ?array $s): array
     $z = q1('SELECT * FROM zakaznici WHERE id=?', [$r['zakaznik_id']]);
     $mas = q1('SELECT * FROM maserky WHERE id=?', [$s['maserka_id']]);
     $v = $r['varianta_id'] ? q1('SELECT v.popis, v.minuty, s.nazev FROM varianty v JOIN sluzby s ON s.id=v.sluzba_id WHERE v.id=?', [$r['varianta_id']]) : null;
-    $out += [
+    $out = array_merge($out, [
         'stav' => $s['stav'], 'sezeni_id' => (int)$s['id'], 'maserka' => $mas['jmeno'] ?? '', 'minuty' => (int)$s['minuty'],
         'potvrzeno' => (bool)$s['potvrzeno'], 'neni_ona' => (bool)$s['neni_ona'],
-        'prijmeni' => trim($z['prijmeni']) !== '' ? $z['prijmeni'] : trim($z['jmeno']),
-        'masaz' => $v ? trim($v['nazev'] . ($v['popis'] ? ' – ' . $v['popis'] : '')) : 'Masáž',
-    ];
+    ]);
+    // údaje o zákazníkovi se na tablet pošlou až po potvrzení jména masérkou (a dál po celou masáž)
+    if ($s['potvrzeno'] || $s['stav'] !== 'cekani') {
+        $out = array_merge($out, [
+            'prijmeni' => trim($z['prijmeni']) !== '' ? $z['prijmeni'] : trim($z['jmeno']),
+            'masaz' => $v ? trim($v['nazev'] . ($v['popis'] ? ' – ' . $v['popis'] : '')) : 'Masáž',
+        ]);
+    }
     if ($s['stav'] === 'cekani' && $s['potvrzeno']) {
         $out['tlak'] = $z['pref_tlak'] ? TLAK[$z['pref_tlak']] : '';
         $out['preference'] = trim($z['pref_text']);
@@ -188,8 +193,8 @@ function stranka_tablet_api(): void
             case 'hodnoceni':
                 $zn = (int)($in['znamka'] ?? 0);
                 if ($s['stav'] === 'konec' && !$s['hodnoceni_id'] && $zn >= 1 && $zn <= 5 && $s['maserka_id']) {
-                    q("INSERT INTO hodnoceni_maserek(maserka_id,rezervace_id,znamka,komentar,zdroj,kdo) VALUES(?,?,?,?,'tablet',?)",
-                        [$s['maserka_id'], $s['rezervace_id'], $zn, '', 'tablet ' . $m['nazev']]);
+                    q("INSERT INTO hodnoceni_maserek(maserka_id,rezervace_id,znamka,komentar,zdroj,kdo,cas) VALUES(?,?,?,?,'tablet',?,?)",
+                        [$s['maserka_id'], $s['rezervace_id'], $zn, '', 'tablet ' . $m['nazev'], $ted]);
                     q('UPDATE sezeni SET hodnoceni_id=? WHERE id=?', [(int)db()->lastInsertId(), $s['id']]);
                 }
                 break;
@@ -222,7 +227,7 @@ const TABLET_HTML = <<<'HTML'
 <title>__NAZEV__ · Thai Most</title>
 <style>
 :root{--bg:#10201f;--bg2:#183432;--card:#1d3b38;--tx:#f3efe6;--mut:#a9bdb7;--acc:#e2b765;--ok:#7fc8a0;--bad:#ef7b6c}
-*{box-sizing:border-box}html,body{height:100%;margin:0}
+*{box-sizing:border-box}button{font-family:inherit}html,body{height:100%;margin:0}
 body{background:radial-gradient(120% 100% at 50% 0%,var(--bg2),var(--bg));color:var(--tx);font:20px/1.4 "Segoe UI",system-ui,-apple-system,sans-serif;overflow:hidden;user-select:none;-webkit-user-select:none;touch-action:manipulation}
 #app{height:100%;display:flex;flex-direction:column;padding:2.2vmin 3vmin}
 header{display:flex;justify-content:space-between;align-items:center;color:var(--mut);font-size:2.4vmin;letter-spacing:.04em}
@@ -302,7 +307,7 @@ function render(){
      +'<div class="row"><button class="btn ok" id="b1">Ano, jsem '+esc(S.maserka)+'</button><button class="btn sec" id="b2">Nejsem to já</button></div></div>';
   }else if(S.stav==='cekani'){
     h='<div class="grid fade"><div class="card"><div class="k">Zákazník</div><div class="v">'+esc(S.prijmeni)+'</div></div>'
-     +'<div class="card"><div class="k">Masáž</div><div class="v">'+esc(S.masaz)+' · '+S.minuty+' min</div></div>'
+     +'<div class="card"><div class="k">Masáž</div><div class="v">'+esc(S.masaz)+(/min/.test(S.masaz)?'':' · '+S.minuty+' min')+'</div></div>'
      +(S.upozorneni?'<div class="card warn wide"><div class="k">⚠ Pozor – zdraví a omezení</div><div class="v">'+esc(S.upozorneni)+'</div></div>':'')
      +((S.tlak||S.preference)?'<div class="card wide"><div class="k">Preference zákazníka</div><div class="t">'+(S.tlak?'Tlak: <b>'+esc(S.tlak)+'</b>\n':'')+esc(S.preference)+'</div></div>':'')
      +((S.poznamky||[]).length?'<div class="card wide"><div class="k">Poznámky</div><div class="t">'+S.poznamky.map(esc).join('\n')+'</div></div>':'')
@@ -446,8 +451,8 @@ function stranka_odmena(array $u): void
     if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         vyzaduj_tym($u);
         if (($_POST['akce'] ?? '') === 'odmenit' && q1('SELECT id FROM maserky WHERE id=?', [(int)($_POST['maserka_id'] ?? 0)])) {
-            q('INSERT INTO odmeny(tyden,maserka_id,poznamka,kdo) VALUES(?,?,?,?) ON CONFLICT(tyden) DO UPDATE SET maserka_id=excluded.maserka_id, poznamka=excluded.poznamka, kdo=excluded.kdo, cas=datetime(\'now\',\'localtime\')',
-                [$pondeli, (int)$_POST['maserka_id'], trim($_POST['poznamka'] ?? ''), kdo()]);
+            q('INSERT INTO odmeny(tyden,maserka_id,poznamka,kdo,cas) VALUES(?,?,?,?,?) ON CONFLICT(tyden) DO UPDATE SET maserka_id=excluded.maserka_id, poznamka=excluded.poznamka, kdo=excluded.kdo, cas=excluded.cas',
+                [$pondeli, (int)$_POST['maserka_id'], trim($_POST['poznamka'] ?? ''), kdo(), nyni()]);
             flash('Odměna týdne zapsána.');
         } elseif (($_POST['akce'] ?? '') === 'zrusit') {
             q('DELETE FROM odmeny WHERE tyden=?', [$pondeli]);

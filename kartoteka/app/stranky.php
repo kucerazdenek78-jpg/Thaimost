@@ -4,6 +4,7 @@ require __DIR__ . '/stranky_zakaznici.php';
 require __DIR__ . '/stranky_poukazy.php';
 require __DIR__ . '/stranky_nastaveni.php';
 require __DIR__ . '/stranky_tym.php';
+require __DIR__ . '/stranky_tablet.php';
 
 function stranka_login(): void
 {
@@ -342,6 +343,15 @@ function stranka_rezervace(array $u): void
             }
             flash('Poznámka uložena.');
             presmeruj("/?r=rezervace&id=$id");
+        } elseif ($akce === 'tablet_poslat') {
+            $err = tablet_poslat($r, (int)($_POST['mistnost_id'] ?? 0));
+            flash($err ?? 'Rezervace odeslána na tablet.', $err ? 'err' : 'ok');
+            presmeruj("/?r=rezervace&id=$id");
+        } elseif ($akce === 'tablet_zrusit') {
+            q("UPDATE sezeni SET stav='zruseno', zavreno=? WHERE rezervace_id=? AND stav='cekani'", [nyni(), $id]);
+            zapis_log('tablet_zruseno', "rez #$id");
+            flash('Rezervace stažena z tabletu.');
+            presmeruj("/?r=rezervace&id=$id");
         } elseif ($akce === 'poukaz') {
             $chyba = uplatni_poukaz($r, strtoupper(trim($_POST['kod'] ?? '')), (int)($_POST['castka'] ?? 0));
             if (!$chyba) { flash('Poukaz uplatněn.'); presmeruj("/?r=rezervace&id=$id"); }
@@ -398,6 +408,8 @@ function stranka_rezervace(array $u): void
           <button class="btn">Uložit poznámku</button>
         </form>
         <?php endif ?>
+
+        <?php if (!$zadost) tablet_karta($r); ?>
 
         <section class="card">
           <h2>Stav</h2>

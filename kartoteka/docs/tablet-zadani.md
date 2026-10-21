@@ -10,7 +10,9 @@ Do každé masérny tablet. Workflow:
 6. Na obrazovce QR kód pro spropitné (masérce) + hodnocení spokojenosti (hvězdy). Hodnocení se eviduje; **jednou týdně se odměňuje masérka s nejlepším skóre**.
 Chce návrh i funkční systém, postavený na workflow a úkolech.
 
-## Co je hotové (v této větvi, nenasazeno, nezapojeno)
+## Stav 2026-10-21: úkoly 1–4 a 6 hotovy a otestovány lokálně (viz docs/tablet-navod.md); update.zip připraven, nasazení na NAS čeká na uživatele
+
+## Co je hotové
 - `app/db.php`: `DB_VERZE = 4`, `migrate_v4` (tabulky `mistnosti`, `sezeni`, `odmeny`, nastavení `odmena_min_hodnoceni`, `spropitne_ucet`).
 - `app/stranky_tablet.php` (lint OK, netestováno): pomocné funkce (`cz_iban`, `rezervace_minuty`, `sezeni_aktivni`), `tablet_poslat`, `tablet_karta`, API `stranka_tablet_api`, kiosk stránka `stranka_tablet` (HTML/JS v nowdoc `TABLET_HTML`: kontrola jména → detail → start → odpočet → znělka (WebAudio) → hvězdy + QR SPAYD), `stranka_masterny` (správa místností/tokenů, účet pro spropitné), `stranka_odmena` (žebříček týdne, zápis odměny).
 - `public/qrcode.js` – vendorovaný qrcode-generator 1.4.4 (MIT).
