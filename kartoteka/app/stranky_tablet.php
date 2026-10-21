@@ -12,6 +12,18 @@ const SEZENI_STAVY = ['cekani' => 'čeká na masérku', 'bezi' => 'masáž běž
 
 /* ---------- pomocné funkce ---------- */
 
+/** Anglické názvy služeb pro masérky na tabletu (klíč = sluzby.kod). Co tu chybí, zůstane česky. */
+const MASAZ_EN = [
+    'tradicni' => 'Traditional Thai massage', 'hlava' => 'Head and neck massage', 'zada' => 'Back and neck massage',
+    'olej' => 'Thai oil massage', 'aroma' => 'Aroma massage', 'detska' => "Children's massage",
+    'lymfa-oblicej' => 'Lymphatic face and décolleté massage', 'poporodni' => 'Postnatal massage', 'oblicej' => 'Face massage',
+    'nohy' => 'Foot massage', 'bylinna' => 'Herbal massage', 'siam' => 'Siam massage', 'ventosa' => 'Ventosa (cupping) massage',
+    'lava' => 'Lava stone face massage', 'lymfa-telo' => 'Manual lymphatic full-body massage', 'tehotenska' => 'Pregnancy massage',
+    'whirlpool' => 'Whirlpool and sauna', 'fiji' => 'Fiji ritual', 'cukr' => 'Sugar breeze from paradise',
+];
+const VARIANTA_EN = ['s bylinnými sáčky' => 'with herbal compresses', 'Sauna + sprcha' => 'Sauna + shower', 'párová' => "couple's", 'asistentky' => 'assistants', 'šampaňské' => 'champagne'];
+const TLAK_EN = ['jemne' => 'light', 'stredne' => 'medium', 'silne' => 'firm'];
+
 function bez_diakritiky(string $s): string
 {
     $s = strtr($s, ['á'=>'a','č'=>'c','ď'=>'d','é'=>'e','ě'=>'e','í'=>'i','ň'=>'n','ó'=>'o','ř'=>'r','š'=>'s','ť'=>'t','ú'=>'u','ů'=>'u','ý'=>'y','ž'=>'z',
@@ -123,7 +135,7 @@ function sezeni_payload(array $m, ?array $s): array
     $r = q1('SELECT * FROM rezervace WHERE id=?', [$s['rezervace_id']]);
     $z = q1('SELECT * FROM zakaznici WHERE id=?', [$r['zakaznik_id']]);
     $mas = q1('SELECT * FROM maserky WHERE id=?', [$s['maserka_id']]);
-    $v = $r['varianta_id'] ? q1('SELECT v.popis, v.minuty, s.nazev FROM varianty v JOIN sluzby s ON s.id=v.sluzba_id WHERE v.id=?', [$r['varianta_id']]) : null;
+    $v = $r['varianta_id'] ? q1('SELECT v.popis, v.minuty, s.nazev, s.kod FROM varianty v JOIN sluzby s ON s.id=v.sluzba_id WHERE v.id=?', [$r['varianta_id']]) : null;
     $out = array_merge($out, [
         'stav' => $s['stav'], 'sezeni_id' => (int)$s['id'], 'maserka' => $mas['jmeno'] ?? '', 'minuty' => (int)$s['minuty'],
         'potvrzeno' => (bool)$s['potvrzeno'], 'neni_ona' => (bool)$s['neni_ona'],
@@ -133,10 +145,12 @@ function sezeni_payload(array $m, ?array $s): array
         $out = array_merge($out, [
             'prijmeni' => trim($z['prijmeni']) !== '' ? $z['prijmeni'] : trim($z['jmeno']),
             'masaz' => $v ? trim($v['nazev'] . ($v['popis'] ? ' – ' . $v['popis'] : '')) : 'Masáž',
+            'masaz_en' => $v ? trim((MASAZ_EN[$v['kod']] ?? $v['nazev']) . ($v['popis'] ? ' – ' . strtr($v['popis'], VARIANTA_EN) : '')) : 'Massage',
         ]);
     }
     if ($s['stav'] === 'cekani' && $s['potvrzeno']) {
-        $out['tlak'] = $z['pref_tlak'] ? TLAK[$z['pref_tlak']] : '';
+        $out['tlak'] = $z['pref_tlak'] ? (TLAK[$z['pref_tlak']] ?? '') : '';
+        $out['tlak_en'] = TLAK_EN[$z['pref_tlak']] ?? '';
         $out['preference'] = trim($z['pref_text']);
         $out['poznamky'] = array_values(array_filter([trim($r['poznamka_zakaznik']), trim($r['poznamka_masaz']), trim($z['poznamka_interni'])], fn($x) => $x !== ''));
         $out['upozorneni'] = trim($z['zdravi_text']);
@@ -215,7 +229,10 @@ function stranka_tablet(): void
     if (!$m) { http_response_code(404); exit('Nenalezeno'); }
     header('Cache-Control: no-store');
     $qr = is_file(__DIR__ . '/../public/qrcode.js') ? '/qrcode.js' : '';
-    echo str_replace(['__TOKEN__', '__NAZEV__', '__QR__'], [$m['token'], h($m['nazev']), $qr], TABLET_HTML);
+    // volitelná fotka na pozadí: stačí nahrát public/pozadi.jpg (nebo .webp); jinak je jen grafika
+    $foto = '';
+    foreach (['pozadi.jpg', 'pozadi.webp'] as $f) if (is_file(__DIR__ . '/../public/' . $f)) { $foto = ',url(/' . $f . '?v=' . filemtime(__DIR__ . '/../public/' . $f) . ')'; break; }
+    echo str_replace(['__TOKEN__', '__NAZEV__', '__QR__', '__FOTO__'], [$m['token'], h($m['nazev']), $qr, $foto], TABLET_HTML);
     exit;
 }
 
@@ -226,10 +243,20 @@ const TABLET_HTML = <<<'HTML'
 <link rel="icon" href="data:,"><meta name="robots" content="noindex, nofollow"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-capable" content="yes">
 <title>__NAZEV__ · Thai Most</title>
 <style>
-:root{--bg:#10201f;--bg2:#183432;--card:#1d3b38;--tx:#f3efe6;--mut:#a9bdb7;--acc:#e2b765;--ok:#7fc8a0;--bad:#ef7b6c}
+:root{--bg:#10201f;--bg2:#183432;--card:rgba(22,56,52,.62);--tx:#f3efe6;--mut:#a9bdb7;--acc:#e2b765;--ok:#7fc8a0;--bad:#ef7b6c}
 *{box-sizing:border-box}button{font-family:inherit}html,body{height:100%;margin:0}
-body{background:radial-gradient(120% 100% at 50% 0%,var(--bg2),var(--bg));color:var(--tx);font:20px/1.4 "Segoe UI",system-ui,-apple-system,sans-serif;overflow:hidden;user-select:none;-webkit-user-select:none;touch-action:manipulation}
-#app{height:100%;display:flex;flex-direction:column;padding:2.2vmin 3vmin}
+body{background:#0e1b1a;color:var(--tx);font:20px/1.4 "Segoe UI",system-ui,-apple-system,sans-serif;overflow:hidden;user-select:none;-webkit-user-select:none;touch-action:manipulation}
+#bg{position:fixed;inset:0;z-index:0;overflow:hidden;background-color:#0e1b1a;background-image:radial-gradient(55% 55% at 88% 95%,rgba(226,183,101,.5),transparent 70%),radial-gradient(70% 60% at 8% 5%,rgba(70,160,138,.45),transparent 70%)__FOTO__;background-size:100% 100%,100% 100%,cover;background-position:0 0,0 0,center;background-repeat:no-repeat}
+#bg::before{content:"";position:absolute;inset:0;background:linear-gradient(160deg,rgba(20,66,58,.74),rgba(9,34,31,.84))}
+#bg svg{position:absolute;fill:none;stroke:#e2b765;stroke-linecap:round;stroke-linejoin:round}
+#bg .rip{right:-14vmin;bottom:-30vmin;width:100vmin;opacity:.2;stroke-width:.5}
+#bg .rip circle{transform-box:fill-box;transform-origin:center;animation:rp 10s ease-in-out infinite}#bg .rip circle:nth-child(2){animation-delay:-2.5s}#bg .rip circle:nth-child(3){animation-delay:-5s}#bg .rip circle:nth-child(4){animation-delay:-7.5s}
+#bg .lot{right:5vmin;bottom:3vmin;width:46vmin;opacity:.3;stroke-width:1}
+#bg .lot2{left:-9vmin;top:-6vmin;width:34vmin;opacity:.11;stroke-width:1.1;transform:rotate(155deg)}
+@keyframes rp{0%,100%{transform:scale(.94);opacity:.55}50%{transform:scale(1.04);opacity:1}}
+@media (prefers-reduced-motion:reduce){#bg .rip circle{animation:none}}
+.brand{display:inline-flex;align-items:center;gap:1.2vmin}.brand svg{width:3.4vmin;height:3.4vmin;fill:none;stroke:var(--acc);stroke-width:5;stroke-linecap:round;stroke-linejoin:round}
+#app{position:relative;z-index:1;height:100%;display:flex;flex-direction:column;padding:2.2vmin 3vmin}
 header{display:flex;justify-content:space-between;align-items:center;color:var(--mut);font-size:2.4vmin;letter-spacing:.04em}
 header b{color:var(--acc);font-weight:600}
 main{flex:1;display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center;gap:2vmin;min-height:0}
@@ -253,19 +280,21 @@ h1{font-size:5.5vmin;margin:0;font-weight:500}h2{font-size:3.6vmin;margin:0;font
 .stars{display:flex;gap:2vmin}.stars button{background:none;border:0;font-size:13vmin;color:#4a6862;padding:0;line-height:1}.stars button.on{color:var(--acc)}
 .qr{background:#fff;border-radius:2vmin;padding:1.6vmin;width:34vmin;height:34vmin}.qr svg{width:100%;height:100%;display:block}
 .chips{display:flex;gap:1.6vmin;justify-content:center;margin-top:1.4vmin}.chip{border:.3vmin solid #4a6862;background:transparent;color:var(--tx);border-radius:2vmin;padding:1vmin 2.4vmin;font-size:3vmin}.chip.on{background:var(--acc);color:#2b2108;border-color:var(--acc)}
+header .r{display:flex;align-items:center}.lg{margin-left:2.4vmin;border:.3vmin solid #4a6862;background:transparent;color:var(--mut);border-radius:2vmin;padding:1vmin 2.2vmin;font-size:2.5vmin;touch-action:none;-webkit-touch-callout:none;-webkit-user-select:none;user-select:none}.lg.on{background:var(--acc);color:#2b2108;border-color:var(--acc)}.lg[hidden]{display:none}
 #snd{position:fixed;inset:0;background:#000b;display:none;align-items:center;justify-content:center;z-index:9;font-size:4vmin;text-align:center;padding:8vmin}
 #off{position:fixed;left:50%;transform:translateX(-50%);bottom:1.2vmin;background:#4b2420;color:#fff;padding:.6vmin 2vmin;border-radius:2vmin;font-size:2.2vmin;display:none}
 .fade{animation:f .8s ease}@keyframes f{from{opacity:0;transform:translateY(1vmin)}to{opacity:1;transform:none}}
 @media (max-aspect-ratio:1/1){.grid{grid-template-columns:1fr}.ring{width:80vmin;height:80vmin}}
 </style></head><body>
-<div id="app"><header><span><b>THAI MOST</b> · __NAZEV__</span><span id="hd"></span></header><main id="m"></main></div>
-<div id="snd"><div>🔔 Klepnutím zapnete zvuk upozornění<br><span class="mut small">(prohlížeč bez něj nepustí závěrečnou znělku)</span></div></div>
-<div id="off">Spojení se serverem je přerušeno – zkouším znovu…</div>
+<div id="bg" aria-hidden="true"><svg class="rip" viewBox="0 0 200 200"><circle cx="100" cy="100" r="34"/><circle cx="100" cy="100" r="54"/><circle cx="100" cy="100" r="74"/><circle cx="100" cy="100" r="96"/></svg><svg class="lot" viewBox="0 0 200 160"><g id="l1"><path d="M100 150C86 124 86 84 100 52C114 84 114 124 100 150Z"/><path d="M100 150C80 130 66 100 70 70C90 88 102 118 100 150Z" transform="rotate(-6 100 150)"/><path d="M100 150C120 130 134 100 130 70C110 88 98 118 100 150Z" transform="rotate(6 100 150)"/><path d="M100 150C70 140 44 116 38 88C66 92 92 114 100 150Z" transform="rotate(-8 100 150)"/><path d="M100 150C130 140 156 116 162 88C134 92 108 114 100 150Z" transform="rotate(8 100 150)"/><path d="M100 150C64 154 30 142 14 118C46 112 82 124 100 150Z"/><path d="M100 150C136 154 170 142 186 118C154 112 118 124 100 150Z"/></g></svg><svg class="lot2" viewBox="0 0 200 160"><g id="l2"><path d="M100 150C86 124 86 84 100 52C114 84 114 124 100 150Z"/><path d="M100 150C80 130 66 100 70 70C90 88 102 118 100 150Z" transform="rotate(-6 100 150)"/><path d="M100 150C120 130 134 100 130 70C110 88 98 118 100 150Z" transform="rotate(6 100 150)"/><path d="M100 150C70 140 44 116 38 88C66 92 92 114 100 150Z" transform="rotate(-8 100 150)"/><path d="M100 150C130 140 156 116 162 88C134 92 108 114 100 150Z" transform="rotate(8 100 150)"/><path d="M100 150C64 154 30 142 14 118C46 112 82 124 100 150Z"/><path d="M100 150C136 154 170 142 186 118C154 112 118 124 100 150Z"/></g></svg></div>
+<div id="app"><header><span class="brand"><svg viewBox="0 0 200 160"><use href="#l1"/></svg><span><b>THAI MOST</b> · __NAZEV__</span></span><span class="r"><span id="hd"></span><button type="button" class="lg" id="lg"></button></span></header><main id="m"></main></div>
+<div id="snd"><div>🔔 Tap the screen to turn the sound on<br><span class="mut small">Klepnutím zapnete zvuk (bez toho se nepřehraje závěrečná znělka)</span></div></div>
+<div id="off">Connection lost – retrying… / Spojení přerušeno, zkouším znovu…</div>
 <script src="__QR__"></script>
 <script>
 "use strict";
 const T="__TOKEN__";
-let S={stav:'idle'},off=0,ctx=null,klic='',tip=100,zvukUz=false,znelaPro=0,online=true;
+let hold=false,S={stav:'idle'},off=0,ctx=null,klic='',tip=100,zvukUz=false,znelaPro=0,online=true;
 const $=s=>document.querySelector(s), esc=t=>String(t??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const now=()=>Date.now()+off;
 const hhmm=(ms,sec)=>{try{return new Date(ms).toLocaleTimeString('cs-CZ',{timeZone:'Europe/Prague',hour:'2-digit',minute:'2-digit',second:sec?'2-digit':undefined,hour12:false})}catch(e){const d=new Date(ms),p=n=>String(n).padStart(2,'0');return p(d.getHours())+':'+p(d.getMinutes())+(sec?':'+p(d.getSeconds()):'')}};
@@ -277,13 +306,23 @@ function setOnline(v){online=v;$('#off').style.display=v?'none':'block'}
 function odemkniZvuk(){try{ctx=ctx||new (window.AudioContext||window.webkitAudioContext)();if(ctx.state==='suspended')ctx.resume();zvukUz=ctx.state==='running';$('#snd').style.display='none'}catch(e){}}
 ['touchstart','mousedown','keydown'].forEach(e=>document.addEventListener(e,odemkniZvuk,{passive:true}));
 function znelka(){
+  /* thajská znělka: xylofon ranat ek + hluboký gong + zvonivé dozvuky; melodie v thajské stupnici (oktáva = 7 stejných dílů, pentatonika) */
   if(!ctx)return;try{ctx.resume()}catch(e){}
-  const t0=ctx.currentTime+.05,master=ctx.createGain();master.gain.value=.5;master.connect(ctx.destination);
-  const dl=ctx.createDelay(1);dl.delayTime.value=.42;const fb=ctx.createGain();fb.gain.value=.38;dl.connect(fb);fb.connect(dl);dl.connect(master);
-  const nota=(f,t,d,v)=>{[[1,1],[2.01,.28],[3.02,.1]].forEach(([m,a])=>{const o=ctx.createOscillator(),g=ctx.createGain();o.type='sine';o.frequency.value=f*m;
-    g.gain.setValueAtTime(0,t0+t);g.gain.linearRampToValueAtTime(v*a,t0+t+.04);g.gain.exponentialRampToValueAtTime(.0008,t0+t+d);o.connect(g);g.connect(master);g.connect(dl);o.start(t0+t);o.stop(t0+t+d+.1)})};
-  const mel=[[523.25,0],[659.25,.9],[783.99,1.8],[987.77,2.8],[783.99,4],[659.25,5],[523.25,6.2],[392,7.6]];
-  mel.forEach(([f,t],i)=>nota(f,t,3.2,.34-i*.012));
+  const t0=ctx.currentTime+.05,master=ctx.createGain();master.gain.value=.55;
+  const cmp=ctx.createDynamicsCompressor();master.connect(cmp);cmp.connect(ctx.destination);
+  const dl=ctx.createDelay(1);dl.delayTime.value=.31;const fb=ctx.createGain();fb.gain.value=.34;const lp=ctx.createBiquadFilter();lp.type='lowpass';lp.frequency.value=3000;
+  dl.connect(lp);lp.connect(fb);fb.connect(dl);lp.connect(master);
+  const hlas=(f,t,d,v,casti)=>casti.forEach(([m,a,k])=>{const o=ctx.createOscillator(),g=ctx.createGain();o.type='sine';o.frequency.value=f*m;
+    g.gain.setValueAtTime(0,t0+t);g.gain.linearRampToValueAtTime(v*a,t0+t+.006);g.gain.exponentialRampToValueAtTime(.0006,t0+t+d*k);
+    o.connect(g);g.connect(master);const s=ctx.createGain();s.gain.value=.55;g.connect(s);s.connect(dl);o.start(t0+t);o.stop(t0+t+d*k+.1)});
+  const ranat=(f,t,v)=>hlas(f,t,1.5,v,[[1,1,1],[2.76,.3,.3],[5.4,.1,.12]]);
+  const gong=(f,t,v)=>hlas(f,t,8,v,[[1,1,1],[1.47,.5,.8],[2.09,.38,.6],[2.56,.28,.45],[3.4,.16,.3]]);
+  const stupen=n=>330*Math.pow(2,n/7);               /* 7 stejných dílů oktávy */
+  gong(stupen(-14),0,.5);                              /* úder gongu na začátku */
+  const mel=[[4,.9],[5,1.4],[7,1.9],[5,2.5],[4,3.0],[2,3.6],[4,4.3],[2,4.9],[0,5.6],[2,6.4],[0,7.2]];
+  mel.forEach(([n,t],i)=>{const v=.3-i*.012;ranat(stupen(n),t,v);ranat(stupen(n-7),t+.02,v*.45)});   /* ranat hraje v oktávách */
+  gong(stupen(-14),7.2,.32);                           /* závěrečný gong */
+  ranat(stupen(7),7.4,.2);ranat(stupen(4),7.4,.14);
 }
 
 /* kvůli kioskovému režimu nenechat usnout obrazovku */
@@ -295,28 +334,45 @@ function qrSvg(text){try{const q=qrcode(0,'M');q.addData(text);q.make();const n=
   return '<svg viewBox="-2 -2 '+(n+4)+' '+(n+4)+'" shape-rendering="crispEdges"><path d="'+d+'" fill="#000"/></svg>'}catch(e){return ''}}
 function spayd(){const sp=S.spropitne;return 'SPD*1.0*ACC:'+sp.iban+(tip?'*AM:'+tip+'.00':'')+'*CC:CZK*MSG:'+sp.zprava}
 
+/* Jazyk: pro masérku je hlavní angličtina; obrazovka pro zákazníka (poděkování, hodnocení, spropitné) je česky.
+   Podržením tlačítka vpravo nahoře se celá obrazovka přepne do češtiny, po pustení zpět do angličtiny. */
+const TX={
+ en:{ready:'Room ready',next:'Waiting for the next massage',on_duty:'Therapist on duty',check:'Please check that this is you.',yes:n=>'Yes, I am '+n,no:'That is not me',
+  notified:'Reception has been notified. Please wait – they will send the booking again.',cust:'Customer',mas:'Massage',warn:'⚠ Caution – health and restrictions',pref:'Customer preferences',press:'Pressure',notes:'Notes',
+  now:'Now',start:'▶ Start massage',left:'remaining',endsat:'ends at',early:'End early: hold here for 2 s',free:'Notes are shown as written by reception (in Czech).',lg:'Hold = česky'},
+ cs:{ready:'Masérna je připravena',next:'Čekáme na další masáž',on_duty:'Dnes zde masíruje',check:'Zkontrolujte, že jde o vás.',yes:n=>'Ano, jsem '+n,no:'Nejsem to já',
+  notified:'Recepce byla upozorněna. Počkejte prosím, pošle masáž znovu.',cust:'Zákazník',mas:'Masáž',warn:'⚠ Pozor – zdraví a omezení',pref:'Preference zákazníka',press:'Tlak',notes:'Poznámky',
+  now:'Teď',start:'▶ Zahájit masáž',left:'zbývá',endsat:'konec v',early:'Ukončit dřív: podržte tady 2 s',free:'',lg:'Česky'}
+};
+const tx=()=>TX[hold?'cs':'en'];
+
 function render(){
-  const k=[S.stav,S.sezeni_id,S.potvrzeno,S.neni_ona,S.ohodnoceno].join('|');
+  const k=[S.stav,S.sezeni_id,S.potvrzeno,S.neni_ona,S.ohodnoceno,hold].join('|');
   if(S.stav==='konec'&&znelaPro!==S.sezeni_id){znelaPro=S.sezeni_id;znelka()}
-  if(k===klic){tick();return}klic=k;const m=$('#m');let h='';
+  const lgb=$('#lg');lgb.textContent=tx().lg;lgb.classList.toggle('on',hold);lgb.hidden=(S.stav==='konec');
+  if(k===klic){tick();return}klic=k;const m=$('#m'),X=tx();let h='';
+  const masaz=hold?S.masaz:(S.masaz_en||S.masaz), tlak=hold?S.tlak:(S.tlak_en||S.tlak);
   if(S.stav==='idle'){
-    h='<div class="fade"><div class="big" id="cl"></div></div><h1 class="fade">Masérna je připravena</h1><div class="mut small">Čekáme na další masáž</div>';
+    h='<div class="fade"><div class="big" id="cl"></div></div><h1 class="fade">'+X.ready+'</h1><div class="mut small">'+X.next+'</div>';
   }else if(S.stav==='cekani'&&!S.potvrzeno){
-    h='<div class="fade"><div class="mut small">Dnes zde masíruje</div><h1 style="font-size:12vmin;margin:1vmin 0 3vmin">'+esc(S.maserka)+'</h1><div class="mut small" style="margin-bottom:4vmin">Zkontrolujte, že jde o vás.</div>'
-     +(S.neni_ona?'<div class="card warn" style="margin-bottom:3vmin"><div class="v">Recepce byla upozorněna. Počkejte prosím, pošle masáž znovu.</div></div>':'')
-     +'<div class="row"><button class="btn ok" id="b1">Ano, jsem '+esc(S.maserka)+'</button><button class="btn sec" id="b2">Nejsem to já</button></div></div>';
+    h='<div class="fade"><div class="mut small">'+X.on_duty+'</div><h1 style="font-size:12vmin;margin:1vmin 0 3vmin">'+esc(S.maserka)+'</h1><div class="mut small" style="margin-bottom:4vmin">'+X.check+'</div>'
+     +(S.neni_ona?'<div class="card warn" style="margin-bottom:3vmin"><div class="v">'+X.notified+'</div></div>':'')
+     +'<div class="row"><button class="btn ok" id="b1">'+esc(X.yes(S.maserka))+'</button><button class="btn sec" id="b2">'+X.no+'</button></div></div>';
   }else if(S.stav==='cekani'){
-    h='<div class="grid fade"><div class="card"><div class="k">Zákazník</div><div class="v">'+esc(S.prijmeni)+'</div></div>'
-     +'<div class="card"><div class="k">Masáž</div><div class="v">'+esc(S.masaz)+(/min/.test(S.masaz)?'':' · '+S.minuty+' min')+'</div></div>'
-     +(S.upozorneni?'<div class="card warn wide"><div class="k">⚠ Pozor – zdraví a omezení</div><div class="v">'+esc(S.upozorneni)+'</div></div>':'')
-     +((S.tlak||S.preference)?'<div class="card wide"><div class="k">Preference zákazníka</div><div class="t">'+(S.tlak?'Tlak: <b>'+esc(S.tlak)+'</b>\n':'')+esc(S.preference)+'</div></div>':'')
-     +((S.poznamky||[]).length?'<div class="card wide"><div class="k">Poznámky</div><div class="t">'+S.poznamky.map(esc).join('\n')+'</div></div>':'')
-     +'</div><div class="row"><div class="mut small">Teď <b id="cl2"></b></div><button class="btn ok" id="b3">▶ Zahájit masáž</button></div>';
+    const volny=!!(S.upozorneni||S.preference||(S.poznamky||[]).length);
+    h='<div class="grid fade"><div class="card"><div class="k">'+X.cust+'</div><div class="v">'+esc(S.prijmeni)+'</div></div>'
+     +'<div class="card"><div class="k">'+X.mas+'</div><div class="v">'+esc(masaz)+(/min/.test(masaz)?'':' · '+S.minuty+' min')+'</div></div>'
+     +(S.upozorneni?'<div class="card warn wide"><div class="k">'+X.warn+'</div><div class="v">'+esc(S.upozorneni)+'</div></div>':'')
+     +((tlak||S.preference)?'<div class="card wide"><div class="k">'+X.pref+'</div><div class="t">'+(tlak?X.press+': <b>'+esc(tlak)+'</b>\n':'')+esc(S.preference)+'</div></div>':'')
+     +((S.poznamky||[]).length?'<div class="card wide"><div class="k">'+X.notes+'</div><div class="t">'+S.poznamky.map(esc).join('\n')+'</div></div>':'')
+     +'</div>'+(volny&&X.free?'<div class="mut small" style="opacity:.7">'+X.free+'</div>':'')
+     +'<div class="row"><div class="mut small">'+X.now+' <b id="cl2"></b></div><button class="btn ok" id="b3">'+X.start+'</button></div>';
   }else if(S.stav==='bezi'){
-    h='<div class="mut small fade">'+esc(S.prijmeni)+' · '+esc(S.masaz)+'</div><div class="ring fade"><svg viewBox="0 0 100 100"><circle cx="50" cy="50" r="46" fill="none" stroke="#264743" stroke-width="2"/><circle id="pr" cx="50" cy="50" r="46" fill="none" stroke="#e2b765" stroke-width="2.4" stroke-linecap="round" stroke-dasharray="289" stroke-dashoffset="0"/></svg>'
-     +'<div class="in"><div class="mut small">zbývá</div><div class="huge" id="cd"></div><div class="mut small" style="margin-top:1.6vmin">konec v <b>'+hhmm(S.konec*1000)+'</b> · teď <span id="cl2"></span></div></div></div>'
-     +'<div class="mut small" id="pre" style="opacity:.35">Ukončit dřív: podržte tady 2 s</div>';
+    h='<div class="mut small fade">'+esc(S.prijmeni)+' · '+esc(masaz)+'</div><div class="ring fade"><svg viewBox="0 0 100 100"><circle cx="50" cy="50" r="46" fill="none" stroke="#264743" stroke-width="2"/><circle id="pr" cx="50" cy="50" r="46" fill="none" stroke="#e2b765" stroke-width="2.4" stroke-linecap="round" stroke-dasharray="289" stroke-dashoffset="0"/></svg>'
+     +'<div class="in"><div class="mut small">'+X.left+'</div><div class="huge" id="cd"></div><div class="mut small" style="margin-top:1.6vmin">'+X.endsat+' <b>'+hhmm(S.konec*1000)+'</b> · '+X.now.toLowerCase()+' <span id="cl2"></span></div></div></div>'
+     +'<div class="mut small" id="pre" style="opacity:.35">'+X.early+'</div>';
   }else if(S.stav==='konec'){
+    /* obrazovka pro zákazníka: vždy česky */
     h='<div class="fade"><h1>Děkujeme, že jste si u nás odpočinuli.</h1><div class="mut small" style="margin-top:1vmin">Těšíme se na vás příště. Zůstaňte klidně ještě chvíli ležet.</div></div><div class="row" style="align-items:flex-start;gap:8vmin;margin-top:1vmin">'
      +'<div class="fade"><h2>'+(S.ohodnoceno?'Děkujeme za hodnocení ♥':'Jak se vám masáž líbila?')+'</h2>'
      +(S.ohodnoceno?'':'<div class="stars" style="margin-top:1vmin">'+[1,2,3,4,5].map(i=>'<button data-z="'+i+'" aria-label="'+i+' hvězd">★</button>').join('')+'</div>')+'</div>'
@@ -330,9 +386,16 @@ function render(){
   on('#b3',()=>{odemkniZvuk();poll('start')});on('#b4',()=>poll('zavrit'));
   m.querySelectorAll('.stars button').forEach(b=>b.onclick=()=>{m.querySelectorAll('.stars button').forEach(x=>x.classList.toggle('on',+x.dataset.z<=+b.dataset.z));setTimeout(()=>poll('hodnoceni',{znamka:+b.dataset.z}),350)});
   m.querySelectorAll('.chip').forEach(b=>b.onclick=()=>{tip=+b.dataset.c;m.querySelectorAll('.chip').forEach(x=>x.classList.toggle('on',+x.dataset.c===tip));kresliQr()});
-  const pr=$('#pre');if(pr){let t=null;const s=()=>{t=setTimeout(()=>poll('predcasne'),2000)},e=()=>clearTimeout(t);pr.onpointerdown=s;pr.onpointerup=pr.onpointerleave=e}
+  const pr=$('#pre');if(pr){let t=null;const s=()=>{t=setTimeout(()=>poll('predcasne'),2000)},e=()=>clearTimeout(t);pr.onpointerdown=s;pr.onpointerup=pr.onpointerleave=pr.onpointercancel=e}
   kresliQr();tick();
 }
+/* tlačítko „Hold = česky“: dokud je stisknuté, je vše česky */
+(function(){const b=$('#lg');let id=null;
+  const on=e=>{e.preventDefault();try{b.setPointerCapture(e.pointerId)}catch(x){}hold=true;render()};
+  const off2=()=>{if(hold){hold=false;render()}};
+  b.addEventListener('pointerdown',on);['pointerup','pointercancel','lostpointercapture'].forEach(ev=>b.addEventListener(ev,off2));
+  b.addEventListener('contextmenu',e=>e.preventDefault());
+})();
 function kresliQr(){const e=$('#qr');if(e&&S.spropitne&&typeof qrcode==='function')e.innerHTML=qrSvg(spayd())}
 function tick(){
   const t=now();
@@ -345,7 +408,7 @@ function tick(){
     if(zb<=0&&!S._pozadano){S._pozadano=true;poll()}
   }
 }
-setInterval(tick,500);setInterval(()=>poll(),3000);poll();
+$('#lg').textContent=tx().lg;setInterval(tick,500);setInterval(()=>poll(),3000);poll();
 if(!ctx){setTimeout(()=>{if(!zvukUz)$('#snd').style.display='flex'},1200)}
 </script></body></html>
 HTML;

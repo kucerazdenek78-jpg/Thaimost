@@ -14,6 +14,13 @@
 5. Na konci zazní znělka, tablet poděkuje, nabídne hvězdy (hodnocení) a QR spropitné (50/100/200 Kč / jiná částka). Rezervace se sama přepne na „proběhlo“. Po 15 min (nebo tlačítkem Hotovo) se tablet vrátí do klidového stavu.
 6. **Tým → Odměna týdne**: žebříček podle průměru hodnocení (min. počet hodnocení, při shodě víc hodnocení → víc masáží); odměnu zapíše admin/hlavní.
 
+## Jazyk, vzhled a zvuk
+- Pro masérku je hlavní jazyk **angličtina** (příkazy, názvy masáží, štítky). Obrazovka pro zákazníka (poděkování, hvězdy, spropitné) je **česky**.
+- Tlačítko **Hold = česky** vpravo nahoře: dokud ho držíš, je celá obrazovka česky (včetně názvu masáže), po pustení se vrátí angličtina.
+- Texty, které píše recepce (zdravotní upozornění, preference, poznámky), se nepřekládají – zobrazí se tak, jak byly zadány. Anglické názvy masáží jsou v `MASAZ_EN` v `app/stranky_tablet.php` (co tam chybí, zůstane česky).
+- Pozadí: polopropustná zelená přes volitelnou fotku. Fotku nahraj jako `public/pozadi.jpg` (nebo `pozadi.webp`, ideálně 1920×1200, do ~300 kB); bez fotky je jen grafika (lotos, vlnky).
+- Znělka na konci je thajská: xylofon ranat a gong ve stupnici 7 stejných dílů oktávy.
+
 ## Řešení potíží
 - „Uvolnit tablet“ (Masérny a tablety → upravit masérnu) zruší zaseknuté sezení.
 - „Nový odkaz“ zneplatní starý odkaz (např. při ztrátě tabletu).
