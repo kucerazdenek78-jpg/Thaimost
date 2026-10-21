@@ -26,7 +26,7 @@ function q(string $sql, array $p = []): PDOStatement
 function q1(string $sql, array $p = []): ?array { $r = q($sql, $p)->fetch(); return $r ?: null; }
 function qv(string $sql, array $p = []) { $r = q($sql, $p)->fetchColumn(); return $r === false ? null : $r; }
 
-const DB_VERZE = 3;
+const DB_VERZE = 4;
 
 /** Migrace běží v jedné transakci a po získání zámku se verze ověří znovu (souběžné první požadavky). */
 function migrate(PDO $pdo): void
@@ -38,6 +38,7 @@ function migrate(PDO $pdo): void
         if ($ver < 1) migrate_v1($pdo);
         if ($ver < 2) migrate_v2($pdo);
         if ($ver < 3) migrate_v3($pdo);
+        if ($ver < 4) migrate_v4($pdo);
         $pdo->exec('PRAGMA user_version = ' . DB_VERZE);
         $pdo->exec('COMMIT');
     } catch (Throwable $e) {
@@ -154,6 +155,38 @@ function migrate_v1(PDO $pdo): void
 }
 
 /** v2: tým – profily masérek a recepčních, hodnocení spokojenosti, směny recepčních, přílohy e-mailů. */
+function migrate_v4(PDO $pdo): void
+{
+    $pdo->exec(<<<SQL
+    -- masérny s tablety: tablet se hlásí tajným tokenem v adrese, bez přihlášení
+    CREATE TABLE mistnosti (
+        id INTEGER PRIMARY KEY, nazev TEXT NOT NULL, token TEXT NOT NULL UNIQUE,
+        aktivni INTEGER NOT NULL DEFAULT 1, poradi INTEGER NOT NULL DEFAULT 0, posledni_spojeni TEXT
+    );
+    -- jedno sezení = jedna masáž na tabletu (od odeslání recepcí po zavření hodnocení)
+    CREATE TABLE sezeni (
+        id INTEGER PRIMARY KEY, mistnost_id INTEGER NOT NULL REFERENCES mistnosti(id),
+        rezervace_id INTEGER NOT NULL REFERENCES rezervace(id), maserka_id INTEGER REFERENCES maserky(id),
+        stav TEXT NOT NULL DEFAULT 'cekani',     -- cekani | bezi | konec | hotovo | zruseno
+        minuty INTEGER NOT NULL DEFAULT 60,
+        poslano TEXT NOT NULL DEFAULT (datetime('now','localtime')), poslal TEXT NOT NULL DEFAULT '',
+        potvrzeno TEXT,                           -- masérka potvrdila, že je to ona
+        neni_ona TEXT,                            -- masérka hlásí, že jde o jinou osobu (upozornění recepci)
+        start TEXT, plan_konec TEXT, konec TEXT, zavreno TEXT,
+        hodnoceni_id INTEGER REFERENCES hodnoceni_maserek(id)
+    );
+    CREATE INDEX sezeni_mistnost ON sezeni(mistnost_id, stav);
+    CREATE INDEX sezeni_rez ON sezeni(rezervace_id);
+    -- odměna týdne (nejlépe hodnocená masérka)
+    CREATE TABLE odmeny (
+        tyden TEXT PRIMARY KEY, maserka_id INTEGER NOT NULL REFERENCES maserky(id),
+        poznamka TEXT NOT NULL DEFAULT '', kdo TEXT NOT NULL DEFAULT '', cas TEXT NOT NULL DEFAULT (datetime('now','localtime'))
+    );
+    INSERT OR IGNORE INTO nastaveni(klic, hodnota) VALUES ('odmena_min_hodnoceni', '3');
+    INSERT OR IGNORE INTO nastaveni(klic, hodnota) VALUES ('spropitne_ucet', '');
+    SQL);
+}
+
 function migrate_v3(PDO $pdo): void
 {
     $pdo->exec("ALTER TABLE maserky ADD COLUMN ical_token TEXT NOT NULL DEFAULT ''");
