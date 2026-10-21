@@ -15,6 +15,7 @@ function hlavicka(string $titul, string $aktivni = ''): void
         'smeny' => 'Směny',
         'nastaveni' => 'Nastavení',
     ];
+    if ($u && ($u['role'] ?? '') === 'admin') $menu['uzivatele'] = 'Uživatelé';
     ?><!doctype html>
 <html lang="cs"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">

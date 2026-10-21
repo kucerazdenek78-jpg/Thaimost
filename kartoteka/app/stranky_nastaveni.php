@@ -36,7 +36,7 @@ function stranka_nastaveni(array $u): void
     $n = q('SELECT klic,hodnota FROM nastaveni')->fetchAll(PDO::FETCH_KEY_PAIR);
     $maserky = q('SELECT * FROM maserky ORDER BY poradi')->fetchAll();
     $cenik = q('SELECT v.*, s.nazev FROM varianty v JOIN sluzby s ON s.id=v.sluzba_id ORDER BY s.poradi, v.poradi')->fetchAll();
-    $uziv = q('SELECT login,jmeno,role,aktivni FROM uzivatele ORDER BY login')->fetchAll();
+    $uziv = q('SELECT id,login,jmeno,role,aktivni FROM uzivatele ORDER BY login')->fetchAll();
     $smtp = !empty(cfg()['smtp']['host']);
 
     hlavicka('Nastavení', 'nastaveni'); ?>
@@ -90,8 +90,8 @@ function stranka_nastaveni(array $u): void
           <form method="post" class="inline"><?= csrf_pole() ?><input type="hidden" name="akce" value="odeslat_emaily"><button class="btn">Odeslat frontu</button> <a class="btn" href="/?r=emaily">Zobrazit frontu</a></form>
         </section>
         <section class="card side">
-          <h3>Uživatelé</h3>
-          <?php foreach ($uziv as $x): ?><p><?= h($x['jmeno']) ?> <span class="muted small">(<?= h($x['login']) ?>, <?= h($x['role']) ?>)</span></p><?php endforeach ?>
+          <h3>Uživatelé <a class="small" href="/?r=uzivatele">správa →</a></h3>
+          <?php foreach ($uziv as $x): ?><p><a href="/?r=uzivatele&id=<?= (int)($x['id'] ?? 0) ?>"><?= h($x['jmeno']) ?></a> <span class="muted small">(<?= h($x['login']) ?>, <?= h($x['role']) ?>)</span></p><?php endforeach ?>
           <?php if ($u['role'] === 'admin'): ?>
           <form method="post"><?= csrf_pole() ?><input type="hidden" name="akce" value="uzivatel">
             <label>Login<input name="login" required></label>

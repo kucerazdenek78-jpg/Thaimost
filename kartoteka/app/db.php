@@ -26,7 +26,7 @@ function q(string $sql, array $p = []): PDOStatement
 function q1(string $sql, array $p = []): ?array { $r = q($sql, $p)->fetch(); return $r ?: null; }
 function qv(string $sql, array $p = []) { $r = q($sql, $p)->fetchColumn(); return $r === false ? null : $r; }
 
-const DB_VERZE = 2;
+const DB_VERZE = 3;
 
 /** Migrace běží v jedné transakci a po získání zámku se verze ověří znovu (souběžné první požadavky). */
 function migrate(PDO $pdo): void
@@ -37,6 +37,7 @@ function migrate(PDO $pdo): void
         $ver = (int)$pdo->query('PRAGMA user_version')->fetchColumn();
         if ($ver < 1) migrate_v1($pdo);
         if ($ver < 2) migrate_v2($pdo);
+        if ($ver < 3) migrate_v3($pdo);
         $pdo->exec('PRAGMA user_version = ' . DB_VERZE);
         $pdo->exec('COMMIT');
     } catch (Throwable $e) {
@@ -153,6 +154,11 @@ function migrate_v1(PDO $pdo): void
 }
 
 /** v2: tým – profily masérek a recepčních, hodnocení spokojenosti, směny recepčních, přílohy e-mailů. */
+function migrate_v3(PDO $pdo): void
+{
+    $pdo->exec("ALTER TABLE maserky ADD COLUMN ical_token TEXT NOT NULL DEFAULT ''");
+}
+
 function migrate_v2(PDO $pdo): void
 {
     $pdo->exec(<<<SQL

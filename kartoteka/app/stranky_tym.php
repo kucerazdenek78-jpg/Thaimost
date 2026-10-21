@@ -122,6 +122,9 @@ function stranka_maserka(array $u): void
                  trim($_POST['ucet'] ?? ''), (int)($_POST['poradi'] ?? 0), !empty($_POST['aktivni']) ? 1 : 0, $id]);
             zapis_log('maserka_uprava', "#$id $jmeno");
             flash('Masérka uložena.');
+        } elseif ($akce === 'token' && $smi) {
+            q("UPDATE maserky SET ical_token=? WHERE id=?", [bin2hex(random_bytes(16)), $id]);
+            flash('Nový odkaz na kalendář vytvořen, starý přestal fungovat.');
         } elseif ($akce === 'hodnoceni') {
             $zn = (int)($_POST['znamka'] ?? 0);
             $rez = (int)($_POST['rezervace_id'] ?? 0) ?: null;
@@ -189,6 +192,15 @@ function stranka_maserka(array $u): void
           <?php if ($smi): ?><button class="btn primary">Uložit</button><?php endif ?>
         </form>
 
+        <?php if ($smi): $kalUrl = ical_url(ical_token_maserky($id)); ?>
+        <section class="card">
+          <h2>Kalendář služeb</h2>
+          <p class="small">Odkaz s rezervacemi masérky (jméno zákazníka, služba, poznámky; bez telefonu). Aktualizuje se sám. Pošlete jí ho a ona si ho přidá do kalendáře v telefonu.</p>
+          <p class="small"><input readonly value="<?= h($kalUrl) ?>" onclick="this.select()"></p>
+          <p class="small">V Google Kalendáři: <i>Další kalendáře → Z adresy URL</i>. V iPhonu: <i>Kalendáře → Přidat → Přidat odebíraný kalendář</i>. Kdo odkaz má, vidí její rezervace.</p>
+          <form method="post"><?= csrf_pole() ?><input type="hidden" name="akce" value="token"><button class="btn small" data-confirm="Vytvořit nový odkaz? Starý přestane fungovat.">vytvořit nový odkaz</button></form>
+        </section>
+        <?php endif ?>
         <section class="card">
           <h2>Výkonnost</h2>
           <table class="tbl plain">
@@ -254,6 +266,7 @@ function ical_url(string $token, bool $webcal = false): string
 
 function stranka_recepcni(array $u): void
 {
+    if (($_GET['r'] ?? '') === 'uzivatele') vyzaduj_admina();
     if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         vyzaduj_admina();
         $akce = $_POST['akce'] ?? '';
@@ -289,7 +302,7 @@ function stranka_recepcni(array $u): void
                 flash("Uživatel $login založen.");
             }
         }
-        presmeruj('/?r=recepcni');
+        presmeruj('/?r=' . ($_GET['r'] === 'uzivatele' ? 'uzivatele' : 'recepcni'));
     }
     $lidi = q('SELECT * FROM uzivatele ORDER BY aktivni DESC, role, jmeno')->fetchAll();
     $od = date('Y-m-01'); $do = date('Y-m-t');
@@ -298,9 +311,11 @@ function stranka_recepcni(array $u): void
         $hodiny[$s['uzivatel_id']] = ($hodiny[$s['uzivatel_id']] ?? 0) + (strtotime("1970-01-01 $s[do_]") - strtotime("1970-01-01 $s[od]")) / 3600;
     $admin = je_admin($u);
 
-    hlavicka('Recepční', 'tym'); ?>
-    <h1>Tým</h1>
-    <?php tym_nav('recepcni'); ?>
+    $spravaUz = $_GET['r'] === 'uzivatele';
+    $otevri = (int)($_GET['id'] ?? 0);
+    hlavicka($spravaUz ? 'Uživatelé' : 'Recepční', $spravaUz ? 'uzivatele' : 'tym'); ?>
+    <h1><?= $spravaUz ? 'Správa uživatelů' : 'Tým' ?></h1>
+    <?php if ($spravaUz): ?><p class="muted small">Kdo se smí přihlásit do kartotéky, s jakou rolí a heslem. Aktivních: <?= count(array_filter($lidi, fn($x) => $x['aktivni'])) ?>, adminů: <?= count(array_filter($lidi, fn($x) => $x['aktivni'] && $x['role'] === 'admin')) ?>.</p><?php else: tym_nav('recepcni'); endif; ?>
     <table class="tbl">
       <tr><th>Jméno</th><th>Role</th><th>Telefon</th><th>E-mail</th><th>Hodin tento měsíc</th><th>Poznámka</th></tr>
       <?php foreach ($lidi as $x): ?>
@@ -311,7 +326,7 @@ function stranka_recepcni(array $u): void
           <td><?= round($hodiny[$x['id']] ?? 0, 1) ?></td><td class="small"><?= h($x['poznamka']) ?></td>
         </tr>
         <?php if ($admin): ?>
-        <tr><td colspan="6" style="border-top:0;padding-top:0"><details><summary class="muted small">upravit <?= h($x['jmeno']) ?></summary>
+        <tr><td colspan="6" style="border-top:0;padding-top:0"><details<?= $otevri === (int)$x['id'] ? ' open' : '' ?>><summary class="small"><a>upravit <?= h($x['jmeno']) ?></a></summary>
           <form method="post" class="inline"><?= csrf_pole() ?><input type="hidden" name="akce" value="ulozit"><input type="hidden" name="id" value="<?= $x['id'] ?>">
             <div class="grid3">
               <label>Jméno<input name="jmeno" value="<?= h($x['jmeno']) ?>"></label>
@@ -387,6 +402,51 @@ function ics_smeny(array $smeny, string $nazev, bool $sJmenem = false, string $m
 }
 
 /** Veřejný kalendářový odkaz (bez přihlášení, chráněný dlouhým tokenem) – pro odběr v Google/Apple/Outlook kalendáři. */
+function ical_token_maserky(int $mid): string
+{
+    $t = (string)qv('SELECT ical_token FROM maserky WHERE id=?', [$mid]);
+    if ($t === '') { $t = bin2hex(random_bytes(16)); q('UPDATE maserky SET ical_token=? WHERE id=?', [$t, $mid]); }
+    return $t;
+}
+
+/** Kalendář služeb masérky: její rezervace (potvrzené, proběhlé; zrušené jako CANCELLED, aby zmizely z kalendáře). */
+function ics_rezervace(array $rez, string $nazev): string
+{
+    $esc = fn(string $t) => str_replace(["\\", ';', ',', "\r\n", "\n"], ["\\\\", '\;', '\,', '\n', '\n'], $t);
+    $fold = function (string $l): string {
+        $o = '';
+        while (strlen($l) > 73) { $c = mb_strcut($l, 0, 73, 'UTF-8'); $o .= $c . "\r\n "; $l = substr($l, strlen($c)); }
+        return $o . $l;
+    };
+    $tz = new DateTimeZone(cfg()['casova_zona'] ?? 'Europe/Prague');
+    $utc = fn(string $dt) => (new DateTime($dt, $tz))->setTimezone(new DateTimeZone('UTC'))->format('Ymd\THis\Z');
+    $L = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//Thai Most//Kartoteka//CS', 'CALSCALE:GREGORIAN', 'METHOD:PUBLISH',
+          'X-WR-CALNAME:' . $esc($nazev), 'X-WR-TIMEZONE:Europe/Prague', 'REFRESH-INTERVAL;VALUE=DURATION:PT1H'];
+    $stamp = gmdate('Ymd\THis\Z');
+    foreach ($rez as $r) {
+        $min = (int)($r['minuty'] ?: 60);
+        $konec = $r['konec'] ?: date('Y-m-d H:i:s', strtotime($r['zacatek'] . " +$min minutes"));
+        $zrus = in_array($r['stav'], ['zruseno_vcas', 'zruseno_pozde'], true);
+        $zak = trim($r['zj'] . ' ' . $r['zp']);
+        $popis = [];
+        if (!empty($r['varianta'])) $popis[] = $r['varianta'];
+        if (trim($r['poznamka_masaz']) !== '') $popis[] = 'Poznámka k masáži: ' . $r['poznamka_masaz'];
+        if (trim($r['poznamka_zakaznik']) !== '') $popis[] = 'Poznámka zákazníka: ' . $r['poznamka_zakaznik'];
+        $L[] = 'BEGIN:VEVENT';
+        $L[] = "UID:rez-$r[id]@masage.dvere.app";
+        $L[] = "DTSTAMP:$stamp";
+        $L[] = 'DTSTART:' . $utc($r['zacatek']);
+        $L[] = 'DTEND:' . $utc($konec);
+        $L[] = 'SUMMARY:' . $esc(($r['sluzba'] ?: 'Masáž') . ($zak !== '' ? ' – ' . $zak : ''));
+        if ($popis) $L[] = 'DESCRIPTION:' . $esc(implode("\n", $popis));
+        $L[] = 'LOCATION:' . $esc('Thai Most, SNP 2654/26, Most');
+        $L[] = 'STATUS:' . ($zrus ? 'CANCELLED' : 'CONFIRMED');
+        $L[] = 'END:VEVENT';
+    }
+    $L[] = 'END:VCALENDAR';
+    return implode("\r\n", array_map($fold, $L)) . "\r\n";
+}
+
 function stranka_ical(): void
 {
     $t = (string)($_GET['t'] ?? '');
@@ -400,6 +460,18 @@ function stranka_ical(): void
             $smeny = q("SELECT s.*, u.jmeno FROM smeny s JOIN uzivatele u ON u.id=s.uzivatel_id WHERE s.uzivatel_id=? AND s.datum>=? AND s.stav IN ('schvaleno','zruseno') ORDER BY s.datum, s.od", [$x['id'], $od])->fetchAll();
             $sJmenem = false; $nazev = 'Thai Most – moje směny (' . $x['jmeno'] . ')';
         }
+    }
+    if ($smeny === null && preg_match('~^[0-9a-f]{32}$~', $t) && ($m = q1('SELECT id, jmeno FROM maserky WHERE ical_token=? AND aktivni=1', [$t]))) {
+        $rez = q("SELECT r.*, z.jmeno AS zj, z.prijmeni AS zp, s.nazev AS sluzba, v.popis AS varianta, v.minuty
+                  FROM rezervace r JOIN zakaznici z ON z.id=r.zakaznik_id
+                  LEFT JOIN varianty v ON v.id=r.varianta_id LEFT JOIN sluzby s ON s.id=v.sluzba_id
+                  WHERE r.maserka_id=? AND r.zacatek IS NOT NULL AND r.zacatek>=? AND r.stav IN ('potvrzeno','probehlo','neprisel','zruseno_vcas','zruseno_pozde')
+                  ORDER BY r.zacatek", [$m['id'], date('Y-m-d 00:00:00', strtotime('-60 days'))])->fetchAll();
+        header('Content-Type: text/calendar; charset=utf-8');
+        header('Content-Disposition: inline; filename="masaze.ics"');
+        header('Cache-Control: no-store');
+        echo ics_rezervace($rez, 'Thai Most – masáže (' . $m['jmeno'] . ')');
+        exit;
     }
     if ($smeny === null) { http_response_code(404); exit('Nenalezeno'); }
     header('Content-Type: text/calendar; charset=utf-8');
