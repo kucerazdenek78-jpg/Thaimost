@@ -20,3 +20,7 @@ Volné termíny se počítají z otevírací doby (Nastavení) a potvrzených re
 ## Poukazy
 - Poukaz se vede pod kupujícím (podle telefonu). Na kartě poukazu: **Držitel** (komu patří – lze změnit, když ho kupující daruje), **věnováno komu / od koho / vzkaz**, tlačítko **🖨 Tisk poukazu** (A5 na šířku, s QR kódem poukazu).
 - Poukaz jde najít v horním hledání podle kódu nebo jména.
+
+## Import kontaktů (Google / Android)
+Zákazníci → **Import z Google kontaktů**. Nahrajete export kontaktů (Google CSV nebo vCard `.vcf`), uvidíte náhled (nový / už existuje / bez telefonu), vyberete a importujete. Existující zákazníci (stejný telefon) se nepřepisují, jen se doplní prázdné jméno a e-mail; další čísla kontaktu jdou do interní poznámky.
+Export: contacts.google.com → Exportovat → Google CSV; nebo v aplikaci Kontakty na Androidu → Nastavení → Exportovat → soubor .vcf (kontakty uložené jen v telefonu).

@@ -21,6 +21,7 @@ function stranka_zakaznici(array $u): void
       <form class="grow"><input type="hidden" name="r" value="zakaznici"><input name="q" value="<?= h($hl) ?>" placeholder="příjmení, jméno, telefon, e-mail, kód karty" autofocus></form>
       <a class="btn primary" href="/?r=zakaznik&novy=1">+ Nový zákazník</a>
       <a class="btn" href="/?r=rez_nova">+ Rezervace</a>
+      <a class="btn" href="/?r=import">⬆ Import z Google kontaktů</a>
     </div>
     <table class="tbl">
       <tr><th>Jméno</th><th>Telefon</th><th>Štítky</th><th>Návštěv</th><th>Naposledy</th><th>Bonus</th></tr>

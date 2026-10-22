@@ -5,6 +5,7 @@ require __DIR__ . '/stranky_poukazy.php';
 require __DIR__ . '/stranky_nastaveni.php';
 require __DIR__ . '/stranky_tym.php';
 require __DIR__ . '/stranky_vernost.php';
+require __DIR__ . '/stranky_import.php';
 require __DIR__ . '/stranky_tablet.php';
 
 function stranka_login(): void
