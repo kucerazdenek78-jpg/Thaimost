@@ -19,7 +19,8 @@ function stranka_zakaznici(array $u): void
     <div class="cal-nav">
       <h1>Zákazníci</h1>
       <form class="grow"><input type="hidden" name="r" value="zakaznici"><input name="q" value="<?= h($hl) ?>" placeholder="příjmení, jméno, telefon, e-mail, kód karty" autofocus></form>
-      <a class="btn" href="/?r=rez_nova">+ Nový zákazník / rezervace</a>
+      <a class="btn primary" href="/?r=zakaznik&novy=1">+ Nový zákazník</a>
+      <a class="btn" href="/?r=rez_nova">+ Rezervace</a>
     </div>
     <table class="tbl">
       <tr><th>Jméno</th><th>Telefon</th><th>Štítky</th><th>Návštěv</th><th>Naposledy</th><th>Bonus</th></tr>
@@ -62,15 +63,31 @@ function stranka_hledat(array $u): void
 function stranka_zakaznik(array $u): void
 {
     $id = (int)($_GET['id'] ?? 0);
-    $z = q1('SELECT * FROM zakaznici WHERE id=?', [$id]);
+    $novy = $id === 0 && isset($_GET['novy']);
+    $z = $novy ? ['id' => 0, 'telefon' => '', 'jmeno' => '', 'prijmeni' => '', 'email' => '', 'poznamka_interni' => '', 'pref_tlak' => '', 'pref_maserka_id' => null,
+                  'pref_text' => '', 'pref_text_en' => '', 'zdravi_text' => '', 'zdravi_text_en' => '', 'zdravi_souhlas' => null, 'volny_termin' => 0, 'volny_kdy' => '',
+                  'blokovany' => 0, 'pocatecni_razitka' => 0, 'gdpr_souhlas' => null, 'zdroj' => 'recepce', 'vytvoreno' => nyni()]
+                : q1('SELECT * FROM zakaznici WHERE id=?', [$id]);
+    if ($novy && !empty($_GET['q'])) {   // předvyplnění z hledání
+        $q = trim($_GET['q']);
+        if (preg_match('~^[\d\s+()-]{6,}$~', $q)) $z['telefon'] = $q;
+        else { $c = preg_split('~\s+~', $q, 2); $z['prijmeni'] = $c[0]; $z['jmeno'] = $c[1] ?? ''; }
+    }
     if (!$z) { flash('Zákazník nenalezen.', 'err'); presmeruj('/?r=zakaznici'); }
 
     if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $p = $_POST;
         $tel = telefon_norm($p['telefon'] ?? '');
-        if ($tel === '') { flash('Neplatný telefon.', 'err'); presmeruj("/?r=zakaznik&id=$id"); }
+        $zpet = $novy ? '/?r=zakaznik&novy=1' : "/?r=zakaznik&id=$id";
+        if ($tel === '') { flash('Neplatný telefon.', 'err'); presmeruj($zpet); }
         $dup = qv('SELECT id FROM zakaznici WHERE telefon=? AND id<>?', [$tel, $id]);
-        if ($dup) { flash('Tento telefon už má jiný zákazník.', 'err'); presmeruj("/?r=zakaznik&id=$id"); }
+        if ($dup) { flash($novy ? 'Zákazník s tímto telefonem už existuje – otevřena jeho karta.' : 'Tento telefon už má jiný zákazník.', 'err'); presmeruj($novy ? "/?r=zakaznik&id=$dup" : $zpet); }
+        if ($novy) {
+            q("INSERT INTO zakaznici(telefon,jmeno,prijmeni,zdroj,gdpr_souhlas) VALUES(?,?,?,'recepce',NULL)", [$tel, trim($p['jmeno'] ?? ''), trim($p['prijmeni'] ?? '')]);
+            $id = (int)db()->lastInsertId();
+            $z = q1('SELECT * FROM zakaznici WHERE id=?', [$id]);
+            zapis_log('zakaznik_novy', "#$id");
+        }
         $zdraviSouhlas = !empty($p['zdravi_souhlas']) ? ($z['zdravi_souhlas'] ?: nyni()) : null;
         $zdravi = $zdraviSouhlas ? trim($p['zdravi_text'] ?? '') : '';
         q('UPDATE zakaznici SET telefon=?, jmeno=?, prijmeni=?, email=?, poznamka_interni=?, pref_tlak=?, pref_maserka_id=?, pref_text=?, pref_text_en=?,
@@ -81,10 +98,19 @@ function stranka_zakaznik(array $u): void
              max(0, (int)($p['pocatecni_razitka'] ?? 0)), $id]);
         zapis_log('zakaznik_uprava', "#$id");
         if ($zdravi !== '' && trim($p['zdravi_text_en'] ?? '') === '') flash('Uloženo. ⚠ Doplňte anglickou verzi zdravotního upozornění – masérka na tabletu jinak uvidí jen češtinu.', 'err');
-        else flash('Uloženo.');
+        else flash($novy ? 'Zákazník založen.' : 'Uloženo.');
         presmeruj("/?r=zakaznik&id=$id");
     }
 
+    if ($novy) {
+        hlavicka('Nový zákazník', 'zakaznici'); ?>
+        <h1>Nový zákazník <small>bez rezervace</small></h1>
+        <p class="muted small">Založí zákazníka do kartotéky i bez rezervace – s preferencemi a upozorněními. Rezervaci mu pak vytvoříte z jeho karty.</p>
+        <div class="cols"><div>
+        <?php zakaznik_formular($z, true) ?>
+        </div></div>
+        <?php paticka(); return;
+    }
     $st = zakaznik_statistika($id);
     $bonus = zakaznik_bonus($z);
     $poukazy = zakaznik_poukazy($id);
@@ -96,38 +122,7 @@ function stranka_zakaznik(array $u): void
     <h1><?= h(jmeno_z($z)) ?> <?= stitky_html(zakaznik_stitky($z, $st)) ?></h1>
     <div class="cols">
       <div>
-        <form method="post" class="card">
-          <?= csrf_pole() ?>
-          <h2>Údaje</h2>
-          <div class="grid3">
-            <label>Telefon *<input name="telefon" required value="<?= h(telefon_cz($z['telefon'])) ?>"></label>
-            <label>Jméno<input name="jmeno" value="<?= h($z['jmeno']) ?>"></label>
-            <label>Příjmení<input name="prijmeni" value="<?= h($z['prijmeni']) ?>"></label>
-          </div>
-          <label>E-mail<input name="email" type="email" value="<?= h($z['email']) ?>"></label>
-
-          <h2>Preference <span class="muted small">(recepce je probere se zákazníkem a předá masérce)</span></h2>
-          <div class="grid3">
-            <label>Síla tlaku<select name="pref_tlak"><?= moznosti(TLAK, $z['pref_tlak']) ?></select></label>
-            <label>Oblíbená masérka<select name="pref_maserka_id"><?= maserky_select($z['pref_maserka_id'] ? (int)$z['pref_maserka_id'] : null, true, '— žádná —') ?></select></label>
-            <label>Razítka z papírové kartičky<input type="number" name="pocatecni_razitka" min="0" value="<?= (int)$z['pocatecni_razitka'] ?>"></label>
-          </div>
-          <label>Co má rád / na co se zaměřit / čemu se vyhnout<textarea name="pref_text" rows="3" placeholder="např. na konci strečink, víc šíje, nemá rád šlapání po zádech, olej kokos, raději ticho"><?= h($z['pref_text']) ?></textarea></label>
-          <label>🇬🇧 English version for the therapist (tablet) <span class="muted small">– napište ručně anglicky; na tabletu se ukáže místo češtiny</span><textarea name="pref_text_en" rows="2" lang="en" placeholder="e.g. extra stretching at the end, more neck work, no walking on the back, coconut oil, prefers quiet"><?= h($z['pref_text_en']) ?></textarea></label>
-
-          <h2>Zdravotní upozornění <span class="muted small">(jen se souhlasem zákazníka)</span></h2>
-          <label class="check"><input type="checkbox" name="zdravi_souhlas" value="1" <?= $z['zdravi_souhlas'] ? 'checked' : '' ?>> Zákazník souhlasí, že si zdravotní informaci zapíšeme<?= $z['zdravi_souhlas'] ? ' (od ' . h(datum_cz($z['zdravi_souhlas'], false)) . ')' : '' ?></label>
-          <label><textarea name="zdravi_text" rows="2" placeholder="např. operované koleno – nešlapat, těhotná, vysoký tlak"><?= h($z['zdravi_text']) ?></textarea></label>
-          <label>🇬🇧 English version for the therapist (tablet) <span class="muted small">– důležité, ať je správně</span><textarea name="zdravi_text_en" rows="2" lang="en" placeholder="e.g. operated knee – do not walk on it, pregnant, high blood pressure"><?= h($z['zdravi_text_en']) ?></textarea></label>
-          <?php if ($z['zdravi_text'] && !$z['zdravi_text_en']): ?><p class="warn small">⚠ Chybí anglická verze – masérka na tabletu uvidí zdravotní upozornění jen česky.</p><?php endif ?>
-
-          <h2>Pro recepci</h2>
-          <label class="check"><input type="checkbox" name="volny_termin" value="1" <?= $z['volny_termin'] ? 'checked' : '' ?>> ⏱ Vezme i uvolněný termín na poslední chvíli</label>
-          <label>Kdy může<input name="volny_kdy" value="<?= h($z['volny_kdy']) ?>" placeholder="např. všední dny dopoledne"></label>
-          <label class="check"><input type="checkbox" name="blokovany" value="1" <?= $z['blokovany'] ? 'checked' : '' ?>> ⛔ Blokovaný (online jen žádost, rozhodne vedoucí)</label>
-          <label>Interní poznámka <span class="muted small">(zákazník nikdy nevidí)</span><textarea name="poznamka_interni" rows="2"><?= h($z['poznamka_interni']) ?></textarea></label>
-          <button class="btn primary">Uložit</button>
-        </form>
+        <?php zakaznik_formular($z, false) ?>
 
         <section class="card">
           <h2>Historie <span class="muted">(<?= count($vse) ?>)</span></h2>
@@ -163,3 +158,40 @@ function stranka_zakaznik(array $u): void
     </div>
     <?php paticka();
 }
+
+/** Formulář zákazníka (údaje, preference, zdraví, pro recepci) – pro novou i existující kartu. */
+function zakaznik_formular(array $z, bool $novy): void
+{ ?>
+        <form method="post" class="card" action="<?= $novy ? '/?r=zakaznik&novy=1' : '/?r=zakaznik&id=' . (int)$z['id'] ?>">
+          <?= csrf_pole() ?>
+          <h2>Údaje</h2>
+          <div class="grid3">
+            <label>Telefon *<input name="telefon" required value="<?= h(telefon_cz($z['telefon'])) ?>"></label>
+            <label>Jméno<input name="jmeno" value="<?= h($z['jmeno']) ?>"></label>
+            <label>Příjmení<input name="prijmeni" value="<?= h($z['prijmeni']) ?>"></label>
+          </div>
+          <label>E-mail<input name="email" type="email" value="<?= h($z['email']) ?>"></label>
+
+          <h2>Preference <span class="muted small">(recepce je probere se zákazníkem a předá masérce)</span></h2>
+          <div class="grid3">
+            <label>Síla tlaku<select name="pref_tlak"><?= moznosti(TLAK, $z['pref_tlak']) ?></select></label>
+            <label>Oblíbená masérka<select name="pref_maserka_id"><?= maserky_select($z['pref_maserka_id'] ? (int)$z['pref_maserka_id'] : null, true, '— žádná —') ?></select></label>
+            <label>Razítka z papírové kartičky<input type="number" name="pocatecni_razitka" min="0" value="<?= (int)$z['pocatecni_razitka'] ?>"></label>
+          </div>
+          <label>Co má rád / na co se zaměřit / čemu se vyhnout<textarea name="pref_text" rows="3" placeholder="např. na konci strečink, víc šíje, nemá rád šlapání po zádech, olej kokos, raději ticho"><?= h($z['pref_text']) ?></textarea></label>
+          <label>🇬🇧 English version for the therapist (tablet) <span class="muted small">– napište ručně anglicky; na tabletu se ukáže místo češtiny</span><textarea name="pref_text_en" rows="2" lang="en" placeholder="e.g. extra stretching at the end, more neck work, no walking on the back, coconut oil, prefers quiet"><?= h($z['pref_text_en']) ?></textarea></label>
+
+          <h2>Zdravotní upozornění <span class="muted small">(jen se souhlasem zákazníka)</span></h2>
+          <label class="check"><input type="checkbox" name="zdravi_souhlas" value="1" <?= $z['zdravi_souhlas'] ? 'checked' : '' ?>> Zákazník souhlasí, že si zdravotní informaci zapíšeme<?= $z['zdravi_souhlas'] ? ' (od ' . h(datum_cz($z['zdravi_souhlas'], false)) . ')' : '' ?></label>
+          <label><textarea name="zdravi_text" rows="2" placeholder="např. operované koleno – nešlapat, těhotná, vysoký tlak"><?= h($z['zdravi_text']) ?></textarea></label>
+          <label>🇬🇧 English version for the therapist (tablet) <span class="muted small">– důležité, ať je správně</span><textarea name="zdravi_text_en" rows="2" lang="en" placeholder="e.g. operated knee – do not walk on it, pregnant, high blood pressure"><?= h($z['zdravi_text_en']) ?></textarea></label>
+          <?php if ($z['zdravi_text'] && !$z['zdravi_text_en']): ?><p class="warn small">⚠ Chybí anglická verze – masérka na tabletu uvidí zdravotní upozornění jen česky.</p><?php endif ?>
+
+          <h2>Pro recepci</h2>
+          <label class="check"><input type="checkbox" name="volny_termin" value="1" <?= $z['volny_termin'] ? 'checked' : '' ?>> ⏱ Vezme i uvolněný termín na poslední chvíli</label>
+          <label>Kdy může<input name="volny_kdy" value="<?= h($z['volny_kdy']) ?>" placeholder="např. všední dny dopoledne"></label>
+          <label class="check"><input type="checkbox" name="blokovany" value="1" <?= $z['blokovany'] ? 'checked' : '' ?>> ⛔ Blokovaný (online jen žádost, rozhodne vedoucí)</label>
+          <label>Interní poznámka <span class="muted small">(zákazník nikdy nevidí)</span><textarea name="poznamka_interni" rows="2"><?= h($z['poznamka_interni']) ?></textarea></label>
+          <button class="btn primary"><?= $novy ? 'Založit zákazníka' : 'Uložit' ?></button>
+        </form>
+<?php }

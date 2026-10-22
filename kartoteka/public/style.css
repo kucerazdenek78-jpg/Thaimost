@@ -75,3 +75,5 @@ input[type=color]{height:38px;padding:2px 4px;cursor:pointer}
 .gsm{flex:1;text-decoration:none;color:inherit;display:block}.gsd{display:block;font-size:.78rem;color:var(--mut)}
 .gsb{font-size:.78rem;padding:4px 8px;border:1px solid var(--bd);border-radius:6px;text-decoration:none;white-space:nowrap}.gsn{padding:10px;color:var(--mut)}.gsa{display:block;padding:8px 10px;border-top:1px solid var(--bd)}
 .slots{display:flex;flex-wrap:wrap;gap:6px}.slotbtn{display:inline-block;padding:6px 10px;border:2px solid;border-radius:8px;text-decoration:none;color:var(--tx);background:#fff}.slotbtn:hover{background:#faf6f0}.slotbtn span{font-size:.8rem;color:var(--mut)}
+
+.zvysl{border:1px solid var(--bd);border-radius:8px;background:#fff;margin:-6px 0 12px;max-height:260px;overflow:auto}.zv{display:block;padding:8px 10px;border-top:1px solid var(--bd);text-decoration:none;color:var(--tx)}.zv:first-child{border-top:0}.zv:hover{background:#faf6f0}.zv span{display:block;font-size:.8rem;color:var(--mut)}

@@ -229,6 +229,9 @@ function rez_formular(array $v, bool $novy, string $tlacitko): void
     $minuty = $v['delka'] ?? ''; ?>
     <?php if ($novy): ?>
     <fieldset><legend>Zákazník</legend>
+      <label>🔍 Najít stávajícího zákazníka <span class="muted">(příjmení, jméno nebo telefon – klepnutím se vyplní údaje)</span>
+        <input id="zhledej" type="search" autocomplete="off" placeholder="např. Novák, Jiří Novák, 777123"></label>
+      <div id="zvysl" class="zvysl" hidden></div>
       <div class="grid3">
         <label>Telefon *<input name="telefon" id="tel" type="tel" required value="<?= h($v['telefon'] ?? '') ?>" placeholder="777 123 456" autocomplete="off"></label>
         <label>Jméno<input name="jmeno" id="jmeno" value="<?= h($v['jmeno'] ?? '') ?>"></label>
@@ -261,6 +264,22 @@ function rez_formular(array $v, bool $novy, string $tlacitko): void
     const sel = document.getElementById('var'), del = document.getElementById('delka');
     sel && sel.addEventListener('change', () => { del.placeholder = varMin[sel.value] ? varMin[sel.value] + ' (podle služby)' : 'zadejte délku'; });
     sel && sel.dispatchEvent(new Event('change'));
+    const zh = document.getElementById('zhledej'), zv = document.getElementById('zvysl');
+    if (zh) {
+      let zt, zs = 0;
+      zh.addEventListener('input', () => { clearTimeout(zt); zt = setTimeout(async () => {
+        const q = zh.value.trim(); if (q.length < 2) { zv.hidden = true; return; }
+        const my = ++zs; const r = await fetch('/?r=hledej_zak&q=' + encodeURIComponent(q)); const d = (await r.json()).filter(x => x.typ === 'zak');
+        if (my !== zs) return; zv.textContent = '';
+        if (!d.length) { const n = document.createElement('div'); n.className = 'muted small'; n.style.padding = '6px 10px'; n.textContent = 'Nikdo takový – vyplňte údaje níže (založí se nový zákazník).'; zv.appendChild(n); }
+        d.forEach(x => { const a = document.createElement('a'); a.href = '#'; a.className = 'zv';
+          const b = document.createElement('b'); b.textContent = x.nazev + ' · ' + x.tel; const i = document.createElement('span'); i.textContent = x.info; a.append(b, i);
+          a.addEventListener('click', e => { e.preventDefault(); document.getElementById('tel').value = x.telefon; document.getElementById('jmeno').value = x.jmeno; document.getElementById('prijmeni').value = x.prijmeni; document.getElementById('email').value = x.email || '';
+            if (x.maserka_id) { const ms = document.querySelector('select[name=maserka_id]'); if (ms && !ms.value) ms.value = x.maserka_id; }
+            zv.hidden = true; zh.value = ''; document.getElementById('tel').dispatchEvent(new Event('input')); });
+          zv.appendChild(a); });
+        zv.hidden = false; }, 200); });
+    }
     const tel = document.getElementById('tel');
     if (tel) {
       let t; tel.addEventListener('input', () => { clearTimeout(t); t = setTimeout(async () => {

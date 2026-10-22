@@ -73,6 +73,7 @@ function stranka_hledej_zak(array $u): void
             $info[] = $b['razitka'] . '/' . $b['po'] . ' razítek' . ($b['zdarma'] ? ' · 🎉 zdarma' : '');
             if (!empty($z['blokovany'])) $info[] = '⛔ blokovaný';
             $out[] = ['typ' => 'zak', 'nazev' => jmeno_z($z), 'tel' => telefon_cz($z['telefon']), 'info' => implode(' · ', $info),
+                      'telefon' => telefon_cz($z['telefon']), 'jmeno' => $z['jmeno'], 'prijmeni' => $z['prijmeni'], 'email' => $z['email'], 'maserka_id' => $z['pref_maserka_id'],
                       'url' => '/?r=zakaznik&id=' . $z['id'], 'rez' => '/?r=rez_nova&z=' . $z['id'], 'volno' => '/?r=volno&z=' . $z['id']];
         }
         // poukazy podle kódu / jména

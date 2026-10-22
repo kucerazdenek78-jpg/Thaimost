@@ -23,7 +23,7 @@ function hlavicka(string $titul, string $aktivni = ''): void
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex, nofollow">
 <title><?= h($titul) ?> · Kartotéka Thai Most</title>
-<link rel="stylesheet" href="/style.css?v=3">
+<link rel="stylesheet" href="/style.css?v=4">
 </head><body>
 <?php if ($u): ?>
 <header class="top">
@@ -49,7 +49,7 @@ function mk(tag,cls,txt){var e=document.createElement(tag);if(cls)e.className=cl
 async function hledej(){var q=i.value.trim();if(q.length<2){b.hidden=true;return}var my=++seq;
  try{var r=await fetch('/?r=hledej_zak&q='+encodeURIComponent(q),{credentials:'same-origin'});res=await r.json()}catch(e){return}
  if(my!==seq)return;b.textContent='';
- if(!res.length){b.appendChild(mk('div','gsn','Nic nenalezeno'));var a=mk('a','gsa','+ Nový zákazník / rezervace');a.href='/?r=rez_nova';b.appendChild(a)}
+ if(!res.length){b.appendChild(mk('div','gsn','Nic nenalezeno'));var a=mk('a','gsa','+ Založit nového zákazníka („'+q+'“)');a.href='/?r=zakaznik&novy=1&q='+encodeURIComponent(q);b.appendChild(a);var a2=mk('a','gsa','+ Nová rezervace');a2.href='/?r=rez_nova';b.appendChild(a2)}
  res.forEach(function(x){var row=mk('div','gsi');var a=mk('a','gsm');a.href=x.url;a.appendChild(mk('b','',x.nazev+(x.tel?' · '+x.tel:'')));a.appendChild(mk('span','gsd',x.info));row.appendChild(a);
   if(x.rez){var l=mk('a','gsb','Termín');l.href=x.volno;row.appendChild(l);var l2=mk('a','gsb','Rezervace');l2.href=x.rez;row.appendChild(l2)}b.appendChild(row)});
  b.hidden=false}
