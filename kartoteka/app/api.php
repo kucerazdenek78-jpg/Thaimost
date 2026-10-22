@@ -50,6 +50,7 @@ function api_route(string $cesta): void
 
     if ($cesta === '/api/zajem' && $m === 'POST') api_zajem();
     if ($cesta === '/api/poukaz' && $m === 'POST') api_poukaz();
+    if ($cesta === '/api/moje' && $m === 'POST') api_moje();
 
     api_odpoved(['ok' => false, 'chyba' => 'Neznámá akce.'], 404);
 }
@@ -127,4 +128,62 @@ function api_poukaz(): void
 
     // Kód poukazu zákazníkovi nevracíme – platí až po zaplacení a vydání v salonu.
     api_odpoved(['ok' => true]);
+}
+
+
+/** Počítadlo pokusů podle libovolného klíče (hodinové okno) – ochrana proti hádání. */
+function api_limit_klic(string $klic, int $max): bool
+{
+    $okno = date('Y-m-d H');
+    $k = 'k:' . hash('sha256', $klic . $okno . __FILE__);
+    $r = q1('SELECT pocet FROM limit_ip WHERE klic=?', [$k]);
+    if ($r && $r['pocet'] >= $max) return false;
+    if ($r) q('UPDATE limit_ip SET pocet=pocet+1 WHERE klic=?', [$k]);
+    else q('INSERT INTO limit_ip(klic,pocet,okno) VALUES(?,1,?)', [$k, $okno]);
+    return true;
+}
+
+function api_bez_diakritiky(string $s): string
+{
+    return strtr(mb_strtolower($s, 'UTF-8'), ['á' => 'a', 'č' => 'c', 'ď' => 'd', 'é' => 'e', 'ě' => 'e', 'í' => 'i', 'ň' => 'n', 'ó' => 'o', 'ř' => 'r',
+        'š' => 's', 'ť' => 't', 'ú' => 'u', 'ů' => 'u', 'ý' => 'y', 'ž' => 'z']);
+}
+
+/**
+ * Zákazník si na webu ověří razítka a nejbližší termín. Bez jména a kontaktů ve výsledku.
+ * Ověření: kód věrnostní karty NEBO telefon + první 3 písmena příjmení.
+ */
+function api_moje(): void
+{
+    $d = api_vstup();
+    $ip = $_SERVER['HTTP_CF_CONNECTING_IP'] ?? $_SERVER['REMOTE_ADDR'] ?? '';
+    $nic = ['ok' => false, 'chyba' => 'Údaje nesedí. Zkontrolujte kartu, telefon a první tři písmena příjmení, nebo nám zavolejte.'];
+    if (!api_limit_klic('moje-ip:' . $ip, 30)) api_odpoved(['ok' => false, 'chyba' => 'Příliš mnoho pokusů, zkuste to prosím za hodinu.'], 429);
+    usleep(random_int(150000, 350000));
+
+    $z = null;
+    $kodVstup = strtoupper(trim((string)($d['karta'] ?? '')));
+    if (preg_match('~[?&]k=([A-Za-z0-9]{10})~', $kodVstup . '', $mm)) $kodVstup = strtoupper($mm[1]);
+    if ($kodVstup !== '') {
+        if (!api_limit_klic('moje-karta:' . $ip, 12)) api_odpoved(['ok' => false, 'chyba' => 'Příliš mnoho pokusů, zkuste to prosím za hodinu.'], 429);
+        if (preg_match('~^[A-HJ-NP-Z2-9]{10}$~', $kodVstup))
+            $z = q1('SELECT z.* FROM karty k JOIN zakaznici z ON z.id=k.zakaznik_id WHERE k.kod=? AND k.aktivni=1', [$kodVstup]);
+    } else {
+        $tel = telefon_norm((string)($d['telefon'] ?? ''));
+        if ($tel === '' && preg_match('~^420\d{9}$~', preg_replace('~\D~', '', (string)($d['telefon'] ?? '')))) $tel = '+' . preg_replace('~\D~', '', (string)$d['telefon']);
+        $pis = api_bez_diakritiky(preg_replace('~[^\p{L}]~u', '', (string)($d['prijmeni'] ?? '')));
+        if ($tel === '' || mb_strlen($pis) < 3) api_odpoved($nic, 200);
+        // omezení hádání na jedno číslo: nejvýš 6 pokusů za hodinu bez ohledu na IP
+        if (!api_limit_klic('moje-tel:' . $tel, 6)) api_odpoved(['ok' => false, 'chyba' => 'Příliš mnoho pokusů pro toto číslo, zkuste to prosím za hodinu nebo nám zavolejte.'], 429);
+        $c = q1('SELECT * FROM zakaznici WHERE telefon=?', [$tel]);
+        if ($c) {
+            $ulozene = api_bez_diakritiky(preg_replace('~[^\p{L}]~u', '', $c['prijmeni']));
+            if ($ulozene !== '' && mb_substr($ulozene, 0, 3) === mb_substr($pis, 0, 3)) $z = $c;
+        }
+    }
+    if (!$z || !empty($z['blokovany'])) api_odpoved($nic, 200);
+
+    $b = zakaznik_bonus($z);
+    $t = q1("SELECT zacatek FROM rezervace WHERE zakaznik_id=? AND stav='potvrzeno' AND zacatek >= ? ORDER BY zacatek LIMIT 1", [$z['id'], date('Y-m-d H:i:s')]);
+    api_odpoved(['ok' => true, 'razitka' => $b['razitka'], 'po' => $b['po'], 'zdarma' => $b['zdarma'], 'termin' => $t ? $t['zacatek'] : null]);
 }

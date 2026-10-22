@@ -471,6 +471,29 @@
         <li>Razítka nelze kombinovat se slevami.</li>
         <li>Ztracené kartičky se zpětně nevystavují.</li>
       </ul>
+      <details class="moje" id="moje">
+        <summary>Zkontrolovat moje razítka a termín</summary>
+        <form id="mForm" novalidate>
+          <div class="m-tabs" role="tablist">
+            <button type="button" class="on" data-m="karta">Mám kartu s QR</button>
+            <button type="button" data-m="tel">Podle telefonu</button>
+          </div>
+          <div data-p="karta">
+            <label for="mKarta">Kód z karty (10 znaků) nebo odkaz z QR kódu</label>
+            <input id="mKarta" autocomplete="off" maxlength="120" placeholder="např. K7M2Q9XW4T">
+          </div>
+          <div data-p="tel" hidden>
+            <label for="mTel">Telefon</label>
+            <input id="mTel" type="tel" autocomplete="tel" placeholder="777 123 456">
+            <label for="mPrij">První tři písmena příjmení</label>
+            <input id="mPrij" autocomplete="off" maxlength="30" placeholder="např. Nov">
+          </div>
+          <button class="btn btn-gold" style="margin-top:14px">Zobrazit</button>
+          <p class="m-hint">Ukážeme jen počet razítek a nejbližší termín – žádné jméno ani kontakt.</p>
+          <div class="m-err" id="mErr" role="alert"></div>
+          <div class="m-vys" id="mVys" aria-live="polite"></div>
+        </form>
+      </details>
       <a href="tel:+420778429329" class="btn btn-gold" style="margin-top:24px">Zavolat a objednat</a>
     </div>
     <div class="stamps reveal" aria-hidden="true">
@@ -680,5 +703,6 @@
 <script src="assets/js/api.js"></script>
 <script src="assets/js/voucher.js"></script>
 <script src="assets/js/main.js"></script>
+<script src="assets/js/moje.js"></script>
 </body>
 </html>
