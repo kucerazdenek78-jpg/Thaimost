@@ -481,7 +481,10 @@ function stranka_masterny(array $u): void
           <td><b><?= h($m['nazev']) ?></b><?= $m['aktivni'] ? '' : ' <span class="tag">neaktivní</span>' ?></td>
           <td><?= $info ?></td>
           <td><?= $on ? '🟢 online' : ($m['posledni_spojeni'] ? '⚪ naposledy ' . h(substr($m['posledni_spojeni'], 5, 11)) : '⚪ nikdy nepřipojen') ?></td>
-          <td><input readonly value="<?= h(mistnost_url($m)) ?>" onclick="this.select()"></td>
+          <td><input readonly value="<?= h(mistnost_url($m)) ?>" onclick="this.select()">
+            <details><summary class="muted small">QR kód pro nastavení jiného tabletu / telefonu</summary>
+              <div class="qrbox" data-qr="<?= h(mistnost_url($m)) ?>" style="background:#fff;padding:10px;display:inline-block;margin-top:6px;width:220px;height:220px"></div>
+              <div class="muted small">Naskenujte běžnou aplikací fotoaparátu a otevřete v „Thai Most Tablet“ (nebo v prohlížeči).</div></details></td>
         </tr>
         <?php if ($smi): ?>
         <tr><td colspan="4" style="border-top:0;padding-top:0"><details><summary class="muted small">upravit <?= h($m['nazev']) ?></summary>
@@ -498,6 +501,12 @@ function stranka_masterny(array $u): void
       <?php endforeach ?>
       <?php if (!$mist): ?><tr><td colspan="4" class="muted">Zatím žádná masérna. Přidejte první níže.</td></tr><?php endif ?>
     </table>
+    <div class="card"><h2>Aplikace pro Android</h2>
+      <p class="muted small">Tablet i telefon: nainstalujte aplikaci z odkazu níže (v prohlížeči zařízení) a pak naskenujte QR kód masérny výše – nic se nepřepisuje. Aplikace je volitelná, tablet funguje i v běžném prohlížeči.</p>
+      <input readonly value="https://github.com/kucerazdenek78-jpg/thaimost/releases/latest/download/thai-most-tablet.apk" onclick="this.select()">
+      <div class="qrbox" data-qr="https://github.com/kucerazdenek78-jpg/thaimost/releases/latest/download/thai-most-tablet.apk" style="background:#fff;padding:10px;display:inline-block;margin-top:8px;width:220px;height:220px"></div></div>
+    <script src="/qrcode.js"></script>
+    <script>document.querySelectorAll('.qrbox').forEach(function(e){try{var q=qrcode(0,'M');q.addData(e.dataset.qr);q.make();e.innerHTML=q.createSvgTag({cellSize:4,margin:0,scalable:true});var v=e.querySelector('svg');if(v){v.style.width='100%';v.style.height='100%'}}catch(x){e.textContent=e.dataset.qr}})</script>
     <?php if ($smi): ?>
     <form method="post" class="card"><?= csrf_pole() ?><input type="hidden" name="akce" value="nova">
       <h2>Přidat masérnu</h2>

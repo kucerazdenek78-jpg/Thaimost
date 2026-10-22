@@ -1,0 +1,42 @@
+plugins {
+    id 'com.android.application'
+}
+
+android {
+    namespace 'cz.thaimost.tablet'
+    compileSdk 34
+
+    defaultConfig {
+        applicationId 'cz.thaimost.tablet'
+        minSdk 24
+        targetSdk 34
+        versionCode 1
+        versionName '1.0'
+    }
+
+    // Aplikace nemá žádná tajemství a distribuuje se jen ručně (sideload) – podpisový klíč je proto v repu,
+    // aby šla aplikace na tabletech aktualizovat přes starší verzi. Není to klíč pro Google Play.
+    signingConfigs {
+        tablet {
+            storeFile file('../keystore/thaimost-tablet.jks')
+            storePassword 'thaimost-tablet'
+            keyAlias 'tablet'
+            keyPassword 'thaimost-tablet'
+        }
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+            signingConfig signingConfigs.tablet
+        }
+        debug {
+            signingConfig signingConfigs.tablet
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+}
