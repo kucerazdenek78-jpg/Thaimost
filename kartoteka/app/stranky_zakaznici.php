@@ -8,19 +8,17 @@ function stranka_zakaznici(array $u): void
     $sql = "SELECT z.*, (SELECT COUNT(*) FROM rezervace r WHERE r.zakaznik_id=z.id AND r.stav='probehlo') AS navstev,
             (SELECT MAX(zacatek) FROM rezervace r WHERE r.zakaznik_id=z.id AND r.stav='probehlo') AS posledni
             FROM zakaznici z";
-    $p = [];
     if ($hl !== '') {
-        $tel = preg_replace('~\D~', '', $hl);
-        $sql .= " WHERE (z.jmeno LIKE ? OR z.prijmeni LIKE ? OR z.email LIKE ?" . ($tel ? " OR z.telefon LIKE ?" : '') . ")";
-        $p = ["%$hl%", "%$hl%", "%$hl%"]; if ($tel) $p[] = "%$tel%";
+        $ids = array_column(zakaznici_hledej($hl, 1000), 'id');
+        $sql .= ' WHERE z.id IN (' . ($ids ? implode(',', array_map('intval', $ids)) : '0') . ')';
     }
     $sql .= ' ORDER BY posledni DESC NULLS LAST, z.prijmeni, z.jmeno LIMIT 300';
-    $rows = q($sql, $p)->fetchAll();
+    $rows = q($sql)->fetchAll();
 
     hlavicka('Zákazníci', 'zakaznici'); ?>
     <div class="cal-nav">
       <h1>Zákazníci</h1>
-      <form class="grow"><input type="hidden" name="r" value="zakaznici"><input name="q" value="<?= h($hl) ?>" placeholder="jméno, příjmení, telefon, e-mail" autofocus></form>
+      <form class="grow"><input type="hidden" name="r" value="zakaznici"><input name="q" value="<?= h($hl) ?>" placeholder="příjmení, jméno, telefon, e-mail, kód karty" autofocus></form>
       <a class="btn" href="/?r=rez_nova">+ Nový zákazník / rezervace</a>
     </div>
     <table class="tbl">

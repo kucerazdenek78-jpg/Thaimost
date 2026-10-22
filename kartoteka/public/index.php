@@ -28,6 +28,8 @@ if ($r === 'login') { stranka_login(); exit; }
 if ($r === 'ical') { stranka_ical(); }   // kalendářový odkaz chráněný tokenem, bez přihlášení
 // tablet v masérně: bez přihlášení, pozná se tajným tokenem místnosti (neplatný token = 403/404)
 if ($r === 'tablet') { stranka_tablet(); }
+// věrnostní karta zákazníka (QR): bez přihlášení, pozná se tajným kódem karty
+if ($r === 'karta') { stranka_karta(); }
 if ($r === 'tablet_api') {
     if ($_SERVER['REQUEST_METHOD'] !== 'POST') { http_response_code(405); exit('Metoda není povolena'); }
     require $root . '/app/api.php';
@@ -47,6 +49,8 @@ $stranky = [
     'nastaveni' => 'stranka_nastaveni', 'emaily' => 'stranka_emaily',
     'masterny' => 'stranka_masterny', 'odmena' => 'stranka_odmena',
     'tym' => 'stranka_maserky', 'maserky' => 'stranka_maserky', 'maserka' => 'stranka_maserka', 'recepcni' => 'stranka_recepcni', 'uzivatele' => 'stranka_recepcni', 'smeny' => 'stranka_smeny',
+    'hledej_zak' => 'stranka_hledej_zak', 'karty' => 'stranka_karty', 'karty_tisk' => 'stranka_karty_tisk',
+    'volno' => 'stranka_volno', 'poukaz_tisk' => 'stranka_poukaz_tisk',
 ];
 if (!isset($stranky[$r])) { http_response_code(404); $r = 'dnes'; }
 if ($_SERVER['REQUEST_METHOD'] === 'POST') over_csrf();

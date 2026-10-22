@@ -54,6 +54,12 @@ function stranka_poukaz_novy(array $u): void
              trim($p['objednal_email'] ?? ''), trim($p['pro_koho'] ?? ''), trim($p['od_koho'] ?? ''), trim($p['venovani'] ?? ''),
              $p['platba'] ?? '', trim($p['poznamka'] ?? '')]);
         $id = (int)db()->lastInsertId();
+        // poukaz se vede pod kupujícím (podle telefonu); může ho darovat – držitele pak lze změnit na kartě poukazu
+        $tel = telefon_norm($p['objednal_tel'] ?? '');
+        if ($tel !== '') {
+            $jm = trim($p['objednal_jmeno'] ?? ''); $parts = preg_split('~\s+~', $jm, 2);
+            q('UPDATE poukazy SET zakaznik_id=? WHERE id=?', [zakaznik_najdi_nebo_zaloz($tel, $parts[0] ?? '', $parts[1] ?? '', trim($p['objednal_email'] ?? '')), $id]);
+        }
         zapis_log('poukaz_novy', $kod);
         flash("Poukaz $kod vystaven.");
         presmeruj("/?r=poukaz&id=$id");
@@ -100,7 +106,8 @@ function stranka_poukaz(array $u): void
         } elseif ($akce === 'uprava') {
             $platnost = preg_match('~^\d{4}-\d{2}-\d{2}$~', $_POST['platnost_do'] ?? '') ? $_POST['platnost_do'] : null;
             $zid = telefon_norm($_POST['zakaznik_tel'] ?? '') ? zakaznik_najdi_nebo_zaloz(telefon_norm($_POST['zakaznik_tel']), '', '') : null;
-            q('UPDATE poukazy SET platnost_do=?, poznamka=?, zakaznik_id=COALESCE(?, zakaznik_id) WHERE id=?', [$platnost, trim($_POST['poznamka'] ?? ''), $zid, $id]);
+            q('UPDATE poukazy SET platnost_do=?, poznamka=?, zakaznik_id=COALESCE(?, zakaznik_id), pro_koho=?, od_koho=?, venovani=? WHERE id=?',
+                [$platnost, trim($_POST['poznamka'] ?? ''), $zid, trim($_POST['pro_koho'] ?? ''), trim($_POST['od_koho'] ?? ''), mb_substr(trim($_POST['venovani'] ?? ''), 0, 200), $id]);
             flash('Uloženo.');
         } elseif ($akce === 'cerpani') {
             $c = (int)($_POST['castka'] ?? 0);
@@ -137,10 +144,16 @@ function stranka_poukaz(array $u): void
           <h2>Upravit</h2>
           <div class="grid3">
             <label>Platnost do<input type="date" name="platnost_do" value="<?= h($p['platnost_do'] ?? '') ?>"></label>
-            <label>Přiřadit držiteli (telefon)<input name="zakaznik_tel" value="<?= h($zak ? telefon_cz($zak['telefon']) : '') ?>"></label>
+            <label>Držitel – komu poukaz patří (telefon)<input name="zakaznik_tel" value="<?= h($zak ? telefon_cz($zak['telefon']) : '') ?>"></label>
           </div>
-          <label>Poznámka<textarea name="poznamka" rows="2"><?= h($p['poznamka']) ?></textarea></label>
+          <div class="grid3">
+            <label>Věnováno (pro koho)<input name="pro_koho" value="<?= h($p['pro_koho']) ?>"></label>
+            <label>Od koho<input name="od_koho" value="<?= h($p['od_koho']) ?>"></label>
+          </div>
+          <label>Vzkaz / věnování na poukazu<textarea name="venovani" rows="2" maxlength="200"><?= h($p['venovani']) ?></textarea></label>
+          <label>Poznámka (interní)<textarea name="poznamka" rows="2"><?= h($p['poznamka']) ?></textarea></label>
           <button class="btn">Uložit</button>
+          <a class="btn" href="/?r=poukaz_tisk&id=<?= $p['id'] ?>" target="_blank">🖨 Tisk poukazu</a>
         </form>
         <section class="card">
           <h2>Pohyby</h2>

@@ -4,6 +4,7 @@ require __DIR__ . '/stranky_zakaznici.php';
 require __DIR__ . '/stranky_poukazy.php';
 require __DIR__ . '/stranky_nastaveni.php';
 require __DIR__ . '/stranky_tym.php';
+require __DIR__ . '/stranky_vernost.php';
 require __DIR__ . '/stranky_tablet.php';
 
 function stranka_login(): void
@@ -285,11 +286,13 @@ function kolize_html(array $kol): string
 
 function stranka_rez_nova(array $u): void
 {
-    $v = ['datum' => $_GET['d'] ?? date('Y-m-d'), 'cas' => $_GET['t'] ?? '', 'maserka_id' => $_GET['m'] ?? null, 'poslat_email' => 1];
+    $v = ['datum' => $_GET['d'] ?? date('Y-m-d'), 'cas' => $_GET['t'] ?? '', 'maserka_id' => $_GET['m'] ?? null, 'poslat_email' => 1,
+          'varianta_id' => ($_GET['v'] ?? '') !== '' ? (int)$_GET['v'] : null, 'delka' => $_GET['delka'] ?? ''];
     if (!empty($_GET['z'])) {
         $z = q1('SELECT * FROM zakaznici WHERE id=?', [(int)$_GET['z']]);
         if ($z) $v += ['telefon' => telefon_cz($z['telefon']), 'jmeno' => $z['jmeno'], 'prijmeni' => $z['prijmeni'], 'email' => $z['email'],
                        'maserka_id' => $v['maserka_id'] ?: $z['pref_maserka_id']];
+        if ($z && !$v['varianta_id']) $v['varianta_id'] = (int)qv("SELECT varianta_id FROM rezervace WHERE zakaznik_id=? AND stav='probehlo' AND varianta_id IS NOT NULL ORDER BY zacatek DESC LIMIT 1", [$z['id']]) ?: null;
     }
     $chyba = null; $kol = [];
     if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -447,6 +450,7 @@ function zakaznik_panel(array $z, array $st, array $bonus, array $poukazy, ?arra
       <?php endforeach ?>
       <p class="muted small"><?= $st['pocet'] ?> návštěv<?= $st['posledni'] ? ' · naposledy ' . h(datum_cz($st['posledni']['zacatek'], false)) . ' (' . h($st['posledni']['sluzba'] . ' ' . $st['posledni']['var_popis']) . ', ' . h($st['posledni']['maserka'] ?? '—') . ')' : '' ?>
         <?= $st['interval'] ? " · chodí cca po $st[interval] dnech" : '' ?></p>
+      <?php if ($st['posledni'] && trim((string)$st['posledni']['poznamka_masaz']) !== ''): ?><p class="small">Minule poznámka: „<?= h(mb_strimwidth($st['posledni']['poznamka_masaz'], 0, 140, '…')) ?>“</p><?php endif ?>
       <?php if ($z['pref_tlak'] || $z['pref_text'] || $z['pref_maserka_id']): ?>
         <h3>Preference</h3>
         <p class="pref"><?= $z['pref_tlak'] ? 'Tlak: <b>' . h(TLAK[$z['pref_tlak']]) . '</b><br>' : '' ?>
@@ -456,7 +460,10 @@ function zakaznik_panel(array $z, array $st, array $bonus, array $poukazy, ?arra
       <?php if ($z['zdravi_text'] && $z['zdravi_souhlas']): ?><h3>Zdraví – pozor</h3><p class="pref warn"><?= nl2br(h($z['zdravi_text'])) ?></p><?php endif ?>
       <?php if ($z['poznamka_interni']): ?><h3>Interní poznámka</h3><p class="pref"><?= nl2br(h($z['poznamka_interni'])) ?></p><?php endif ?>
       <p><a class="btn" href="/?r=zakaznik&id=<?= $z['id'] ?>">Karta zákazníka</a>
-         <a class="btn" href="/?r=rez_nova&z=<?= $z['id'] ?>">Další termín</a></p>
+         <a class="btn" href="/?r=rez_nova&z=<?= $z['id'] ?>">Další termín</a>
+         <a class="btn primary" href="/?r=volno&z=<?= $z['id'] ?>">Najít volný termín</a></p>
+      <?php $kt = karta_zakaznika((int)$z['id']); ?>
+      <p class="small"><?= $kt ? '💳 Věrnostní karta <a href="/?r=karta&k=' . h($kt['kod']) . '">' . h($kt['kod']) . '</a>' : '<span class="muted">💳 Bez věrnostní karty – naskenujte QR nové karty a přiřaďte ji.</span> <a href="/?r=karty">karty</a>' ?></p>
       <?php if ($r && $r['stav'] !== 'zadost' && !$r['poukaz_id']): ?>
       <form method="post" class="inline">
         <?= csrf_pole() ?><input type="hidden" name="akce" value="poukaz">

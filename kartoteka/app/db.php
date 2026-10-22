@@ -26,7 +26,7 @@ function q(string $sql, array $p = []): PDOStatement
 function q1(string $sql, array $p = []): ?array { $r = q($sql, $p)->fetch(); return $r ?: null; }
 function qv(string $sql, array $p = []) { $r = q($sql, $p)->fetchColumn(); return $r === false ? null : $r; }
 
-const DB_VERZE = 5;
+const DB_VERZE = 6;
 
 /** Migrace běží v jedné transakci a po získání zámku se verze ověří znovu (souběžné první požadavky). */
 function migrate(PDO $pdo): void
@@ -40,6 +40,7 @@ function migrate(PDO $pdo): void
         if ($ver < 3) migrate_v3($pdo);
         if ($ver < 4) migrate_v4($pdo);
         if ($ver < 5) migrate_v5($pdo);
+        if ($ver < 6) migrate_v6($pdo);
         $pdo->exec('PRAGMA user_version = ' . DB_VERZE);
         $pdo->exec('COMMIT');
     } catch (Throwable $e) {
@@ -153,6 +154,19 @@ function migrate_v1(PDO $pdo): void
     $sm = $pdo->prepare('INSERT INTO maserky(jmeno,poradi,barva) VALUES(?,?,?)');
     $barvy = ['#b07a3a', '#5b8a72', '#7a5ea8', '#c0605a', '#3f7fae'];
     for ($i = 1; $i <= 5; $i++) $sm->execute(["Masérka $i", $i, $barvy[$i - 1]]);
+}
+
+/** v6: plastové věrnostní karty s QR (zákazník si na telefonu otevře razítka, recepce kartu přiřadí k zákazníkovi). */
+function migrate_v6(PDO $pdo): void
+{
+    $pdo->exec(<<<SQL
+    CREATE TABLE karty (
+        id INTEGER PRIMARY KEY, kod TEXT NOT NULL UNIQUE, zakaznik_id INTEGER REFERENCES zakaznici(id),
+        aktivni INTEGER NOT NULL DEFAULT 1,
+        vytvoreno TEXT NOT NULL DEFAULT (datetime('now','localtime')), prirazeno TEXT, kdo TEXT NOT NULL DEFAULT ''
+    );
+    CREATE INDEX karty_zak ON karty(zakaznik_id);
+    SQL);
 }
 
 /** v5: anglické verze textů pro masérky na tabletu (píše recepce ručně). */

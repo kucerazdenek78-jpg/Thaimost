@@ -10,7 +10,9 @@ function hlavicka(string $titul, string $aktivni = ''): void
         'dnes' => 'Dnes' . ($zadosti ? " <b class=\"cnt\">$zadosti</b>" : ''),
         'kalendar' => 'Kalendář',
         'zakaznici' => 'Zákazníci',
+        'volno' => 'Volné termíny',
         'poukazy' => 'Poukazy' . ($poukazyCekaji ? " <b class=\"cnt\">$poukazyCekaji</b>" : ''),
+        'karty' => 'Karty',
         'tym' => 'Tým',
         'smeny' => 'Směny',
         'nastaveni' => 'Nastavení',
@@ -21,12 +23,13 @@ function hlavicka(string $titul, string $aktivni = ''): void
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex, nofollow">
 <title><?= h($titul) ?> · Kartotéka Thai Most</title>
-<link rel="stylesheet" href="/style.css?v=2">
+<link rel="stylesheet" href="/style.css?v=3">
 </head><body>
 <?php if ($u): ?>
 <header class="top">
   <a class="logo" href="/?r=dnes">Thai Most <span>kartotéka</span></a>
   <nav><?php foreach ($menu as $k => $t): ?><a href="/?r=<?= $k ?>"<?= $aktivni === $k ? ' class="on"' : '' ?>><?= $t ?></a><?php endforeach ?></nav>
+  <div class="gs"><input id="gs" type="search" placeholder="🔍 příjmení, telefon, kód karty / poukazu" autocomplete="off"><div id="gsr" class="gsr" hidden></div></div>
   <a class="btn primary" href="/?r=rez_nova">+ Rezervace</a>
   <span class="who"><?= h($u['jmeno']) ?> · <a href="/?r=logout">odhlásit</a></span>
 </header>
@@ -40,6 +43,21 @@ function paticka(): void
 {
     ?></main>
 <script>
+// rychlé hledání zákazníků a poukazů (příjmení bez diakritiky, telefon, kód karty / poukazu)
+(function(){var i=document.getElementById('gs'),b=document.getElementById('gsr');if(!i)return;var t,seq=0,res=[];
+function mk(tag,cls,txt){var e=document.createElement(tag);if(cls)e.className=cls;if(txt!==undefined)e.textContent=txt;return e}
+async function hledej(){var q=i.value.trim();if(q.length<2){b.hidden=true;return}var my=++seq;
+ try{var r=await fetch('/?r=hledej_zak&q='+encodeURIComponent(q),{credentials:'same-origin'});res=await r.json()}catch(e){return}
+ if(my!==seq)return;b.textContent='';
+ if(!res.length){b.appendChild(mk('div','gsn','Nic nenalezeno'));var a=mk('a','gsa','+ Nový zákazník / rezervace');a.href='/?r=rez_nova';b.appendChild(a)}
+ res.forEach(function(x){var row=mk('div','gsi');var a=mk('a','gsm');a.href=x.url;a.appendChild(mk('b','',x.nazev+(x.tel?' · '+x.tel:'')));a.appendChild(mk('span','gsd',x.info));row.appendChild(a);
+  if(x.rez){var l=mk('a','gsb','Termín');l.href=x.volno;row.appendChild(l);var l2=mk('a','gsb','Rezervace');l2.href=x.rez;row.appendChild(l2)}b.appendChild(row)});
+ b.hidden=false}
+i.addEventListener('input',function(){clearTimeout(t);t=setTimeout(hledej,200)});
+i.addEventListener('keydown',function(e){if(e.key==='Enter'&&res.length){e.preventDefault();location=res[0].url}if(e.key==='Escape'){b.hidden=true}});
+document.addEventListener('click',function(e){if(!e.target.closest('.gs'))b.hidden=true});
+document.addEventListener('keydown',function(e){if(e.key==='/'&&!/INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName)){e.preventDefault();i.focus()}});
+})();
 // potvrzení u nevratných akcí
 document.querySelectorAll('[data-confirm]').forEach(el => el.addEventListener('click', e => { if (!confirm(el.dataset.confirm)) e.preventDefault(); }));
 </script>
