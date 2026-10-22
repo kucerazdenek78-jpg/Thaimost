@@ -4,7 +4,7 @@ declare(strict_types=1);
 /*
  * Tablety v masérnách.
  *   Recepce v rezervaci „Pošle na tablet“ → masérka potvrdí, že je to ona → uvidí zákazníka a pozor na zdraví →
- *   spustí masáž → odpočet zaplacené doby → znělka + poděkování → hodnocení (★) a QR spropitné → hotovo.
+ *   spustí masáž → odpočet zaplacené doby → znělka + poděkování → hodnocení (smajlíky 1–5) a QR spropitné → hotovo.
  * Tablet se nepřihlašuje; pozná ho tajný token místnosti v adrese (/?r=tablet&t=TOKEN).
  */
 
@@ -286,7 +286,7 @@ h1{font-size:5.5vmin;margin:0;font-weight:500}h2{font-size:3.6vmin;margin:0;font
 .warn{background:#4b2420;border:.4vmin solid var(--bad)}.warn .k{color:#ffb4a8}.warn .v{color:#fff;font-size:4vmin}
 .ring{position:relative;width:64vmin;height:64vmin}.ring svg{position:absolute;inset:0;transform:rotate(-90deg)}
 .ring .in{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center}
-.stars{display:flex;gap:2vmin}.stars button{background:none;border:0;font-size:13vmin;color:#4a6862;padding:0;line-height:1}.stars button.on{color:var(--acc)}
+.stars{display:flex;gap:2.4vmin}.stars button{background:none;border:0;font-size:12vmin;padding:0;line-height:1;opacity:.6;transition:transform .15s,opacity .15s;font-family:'Noto Color Emoji','Apple Color Emoji','Segoe UI Emoji',sans-serif}.stars button.on{opacity:1;transform:scale(1.3)}
 .qr{background:#fff;border-radius:2vmin;padding:1.6vmin;width:34vmin;height:34vmin}.qr svg{width:100%;height:100%;display:block}
 .chips{display:flex;gap:1.6vmin;justify-content:center;margin-top:1.4vmin}.chip{border:.3vmin solid #4a6862;background:transparent;color:var(--tx);border-radius:2vmin;padding:1vmin 2.4vmin;font-size:3vmin}.chip.on{background:var(--acc);color:#2b2108;border-color:var(--acc)}
 header .r{display:flex;align-items:center}.lg{margin-left:2.4vmin;border:.3vmin solid #4a6862;background:transparent;color:var(--mut);border-radius:2vmin;padding:1vmin 2.2vmin;font-size:2.5vmin;touch-action:none;-webkit-touch-callout:none;-webkit-user-select:none;user-select:none}.lg.on{background:var(--acc);color:#2b2108;border-color:var(--acc)}.lg[hidden]{display:none}.czt{display:inline-block;margin-left:1.2vmin;padding:.2vmin 1.2vmin;border:.25vmin solid #8a7a52;border-radius:1.2vmin;color:#e2b765;font-size:2vmin;text-transform:none;letter-spacing:0}
@@ -387,7 +387,7 @@ function render(){
     /* obrazovka pro zákazníka: vždy česky */
     h='<div class="fade"><h1>Děkujeme, že jste si u nás odpočinuli.</h1><div class="mut small" style="margin-top:1vmin">Těšíme se na vás příště. Zůstaňte klidně ještě chvíli ležet.</div></div><div class="row" style="align-items:flex-start;gap:8vmin;margin-top:1vmin">'
      +'<div class="fade"><h2>'+(S.ohodnoceno?'Děkujeme za hodnocení ♥':'Jak se vám masáž líbila?')+'</h2>'
-     +(S.ohodnoceno?'':'<div class="stars" style="margin-top:1vmin">'+[1,2,3,4,5].map(i=>'<button data-z="'+i+'" aria-label="'+i+' hvězd">★</button>').join('')+'</div>')+'</div>'
+     +(S.ohodnoceno?'':'<div class="stars" style="margin-top:1vmin">'+[[1,'😞','Špatné'],[2,'🙁','Slabší'],[3,'😐','Průměrné'],[4,'🙂','Dobré'],[5,'😍','Výborné']].map(a=>'<button data-z="'+a[0]+'" aria-label="'+a[2]+'">'+a[1]+'</button>').join('')+'</div>')+'</div>'
      +(S.spropitne?'<div class="fade"><h2>Spropitné pro '+esc(S.maserka)+'</h2><div class="row" style="gap:3vmin;align-items:center;margin-top:1vmin"><div class="qr" id="qr"></div></div>'
         +'<div class="chips">'+[50,100,200,0].map(c=>'<button class="chip'+(tip===c?' on':'')+'" data-c="'+c+'">'+(c?c+' Kč':'jiná částka')+'</button>').join('')+'</div><div class="mut small" style="margin-top:.8vmin">Naskenujte v bankovní aplikaci</div></div>':'')
      +'</div><button class="btn sec" id="b4" style="margin-top:2vmin">Hotovo</button>';
@@ -396,7 +396,7 @@ function render(){
   const on=(s,f)=>{const e=$(s);if(e)e.onclick=f};
   on('#b1',()=>{odemkniZvuk();poll('potvrdit')});on('#b2',()=>poll('nejsem'));
   on('#b3',()=>{odemkniZvuk();poll('start')});on('#b4',()=>poll('zavrit'));
-  m.querySelectorAll('.stars button').forEach(b=>b.onclick=()=>{m.querySelectorAll('.stars button').forEach(x=>x.classList.toggle('on',+x.dataset.z<=+b.dataset.z));setTimeout(()=>poll('hodnoceni',{znamka:+b.dataset.z}),350)});
+  m.querySelectorAll('.stars button').forEach(b=>b.onclick=()=>{m.querySelectorAll('.stars button').forEach(x=>x.classList.toggle('on',x===b));setTimeout(()=>poll('hodnoceni',{znamka:+b.dataset.z}),350)});
   m.querySelectorAll('.chip').forEach(b=>b.onclick=()=>{tip=+b.dataset.c;m.querySelectorAll('.chip').forEach(x=>x.classList.toggle('on',+x.dataset.c===tip));kresliQr()});
   const pr=$('#pre');if(pr){let t=null;const s=()=>{t=setTimeout(()=>poll('predcasne'),2000)},e=()=>clearTimeout(t);pr.onpointerdown=s;pr.onpointerup=pr.onpointerleave=pr.onpointercancel=e}
   kresliQr();tick();
