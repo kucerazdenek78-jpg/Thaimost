@@ -59,7 +59,7 @@ document.addEventListener('click',function(e){if(!e.target.closest('.gs'))b.hidd
 document.addEventListener('keydown',function(e){if(e.key==='/'&&!/INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName)){e.preventDefault();i.focus()}});
 })();
 // skener QR (věrnostní karta → přímo na kartu; jiný text → do hledání)
-(function(){var b=document.getElementById('gscan'),i=document.getElementById('gs');if(!b)return;var sc=document.createElement('script');sc.src='/skener.js';document.head.appendChild(sc);
+(function(){var b=document.getElementById('gscan'),i=document.getElementById('gs');if(!b)return;var sc=document.createElement('script');sc.src='/skener.js?v=2';document.head.appendChild(sc);
 b.addEventListener('click',function(){if(!window.ThaiScan)return;ThaiScan.open(function(t){var m=t.match(/[?&]k=([A-Za-z0-9]{10})/)||t.match(/^\s*([A-HJ-NP-Z2-9]{10})\s*$/i);if(m){location='/?r=karta&k='+m[1].toUpperCase()}else{i.value=t.trim();i.dispatchEvent(new Event('input'));i.focus()}})})})();
 // potvrzení u nevratných akcí
 document.querySelectorAll('[data-confirm]').forEach(el => el.addEventListener('click', e => { if (!confirm(el.dataset.confirm)) e.preventDefault(); }));
