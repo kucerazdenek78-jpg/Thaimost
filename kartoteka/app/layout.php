@@ -23,13 +23,13 @@ function hlavicka(string $titul, string $aktivni = ''): void
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex, nofollow">
 <title><?= h($titul) ?> · Kartotéka Thai Most</title>
-<link rel="stylesheet" href="/style.css?v=4">
+<link rel="stylesheet" href="/style.css?v=5">
 </head><body>
 <?php if ($u): ?>
 <header class="top">
   <a class="logo" href="/?r=dnes">Thai Most <span>kartotéka</span></a>
   <nav><?php foreach ($menu as $k => $t): ?><a href="/?r=<?= $k ?>"<?= $aktivni === $k ? ' class="on"' : '' ?>><?= $t ?></a><?php endforeach ?></nav>
-  <div class="gs"><input id="gs" type="search" placeholder="🔍 příjmení, telefon, kód karty / poukazu" autocomplete="off"><div id="gsr" class="gsr" hidden></div></div>
+  <div class="gs"><input id="gs" type="search" placeholder="🔍 příjmení, telefon, kód karty / poukazu" autocomplete="off"><button type="button" id="gscan" class="gscan" title="Skenovat QR kód karty fotoaparátem">📷</button><div id="gsr" class="gsr" hidden></div></div>
   <a class="btn primary" href="/?r=rez_nova">+ Rezervace</a>
   <span class="who"><?= h($u['jmeno']) ?> · <a href="/?r=logout">odhlásit</a></span>
 </header>
@@ -58,6 +58,9 @@ i.addEventListener('keydown',function(e){if(e.key==='Enter'&&res.length){e.preve
 document.addEventListener('click',function(e){if(!e.target.closest('.gs'))b.hidden=true});
 document.addEventListener('keydown',function(e){if(e.key==='/'&&!/INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName)){e.preventDefault();i.focus()}});
 })();
+// skener QR (věrnostní karta → přímo na kartu; jiný text → do hledání)
+(function(){var b=document.getElementById('gscan'),i=document.getElementById('gs');if(!b)return;var sc=document.createElement('script');sc.src='/skener.js';document.head.appendChild(sc);
+b.addEventListener('click',function(){if(!window.ThaiScan)return;ThaiScan.open(function(t){var m=t.match(/[?&]k=([A-Za-z0-9]{10})/)||t.match(/^\s*([A-HJ-NP-Z2-9]{10})\s*$/i);if(m){location='/?r=karta&k='+m[1].toUpperCase()}else{i.value=t.trim();i.dispatchEvent(new Event('input'));i.focus()}})})})();
 // potvrzení u nevratných akcí
 document.querySelectorAll('[data-confirm]').forEach(el => el.addEventListener('click', e => { if (!confirm(el.dataset.confirm)) e.preventDefault(); }));
 </script>

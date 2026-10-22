@@ -26,6 +26,12 @@
     return h;
   }
 
+  const sc = document.getElementById("mScan");
+  if (sc) sc.addEventListener("click", () => {
+    if (!window.ThaiScan) return;
+    window.ThaiScan.open(text => { $("#mKarta").value = text; f.requestSubmit ? f.requestSubmit() : f.dispatchEvent(new Event("submit", { cancelable: true })); });
+  });
+
   f.addEventListener("submit", async e => {
     e.preventDefault();
     err.textContent = ""; vys.innerHTML = "";

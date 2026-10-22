@@ -246,6 +246,7 @@ function stranka_karty(array $u): void
         <h3>Najít kartu podle kódu</h3>
         <input name="kod" placeholder="kód nebo odkaz z QR" autocomplete="off">
         <button class="btn" style="margin-top:8px">Otevřít</button>
+        <button type="button" class="btn" style="margin-top:8px" onclick="ThaiScan.open(function(t){var f=document.querySelector('input[name=kod]');f.value=t;f.form.submit()})">📷 Skenovat</button>
       </form>
     </div></div>
     <?php paticka();
