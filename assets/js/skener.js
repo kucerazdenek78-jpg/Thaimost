@@ -20,7 +20,7 @@
     if (document.getElementById("thaiScan")) return;
     var st = document.createElement("style"); st.id = "thaiScanCss"; st.textContent = css; document.head.appendChild(st);
     var o = document.createElement("div"); o.id = "thaiScan";
-    o.innerHTML = '<div class="m" id="tsMsg">Namiřte fotoaparát na QR kód.</div><div style="position:relative"><video playsinline muted></video><div class="fr"></div></div><button type="button">Zavřít</button>';
+    o.innerHTML = '<div class="m" id="tsMsg">Namiřte fotoaparát na QR kód.</div><div style="position:relative"><video playsinline muted></video><div class="fr"></div></div><button type="button" id="tsFoto">📷 Vyfotit QR kód (aplikace fotoaparátu)</button><input type="file" id="tsFile" accept="image/*" capture="environment" hidden><button type="button" id="tsX" style="background:#555;color:#fff">Zavřít</button>';
     document.body.appendChild(o);
     var v = o.querySelector("video"), msg = o.querySelector("#tsMsg"), stream = null, stop = false, timer = null;
 
@@ -29,11 +29,36 @@
       if (stream) stream.getTracks().forEach(function (t) { t.stop(); });
       o.remove(); var c = document.getElementById("thaiScanCss"); if (c) c.remove();
     }
-    o.querySelector("button").onclick = zavri;
+    o.querySelector("#tsX").onclick = zavri;
+
+    // záloha: vyfotit QR běžným fotoaparátem telefonu a přečíst z fotky (funguje i když živý náhled nejde)
+    var fi = o.querySelector("#tsFile");
+    o.querySelector("#tsFoto").onclick = function () { fi.click(); };
+    fi.onchange = function () {
+      var f = fi.files && fi.files[0]; if (!f) return;
+      msg.textContent = "Čtu QR kód z fotky…";
+      var img = new Image(), url = URL.createObjectURL(f);
+      img.onload = function () {
+        URL.revokeObjectURL(url);
+        var k = Math.min(1, 1400 / Math.max(img.width, img.height)), c = document.createElement("canvas");
+        c.width = Math.round(img.width * k); c.height = Math.round(img.height * k);
+        var x = c.getContext("2d", { willReadFrequently: true }); x.drawImage(img, 0, 0, c.width, c.height);
+        nactiJsqr().then(function () {
+          var d = x.getImageData(0, 0, c.width, c.height), r = window.jsQR(d.data, d.width, d.height, { inversionAttempts: "attemptBoth" });
+          if (r && r.data) { zavri(); try { done(r.data); } catch (e) { console.error(e); } }
+          else msg.textContent = "QR kód se na fotce nenašel. Vyfoťte ho zblízka, ostře a celý.";
+        }).catch(function () { msg.textContent = "Nepodařilo se načíst čtečku QR."; });
+      };
+      img.onerror = function () { msg.textContent = "Fotku se nepodařilo otevřít."; };
+      img.src = url; fi.value = "";
+    };
 
     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) { msg.textContent = "Tento prohlížeč neumí použít fotoaparát (nebo stránka není na https). Otevřete QR kód běžnou aplikací fotoaparátu."; return; }
 
-    navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: "environment" } }, audio: false }).then(function (s) {
+    navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: "environment" } }, audio: false }).catch(function (e) {
+      if (e && (e.name === "OverconstrainedError" || e.name === "NotFoundError" || e.name === "NotReadableError")) return navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+      throw e;
+    }).then(function (s) {
       stream = s; v.srcObject = s; return v.play();
     }).then(function () {
       var det = null, cv = document.createElement("canvas"), cx = cv.getContext("2d", { willReadFrequently: true });
@@ -57,7 +82,11 @@
         })();
       });
     }).catch(function (e) {
-      msg.textContent = (e && e.name === "NotAllowedError") ? "Přístup k fotoaparátu je zakázaný. Povolte ho v nastavení prohlížeče pro tuto stránku." : "Fotoaparát se nepodařilo spustit.";
+      var n = e && e.name ? e.name : "chyba";
+      msg.textContent = (n === "NotAllowedError" ? "Přístup k fotoaparátu je zakázaný – povolte ho v nastavení prohlížeče (ikona zámku vedle adresy → Fotoaparát) a zkuste znovu. " :
+        n === "NotReadableError" ? "Fotoaparát používá jiná aplikace – zavřete ji. " :
+        n === "NotFoundError" ? "Zařízení nemá dostupný fotoaparát. " : "Fotoaparát se nepodařilo spustit (" + n + "). ") +
+        "Můžete QR vyfotit tlačítkem níže.";
     });
   }
   window.ThaiScan = { open: open };
