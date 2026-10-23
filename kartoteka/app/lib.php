@@ -116,11 +116,23 @@ const PLATBY = [
 ];
 const TLAK = ['' => '—', 'jemne' => 'jemně', 'stredne' => 'středně', 'silne' => 'silně'];
 
-/** Potvrzené termíny, které už skončily, se samy přepnou na „proběhlo“ (recepce jen označuje „nepřišel“). */
+/** Proběhlo se nastaví samo jen tam, kde masérka masáž spustila na tabletu (START) – to je důkaz, že klient přišel.
+ *  Ostatní potvrzené termíny, které už skončily, zůstanou „ke kontrole“ v přehledu Dnes, aby se nepřišel
+ *  zapomenutý klient nepočítal jako návštěva (a nedostal razítko do bonusu). */
 function uzavri_probehle(): void
 {
-    q("UPDATE rezervace SET stav='probehlo', zmeneno=?, zmenil='automaticky'
-       WHERE stav='potvrzeno' AND konec IS NOT NULL AND konec < ?", [nyni(), date('Y-m-d 00:00:00')]);
+    q("UPDATE rezervace SET stav='probehlo', zmeneno=?, zmenil='automaticky (tablet)'
+       WHERE stav='potvrzeno' AND konec IS NOT NULL AND konec < ?
+         AND EXISTS (SELECT 1 FROM sezeni s WHERE s.rezervace_id=rezervace.id AND s.start IS NOT NULL)", [nyni(), nyni()]);
+}
+
+/** Potvrzené termíny, které už skončily a nikdo neoznačil, jestli klient přišel. */
+function ke_kontrole(): array
+{
+    return q("SELECT r.*, z.jmeno, z.prijmeni, z.telefon, s.nazev AS sluzba, v.popis AS var_popis, m.jmeno AS maserka
+        FROM rezervace r JOIN zakaznici z ON z.id=r.zakaznik_id LEFT JOIN varianty v ON v.id=r.varianta_id
+        LEFT JOIN sluzby s ON s.id=v.sluzba_id LEFT JOIN maserky m ON m.id=r.maserka_id
+        WHERE r.stav='potvrzeno' AND r.konec IS NOT NULL AND r.konec < ? ORDER BY r.zacatek", [nyni()])->fetchAll();
 }
 
 function zakaznik_statistika(int $id): array
@@ -154,6 +166,7 @@ function zakaznik_statistika(int $id): array
 function zakaznik_stitky(array $z, array $st): array
 {
     $out = [];
+    if (($z['zdroj'] ?? '') === 'vzor') $out[] = ['🧪 VZOR', 'vzor', 'vzorový zákazník – smaže se v Nastavení'];
     $prahStaly = (int)nastaveni('prah_staly_navstev', 6);
     $prahSpici = (int)nastaveni('prah_spici_dni', 90);
     $prahNesp = (int)nastaveni('prah_nespolehlivy', 2);

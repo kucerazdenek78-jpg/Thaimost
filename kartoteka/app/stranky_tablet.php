@@ -13,6 +13,30 @@ const SEZENI_STAVY = ['cekani' => 'čeká na masérku', 'bezi' => 'masáž běž
 /* ---------- pomocné funkce ---------- */
 
 /** Anglické názvy služeb pro masérky na tabletu (klíč = sluzby.kod). Co tu chybí, zůstane česky. */
+/** Fotka masáže na pozadí tabletu (poloprůhledně) – stejné fotky jako na webu (assets/js/data.js).
+ *  Jiná fotka: přepsat adresu tady, nebo nahrát public/foto-<kod>.jpg (má přednost). */
+const MASAZ_FOTO = [
+    "tradicni" => "https://www.thaimost.cz/media/tradicni-3.jpg",
+    "hlava" => "https://www.thaimost.cz/media/hlava-3.jpg",
+    "zada" => "https://www.thaimost.cz/media/zada-special-1.jpg",
+    "olej" => "https://www.thaimost.cz/media/olej-1.jpg",
+    "aroma" => "https://www.thaimost.cz/media/aroma-1.jpg",
+    "detska" => "https://images.unsplash.com/photo-1611073615830-9f76902c10fe?auto=format&fit=crop&w=900&q=75",
+    "lymfa-oblicej" => "https://images.unsplash.com/photo-1598901986949-f593ff2a31a6?auto=format&fit=crop&w=900&q=75",
+    "poporodni" => "https://images.pexels.com/photos/6187421/pexels-photo-6187421.jpeg?auto=compress&cs=tinysrgb&w=900",
+    "oblicej" => "https://www.thaimost.cz/media/masaz-obliceje-1.jpg",
+    "nohy" => "https://www.thaimost.cz/media/cinska-nohy-1.jpg",
+    "bylinna" => "https://www.thaimost.cz/media/bylinna-1.jpg",
+    "siam" => "https://www.thaimost.cz/media/masaz-siam-1.jpg",
+    "ventosa" => "https://images.pexels.com/photos/6188042/pexels-photo-6188042.jpeg?auto=compress&cs=tinysrgb&w=900",
+    "lava" => "https://images.unsplash.com/photo-1600334129128-685c5582fd35?auto=format&fit=crop&w=900&q=75",
+    "lymfa-telo" => "https://images.pexels.com/photos/6186747/pexels-photo-6186747.jpeg?auto=compress&cs=tinysrgb&w=900",
+    "tehotenska" => "https://images.pexels.com/photos/6186763/pexels-photo-6186763.jpeg?auto=compress&cs=tinysrgb&w=900",
+    "whirlpool" => "https://www.thaimost.cz/media/was2.jpg",
+    "fiji" => "https://www.thaimost.cz/media/fiji-1.jpg",
+    "cukr" => "https://www.thaimost.cz/media/cukr-1.jpg",
+];
+
 const MASAZ_EN = [
     'tradicni' => 'Traditional Thai massage', 'hlava' => 'Head and neck massage', 'zada' => 'Back and neck massage',
     'olej' => 'Thai oil massage', 'aroma' => 'Aroma massage', 'detska' => "Children's massage",
@@ -134,6 +158,15 @@ function tablet_karta(array $r): void
 
 /* ---------- API tabletu ---------- */
 
+function masaz_foto(string $kod): string
+{
+    foreach (['jpg', 'webp'] as $p) {
+        $f = __DIR__ . "/../public/foto-$kod.$p";
+        if (is_file($f)) return "/foto-$kod.$p?v=" . filemtime($f);
+    }
+    return MASAZ_FOTO[$kod] ?? '';
+}
+
 function sezeni_payload(array $m, ?array $s): array
 {
     $out = ['ok' => true, 'ted' => time(), 'mistnost' => $m['nazev'], 'stav' => 'idle'];
@@ -153,6 +186,7 @@ function sezeni_payload(array $m, ?array $s): array
             'masaz' => $v ? trim($v['nazev'] . ($v['popis'] ? ' – ' . $v['popis'] : '')) : 'Masáž',
             'masaz_en' => $v ? trim((MASAZ_EN[$v['kod']] ?? $v['nazev']) . ($v['popis'] ? ' – ' . strtr($v['popis'], VARIANTA_EN) : '')) : 'Massage',
         ]);
+        $out['foto'] = $v ? masaz_foto((string)$v['kod']) : '';
     }
     if ($s['stav'] === 'cekani' && $s['potvrzeno']) {
         $out['tlak'] = $z['pref_tlak'] ? (TLAK[$z['pref_tlak']] ?? '') : '';
@@ -257,6 +291,7 @@ const TABLET_HTML = <<<'HTML'
 body{background:#0e1b1a;color:var(--tx);font:20px/1.4 "Segoe UI",system-ui,-apple-system,sans-serif;overflow:hidden;user-select:none;-webkit-user-select:none;touch-action:manipulation}
 #bg{position:fixed;inset:0;z-index:0;overflow:hidden;background-color:#0e1b1a;background-image:radial-gradient(55% 55% at 88% 95%,rgba(226,183,101,.5),transparent 70%),radial-gradient(70% 60% at 8% 5%,rgba(70,160,138,.45),transparent 70%)__FOTO__;background-size:100% 100%,100% 100%,cover;background-position:0 0,0 0,center;background-repeat:no-repeat}
 #bg::before{content:"";position:absolute;inset:0;background:linear-gradient(160deg,rgba(20,66,58,.74),rgba(9,34,31,.84))}
+#ph{position:absolute;inset:0;background:center/cover no-repeat;opacity:0;transition:opacity 1.2s ease}#ph.on{opacity:.28}
 #bg svg{position:absolute;fill:none;stroke:#e2b765;stroke-linecap:round;stroke-linejoin:round}
 #bg .rip{right:-14vmin;bottom:-30vmin;width:100vmin;opacity:.2;stroke-width:.5}
 #bg .rip circle{transform-box:fill-box;transform-origin:center;animation:rp 10s ease-in-out infinite}#bg .rip circle:nth-child(2){animation-delay:-2.5s}#bg .rip circle:nth-child(3){animation-delay:-5s}#bg .rip circle:nth-child(4){animation-delay:-7.5s}
@@ -295,7 +330,7 @@ header .r{display:flex;align-items:center}.lg{margin-left:2.4vmin;border:.3vmin 
 .fade{animation:f .8s ease}@keyframes f{from{opacity:0;transform:translateY(1vmin)}to{opacity:1;transform:none}}
 @media (max-aspect-ratio:1/1){.grid{grid-template-columns:1fr}.ring{width:80vmin;height:80vmin}}
 </style></head><body>
-<div id="bg" aria-hidden="true"><svg class="rip" viewBox="0 0 200 200"><circle cx="100" cy="100" r="34"/><circle cx="100" cy="100" r="54"/><circle cx="100" cy="100" r="74"/><circle cx="100" cy="100" r="96"/></svg><svg class="lot" viewBox="0 0 200 160"><g id="l1"><path d="M100 150C86 124 86 84 100 52C114 84 114 124 100 150Z"/><path d="M100 150C80 130 66 100 70 70C90 88 102 118 100 150Z" transform="rotate(-6 100 150)"/><path d="M100 150C120 130 134 100 130 70C110 88 98 118 100 150Z" transform="rotate(6 100 150)"/><path d="M100 150C70 140 44 116 38 88C66 92 92 114 100 150Z" transform="rotate(-8 100 150)"/><path d="M100 150C130 140 156 116 162 88C134 92 108 114 100 150Z" transform="rotate(8 100 150)"/><path d="M100 150C64 154 30 142 14 118C46 112 82 124 100 150Z"/><path d="M100 150C136 154 170 142 186 118C154 112 118 124 100 150Z"/></g></svg><svg class="lot2" viewBox="0 0 200 160"><g id="l2"><path d="M100 150C86 124 86 84 100 52C114 84 114 124 100 150Z"/><path d="M100 150C80 130 66 100 70 70C90 88 102 118 100 150Z" transform="rotate(-6 100 150)"/><path d="M100 150C120 130 134 100 130 70C110 88 98 118 100 150Z" transform="rotate(6 100 150)"/><path d="M100 150C70 140 44 116 38 88C66 92 92 114 100 150Z" transform="rotate(-8 100 150)"/><path d="M100 150C130 140 156 116 162 88C134 92 108 114 100 150Z" transform="rotate(8 100 150)"/><path d="M100 150C64 154 30 142 14 118C46 112 82 124 100 150Z"/><path d="M100 150C136 154 170 142 186 118C154 112 118 124 100 150Z"/></g></svg></div>
+<div id="bg" aria-hidden="true"><div id="ph"></div><svg class="rip" viewBox="0 0 200 200"><circle cx="100" cy="100" r="34"/><circle cx="100" cy="100" r="54"/><circle cx="100" cy="100" r="74"/><circle cx="100" cy="100" r="96"/></svg><svg class="lot" viewBox="0 0 200 160"><g id="l1"><path d="M100 150C86 124 86 84 100 52C114 84 114 124 100 150Z"/><path d="M100 150C80 130 66 100 70 70C90 88 102 118 100 150Z" transform="rotate(-6 100 150)"/><path d="M100 150C120 130 134 100 130 70C110 88 98 118 100 150Z" transform="rotate(6 100 150)"/><path d="M100 150C70 140 44 116 38 88C66 92 92 114 100 150Z" transform="rotate(-8 100 150)"/><path d="M100 150C130 140 156 116 162 88C134 92 108 114 100 150Z" transform="rotate(8 100 150)"/><path d="M100 150C64 154 30 142 14 118C46 112 82 124 100 150Z"/><path d="M100 150C136 154 170 142 186 118C154 112 118 124 100 150Z"/></g></svg><svg class="lot2" viewBox="0 0 200 160"><g id="l2"><path d="M100 150C86 124 86 84 100 52C114 84 114 124 100 150Z"/><path d="M100 150C80 130 66 100 70 70C90 88 102 118 100 150Z" transform="rotate(-6 100 150)"/><path d="M100 150C120 130 134 100 130 70C110 88 98 118 100 150Z" transform="rotate(6 100 150)"/><path d="M100 150C70 140 44 116 38 88C66 92 92 114 100 150Z" transform="rotate(-8 100 150)"/><path d="M100 150C130 140 156 116 162 88C134 92 108 114 100 150Z" transform="rotate(8 100 150)"/><path d="M100 150C64 154 30 142 14 118C46 112 82 124 100 150Z"/><path d="M100 150C136 154 170 142 186 118C154 112 118 124 100 150Z"/></g></svg></div>
 <div id="app"><header><span class="brand"><svg viewBox="0 0 200 160"><use href="#l1"/></svg><span><b>THAI MOST</b> · __NAZEV__</span></span><span class="r"><span id="hd"></span><button type="button" class="lg" id="lg"></button></span></header><main id="m"></main></div>
 <div id="snd"><div>🔔 Tap the screen to turn the sound on<br><span class="mut small">Klepnutím zapnete zvuk (bez toho se nepřehraje závěrečná znělka)</span></div></div>
 <div id="off">Connection lost – retrying… / Spojení přerušeno, zkouším znovu…</div>
@@ -358,6 +393,7 @@ const tx=()=>TX[hold?'cs':'en'];
 function render(){
   const k=[S.stav,S.sezeni_id,S.potvrzeno,S.neni_ona,S.ohodnoceno,hold].join('|');
   if(S.stav==='konec'&&znelaPro!==S.sezeni_id){znelaPro=S.sezeni_id;znelka()}
+  {const ph=$('#ph'),u=(S.stav!=='idle'&&S.foto)?S.foto:'';if(ph.dataset.u!==u){ph.dataset.u=u;ph.classList.remove('on');if(u){const im=new Image();im.onload=()=>{if(ph.dataset.u===u){ph.style.backgroundImage='url("'+u+'")';ph.classList.add('on')}};im.src=u}}}
   const lgb=$('#lg');lgb.textContent=tx().lg;lgb.classList.toggle('on',hold);lgb.hidden=(S.stav==='konec');
   if(k===klic){tick();return}klic=k;const m=$('#m'),X=tx();let h='';
   const masaz=hold?S.masaz:(S.masaz_en||S.masaz), tlak=hold?S.tlak:(S.tlak_en||S.tlak);

@@ -28,6 +28,11 @@ function stranka_nastaveni(array $u): void
                     [$login, trim($_POST['jmeno'] ?? '') ?: $login, password_hash($heslo, PASSWORD_DEFAULT), array_key_exists($_POST['role'] ?? '', ROLE) ? $_POST['role'] : 'recepce']);
                 flash("Uživatel $login uložen.");
             } else flash('Login a heslo (aspoň 8 znaků).', 'err');
+        } elseif ($akce === 'demo_nahrat' && $u['role'] === 'admin') {
+            try { flash(demo_nahrat()); } catch (Throwable $e) { flash('Vzorová data se nenahrála: ' . $e->getMessage(), 'err'); }
+        } elseif ($akce === 'demo_smazat' && $u['role'] === 'admin') {
+            if (($_POST['potvrzeni'] ?? '') !== 'SMAZAT') flash('Pro smazání napište SMAZAT.', 'err');
+            else { try { flash(demo_smazat()); } catch (Throwable $e) { flash('Smazání selhalo: ' . $e->getMessage(), 'err'); } }
         } elseif ($akce === 'odeslat_emaily') {
             odesli_frontu(); flash('Fronta e-mailů zpracována.');
         }
@@ -83,6 +88,7 @@ function stranka_nastaveni(array $u): void
         </form>
       </div>
       <div>
+        <?php demo_karta($u) ?>
         <section class="card side">
           <h3>E-maily</h3>
           <p class="small"><?= $smtp ? 'SMTP nastaveno: ' . h(cfg()['smtp']['host']) : '<b class="warn">SMTP není nastaveno</b> – e-maily se jen ukládají do fronty.' ?><br>

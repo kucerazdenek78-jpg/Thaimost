@@ -23,7 +23,7 @@ function hlavicka(string $titul, string $aktivni = ''): void
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex, nofollow">
 <title><?= h($titul) ?> · Kartotéka Thai Most</title>
-<link rel="stylesheet" href="/style.css?v=5">
+<link rel="stylesheet" href="/style.css?v=6">
 </head><body>
 <?php if ($u): ?>
 <header class="top">
@@ -35,6 +35,7 @@ function hlavicka(string $titul, string $aktivni = ''): void
 </header>
 <?php endif ?>
 <main>
+<?php if ($u && function_exists('demo_pocet') && demo_pocet()): ?><div class="flash vzor">🧪 <b>VZOR</b> – v systému jsou vzorová data na zkoušení (<?= demo_pocet() ?> zákazníků se štítkem VZOR). Před ostrým provozem je smažte v <a href="/?r=nastaveni">Nastavení</a>.</div><?php endif ?>
 <?php foreach (flash() as [$typ, $msg]): ?><div class="flash <?= h($typ) ?>"><?= h($msg) ?></div><?php endforeach ?>
 <?php
 }

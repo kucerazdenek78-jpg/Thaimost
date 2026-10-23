@@ -79,3 +79,10 @@ input[type=color]{height:38px;padding:2px 4px;cursor:pointer}
 .zvysl{border:1px solid var(--bd);border-radius:8px;background:#fff;margin:-6px 0 12px;max-height:260px;overflow:auto}.zv{display:block;padding:8px 10px;border-top:1px solid var(--bd);text-decoration:none;color:var(--tx)}.zv:first-child{border-top:0}.zv:hover{background:#faf6f0}.zv span{display:block;font-size:.8rem;color:var(--mut)}
 
 .gs{display:flex;gap:6px;align-items:center}.gs input{flex:1;min-width:0}.gscan{border:0;border-radius:7px;background:rgba(255,255,255,.95);padding:6px 10px;font-size:1rem;cursor:pointer;flex:none}.gs .gsr{left:0;right:auto}
+
+/* vzorová data a kontrola docházky */
+.flash.vzor{background:#fff3d6;border:1px dashed #c8952c;color:#5a3d06}
+.tag.vzor{background:#c8952c;color:#fff;font-weight:700;letter-spacing:.05em}
+.demo-card{border:1px dashed #c8952c}
+.kontrola{border-left:4px solid #c0605a}.kontrola .row-item{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.volno-box{border-left:4px solid #5b8a72}

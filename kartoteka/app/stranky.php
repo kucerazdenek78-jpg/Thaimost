@@ -7,6 +7,7 @@ require __DIR__ . '/stranky_tym.php';
 require __DIR__ . '/stranky_vernost.php';
 require __DIR__ . '/stranky_import.php';
 require __DIR__ . '/stranky_tablet.php';
+require __DIR__ . '/demo.php';
 
 function stranka_login(): void
 {
@@ -77,6 +78,24 @@ function stranka_dnes(array $u): void
         </div>
       <?php endforeach ?>
     </section>
+
+    <?php $kontrola = ke_kontrole(); if ($kontrola): ?>
+    <section class="card kontrola">
+      <h2>Přišel klient? <span class="muted">(<?= count($kontrola) ?> ke kontrole)</span></h2>
+      <p class="muted small">Termín už skončil a masáž nebyla spuštěná na tabletu. Označte, jak to dopadlo – „Nepřišel“ a „Zrušeno pozdě“ se počítají do štítku ⚠️ Nespolehlivý, do bonusu se počítá jen „Proběhlo“.</p>
+      <?php foreach ($kontrola as $r): ?>
+        <form method="post" action="/?r=rezervace&id=<?= $r['id'] ?>" class="row-item">
+          <?= csrf_pole() ?><input type="hidden" name="akce" value="stav"><input type="hidden" name="zpet" value="dnes">
+          <div class="time"><?= date('H:i', strtotime($r['zacatek'])) ?><br><span class="muted small"><?= date('j. n.', strtotime($r['zacatek'])) ?></span></div>
+          <div class="grow"><a href="/?r=rezervace&id=<?= $r['id'] ?>"><b><?= h(jmeno_z($r)) ?></b></a> · <a href="tel:<?= h($r['telefon']) ?>"><?= h(telefon_cz($r['telefon'])) ?></a><br>
+            <?= h($r['sluzba'] . ' – ' . $r['var_popis']) ?> · <?= h($r['maserka'] ?? 'bez masérky') ?></div>
+          <button name="stav" value="probehlo" class="btn primary">✓ Proběhlo</button>
+          <button name="stav" value="neprisel" class="btn danger">Nepřišel</button>
+          <button name="stav" value="zruseno_pozde" class="btn">Zrušeno pozdě</button>
+        </form>
+      <?php endforeach ?>
+    </section>
+    <?php endif ?>
 
     <section class="card">
       <h2>Dnešní plán <span class="muted">(<?= count($plan) ?>)</span></h2>
@@ -350,12 +369,16 @@ function stranka_rezervace(array $u): void
             $novy = $_POST['stav'];
             q('UPDATE rezervace SET stav=?, zmeneno=?, zmenil=? WHERE id=?', [$novy, nyni(), kdo(), $id]);
             zapis_log('rezervace_stav', "#$id $novy");
+            // klient nepřišel / zrušil: stáhnout masáž z tabletu, pokud tam čeká
+            if (in_array($novy, ['neprisel', 'zruseno_vcas', 'zruseno_pozde', 'odmitnuto'], true))
+                q("UPDATE sezeni SET stav='zruseno', zavreno=? WHERE rezervace_id=? AND stav='cekani'", [nyni(), $id]);
             if ($novy === 'odmitnuto' && $r['email'] && !empty($_POST['poslat_email']))
                 posli_email($r['email'], 'Thai Most – k vaší žádosti o termín',
                     "Dobrý den,\n\nomlouváme se, ale požadovaný termín ($r[preferovano]) už nemáme volný."
                     . (trim($_POST['duvod'] ?? '') !== '' ? "\n" . trim($_POST['duvod']) : '')
                     . "\n\nZavolejte nám prosím na +420 778 429 329, rádi najdeme jiný čas.\n\nThajské masáže Most\n");
-            flash('Stav změněn: ' . STAVY[$novy]);
+            flash(jmeno_z($r) . ': ' . STAVY[$novy]);
+            if (($_POST['zpet'] ?? '') === 'dnes') presmeruj('/?r=dnes');
             presmeruj("/?r=rezervace&id=$id");
         } elseif ($akce === 'poznamka') {
             q('UPDATE rezervace SET poznamka_masaz=?, poznamka_en=?, zmeneno=?, zmenil=? WHERE id=?', [trim($_POST['poznamka_masaz'] ?? ''), trim($_POST['poznamka_en'] ?? ''), nyni(), kdo(), $id]);
@@ -433,7 +456,9 @@ function stranka_rezervace(array $u): void
         </form>
         <?php endif ?>
 
-        <?php if (!$zadost) tablet_karta($r); ?>
+        <?php if (!$zadost && !in_array($r['stav'], ['neprisel', 'zruseno_vcas', 'zruseno_pozde', 'odmitnuto'], true)) tablet_karta($r); ?>
+
+        <?php if (in_array($r['stav'], ['neprisel', 'zruseno_vcas', 'zruseno_pozde'], true) && $r['konec'] && $r['konec'] > nyni()) uvolneny_termin($r); ?>
 
         <section class="card">
           <h2>Stav</h2>
@@ -492,6 +517,27 @@ function zakaznik_panel(array $z, array $st, array $bonus, array $poukazy, ?arra
         <input name="castka" type="number" placeholder="částka" value="<?= h($r['cena'] ?? '') ?>">
         <button class="btn">Uplatnit</button>
       </form>
+      <?php endif ?>
+    </section>
+<?php }
+
+
+/** Termín se uvolnil (storno / nepřišel a ještě neskončil): komu zavolat. */
+function uvolneny_termin(array $r): void
+{
+    $zajemci = q("SELECT z.* FROM zakaznici z WHERE z.volny_termin=1 AND z.blokovany=0 AND z.id<>?
+        AND NOT EXISTS (SELECT 1 FROM rezervace x WHERE x.zakaznik_id=z.id AND x.stav='potvrzeno' AND x.zacatek < ? AND x.konec > ?)
+        ORDER BY (SELECT MAX(zacatek) FROM rezervace y WHERE y.zakaznik_id=z.id AND y.stav='probehlo') DESC LIMIT 12",
+        [$r['zakaznik_id'], $r['konec'], max($r['zacatek'], nyni())])->fetchAll(); ?>
+    <section class="card volno-box">
+      <h2>⏱ Uvolněný termín <?= h(date('H:i', strtotime(max($r['zacatek'], nyni())))) ?>–<?= h(date('H:i', strtotime($r['konec']))) ?><?= $r['maserka'] ? ' · ' . h($r['maserka']) : '' ?></h2>
+      <?php if (!$zajemci): ?><p class="muted">Nikdo nemá zaškrtnuto „Vezme i uvolněný termín“. Nastavíte to v kartě zákazníka.</p>
+      <?php else: ?><p class="muted small">Zákazníci, kteří vezmou volný termín na poslední chvíli – zavolejte a pak jim termín zapište přes „Další termín“:</p>
+        <?php foreach ($zajemci as $z): ?>
+          <p><a href="tel:<?= h($z['telefon']) ?>" class="btn">📞 <?= h(telefon_cz($z['telefon'])) ?></a> <a href="/?r=zakaznik&id=<?= $z['id'] ?>"><b><?= h(jmeno_z($z)) ?></b></a>
+            <?= $z['volny_kdy'] ? '<span class="muted small">– ' . h($z['volny_kdy']) . '</span>' : '' ?>
+            <a class="small" href="/?r=rez_nova&z=<?= $z['id'] ?>">zapsat →</a></p>
+        <?php endforeach ?>
       <?php endif ?>
     </section>
 <?php }

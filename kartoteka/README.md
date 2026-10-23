@@ -42,3 +42,18 @@ php -S localhost:3000 -t public public/router.php
 - `GET /api/stav` – `{ok:true, rezim:"zajem"}`; když neodpoví, web ukáže telefon
 
 Ochrana: honeypot pole `web`, limit 10 požadavků z IP za hodinu, CORS jen z povolených originů.
+
+## Vzorová data (VZOR) na zkoušení
+**Nastavení → 🧪 Vzorová data → Nahrát** (jen admin). Nahraje 120 zákazníků s historií (~4 měsíce), preferencemi, zdravotními upozorněními a štítky (stálý, nový, spící, nespolehlivý, vezme volný termín), plný kalendář na **dnes + 13 dní** pro všechny aktivní masérky (víkend jen wellness), 4 žádosti z webu, 4 poukazy, 6 věrnostních karet a hodnocení masérek. Pokud nejsou žádné masérny, založí 3 pro tablety.
+- Vzoroví zákazníci mají štítek **VZOR**, telefon `+420 999 …` (neexistující rozsah) a **žádný e-mail** – nic se jim neodešle. Nahoře v aplikaci svítí žlutý pruh, dokud v systému jsou.
+- **Smazat:** Nastavení → napsat `SMAZAT` → „Smazat všechna vzorová data“. Smaže vzorové zákazníky a vše, co u nich vzniklo (i během zkoušení). Skutečných zákazníků, masérek ani masérn se nedotkne.
+- Z příkazové řádky: `php bin/vzor.php nahrat` / `php bin/vzor.php smazat`.
+
+## Nepřišel / storno
+- Po skončení termínu se rezervace sama přepne na **Proběhlo jen tehdy, když masérka masáž spustila na tabletu**. Ostatní se v přehledu **Dnes** objeví v sekci **„Přišel klient?“** s tlačítky Proběhlo / Nepřišel / Zrušeno pozdě – zapomenutý „nepřišel“ se tak nepočítá jako návštěva ani do bonusu.
+- Stavy: *Zrušeno včas* (nepočítá se nikam, v kalendáři se skryje), *Zrušeno pozdě* a *Nepřišel* (počítají se do štítku ⚠️ Nespolehlivý – práh v Nastavení, výchozí 2× za 12 měsíců).
+- Při stornu/nepřišel se masáž čekající na tabletu sama stáhne.
+- Když se uvolní termín, který ještě neskončil, ukáže detail rezervace **„Uvolněný termín“** se seznamem zákazníků, kteří mají zaškrtnuto „Vezme i uvolněný termín“ (s telefonem a odkazem na zapsání).
+
+## Fotka masáže na tabletu
+Během masáže je na pozadí tabletu poloprůhledně fotka zvolené masáže (stejné fotky jako na webu – seznam `MASAZ_FOTO` v `app/stranky_tablet.php`). Vlastní fotku stačí nahrát jako `public/foto-<kód>.jpg` (např. `foto-tradicni.jpg`, kódy viz `app/seed-sluzby.json`) – má přednost.
