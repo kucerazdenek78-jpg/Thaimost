@@ -280,7 +280,8 @@ function stranka_volno(array $u): void
     $st = $z ? zakaznik_statistika((int)$z['id']) : null;
     $varId = (int)($_GET['v'] ?? 0);
     if (!$varId && $st && $st['posledni']) $varId = (int)$st['posledni']['varianta_id'];
-    $mas = isset($_GET['m']) ? (int)$_GET['m'] : ($z && $z['pref_maserka_id'] ? (int)$z['pref_maserka_id'] : 0);
+    $mas = isset($_GET['m']) ? (int)$_GET['m'] : 0;   // výchozí: všechny masérky (oblíbená je označená ★ a první)
+    $oblib = $z && $z['pref_maserka_id'] ? (int)$z['pref_maserka_id'] : 0;
     $od = preg_match('~^\d{4}-\d{2}-\d{2}$~', $_GET['od'] ?? '') ? $_GET['od'] : date('Y-m-d');
     $dny = max(1, min(14, (int)($_GET['dny'] ?? 7)));
     $krok = in_array((int)($_GET['krok'] ?? 30), [15, 30, 60], true) ? (int)($_GET['krok'] ?? 30) : 30;
@@ -291,6 +292,7 @@ function stranka_volno(array $u): void
 
     $maserky = q('SELECT * FROM maserky WHERE aktivni=1 ORDER BY poradi')->fetchAll();
     $kandidati = array_values(array_filter($maserky, fn($m) => !$mas || (int)$m['id'] === $mas));
+    usort($kandidati, fn($a, $b) => ((int)$b['id'] === $oblib) <=> ((int)$a['id'] === $oblib));
 
     $volno = [];   // [datum => [čas => [masérka_id, ...]]]
     if ($var && $delka > 0) {
@@ -343,6 +345,13 @@ function stranka_volno(array $u): void
       </div>
       <button class="btn primary">Hledat</button>
     </form>
+    <?php if ($var):
+        $qs = $_GET; unset($qs['m']); ?>
+      <div class="mas-prepinac"><span class="muted small">Masérka:</span>
+        <a class="chip<?= !$mas ? ' on' : '' ?>" href="/?<?= h(http_build_query($qs)) ?>">všechny</a>
+        <?php foreach ($maserky as $m): ?><a class="chip<?= $mas === (int)$m['id'] ? ' on' : '' ?>" style="border-color:<?= h($m['barva']) ?>" href="/?<?= h(http_build_query($qs + ['m' => $m['id']])) ?>"><?= h($m['jmeno']) ?><?= $oblib === (int)$m['id'] ? ' ★' : '' ?></a><?php endforeach ?>
+      </div>
+    <?php endif ?>
     <?php if (!$var): ?>
       <p class="muted">Vyberte službu a klikněte na Hledat.</p>
     <?php elseif (!$volno): ?>
@@ -353,7 +362,7 @@ function stranka_volno(array $u): void
         <section class="card"><h2><?= $dnyCz[(int)date('w', strtotime($d))] ?> <?= h(date('j. n. Y', strtotime($d))) ?></h2>
           <div class="slots"><?php foreach ($casy as $hh => $ids): foreach ($ids as $mid):
               $url = '/?r=rez_nova&d=' . $d . '&t=' . $hh . '&m=' . $mid . '&v=' . $varId . ($delka !== (int)$var['minuty'] ? '&delka=' . $delka : '') . ($z ? '&z=' . $z['id'] : ''); ?>
-            <a class="slotbtn" style="border-color:<?= h($barvy[$mid] ?? '#b07a3a') ?>" href="<?= h($url) ?>"><b><?= $hh ?></b> <span><?= h($nazvy[$mid] ?? '') ?><?= $z && (int)$z['pref_maserka_id'] === $mid ? ' ★' : '' ?></span></a>
+            <a class="slotbtn" style="border-color:<?= h($barvy[$mid] ?? '#b07a3a') ?>" href="<?= h($url) ?>"><b><?= $hh ?></b> <span><?= h($nazvy[$mid] ?? '') ?><?= $oblib === $mid ? ' ★' : '' ?></span></a>
           <?php endforeach; endforeach ?></div></section>
       <?php endforeach ?>
     <?php endif ?>

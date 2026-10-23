@@ -86,3 +86,35 @@ input[type=color]{height:38px;padding:2px 4px;cursor:pointer}
 .demo-card{border:1px dashed #c8952c}
 .kontrola{border-left:4px solid #c0605a}.kontrola .row-item{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
 .volno-box{border-left:4px solid #5b8a72}
+
+/* živá obsazenost ve formuláři rezervace */
+.obs{margin:10px 0}
+.obs-st{padding:8px 12px;border-radius:8px;margin-bottom:8px;font-size:.92rem;line-height:1.7}
+.obs-st.ok{background:#e3efe8;color:#2f5446}.obs-st.bad{background:#fbe0dc;color:#8e1d15}
+.chip{font:inherit;font-size:.85rem;padding:3px 10px;border-radius:999px;border:1px solid #c9b79f;background:#fff;cursor:pointer;margin:2px 2px 2px 0}
+.chip:hover{background:#faf6f0;border-color:#b07a3a}
+.obs-den{border:1px solid #e4dccf;border-radius:10px;padding:8px 10px;background:#fffdf9}
+.obs-hl{display:flex;justify-content:space-between;gap:10px;font-weight:600;margin-bottom:6px;font-size:.9rem}
+.obs-r{display:grid;grid-template-columns:118px 1fr;gap:8px;align-items:center;margin:4px 0}
+.obs-n{font:inherit;font-size:.85rem;text-align:left;padding:4px 8px;border:0;border-left:4px solid;border-radius:6px;background:#f5efe6;cursor:pointer;line-height:1.15}
+.obs-n small{display:block;color:#7a6a5c;font-size:.72rem}
+.obs-r.on .obs-n{background:#e9dcc6;font-weight:700}
+.obs-bar{position:relative;height:28px;border-radius:6px;background:repeating-linear-gradient(90deg,#eef6f0 0,#eef6f0 calc(100%/11 - 1px),#e2ebe4 calc(100%/11 - 1px),#e2ebe4 calc(100%/11));cursor:pointer}
+.obs-bar i{position:absolute;top:3px;bottom:3px;border-radius:4px}
+.obs-bar i.b{background:#9b8b7a;opacity:.75}
+.obs-bar i.v{background:rgba(198,156,93,.55);outline:2px solid #b07a3a;z-index:1}
+.obs-osa{position:relative;height:16px;margin-left:126px;font-size:.7rem;color:#7a6a5c}
+.obs-osa span{position:absolute;transform:translateX(-50%)}
+@media (max-width:600px){.obs-r{grid-template-columns:84px 1fr}.obs-osa{margin-left:92px}}
+.mas-prepinac{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin:10px 0}.mas-prepinac .chip{text-decoration:none;color:inherit;border-width:2px}.mas-prepinac .chip.on{background:#6b4a2b;color:#fff;border-color:#6b4a2b}
+
+/* Dnes: masérny teď a posílání na tablet */
+.mist-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:8px}
+.mist{padding:8px 12px;border-radius:10px;border:1px solid #e4dccf;display:flex;flex-direction:column;font-size:.88rem}
+.mist b{font-size:1rem}.mist.m-volno{background:#e3efe8}.mist.m-cekani{background:#fff3d6}.mist.m-bezi{background:#fbe0dc}.mist.m-konec{background:#ece6f5}
+.plan-row{display:flex;gap:10px;align-items:flex-start;flex-wrap:wrap}.plan-row a{color:inherit}.plan-row .time{text-decoration:none}
+.tab-send form{display:flex;flex-wrap:wrap;gap:6px;align-items:center;justify-content:flex-end}
+.tab-send select{width:auto;padding:4px 6px;font-size:.85rem}
+.btn.small{padding:4px 10px;font-size:.82rem}.btn.small.on{background:#6b4a2b;color:#fff}
+.tab-st{font-size:.82rem;padding:3px 8px;border-radius:999px}.tab-st.cek{background:#fff3d6}.tab-st.bezi{background:#fbe0dc}
+@media (max-width:700px){.tab-send{width:100%}.tab-send form{justify-content:flex-start}}

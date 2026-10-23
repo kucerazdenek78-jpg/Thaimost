@@ -43,6 +43,29 @@ function stranka_login(): void
 // ---------------- DNES ----------------
 function stranka_dnes(array $u): void
 {
+    // recepce posílá masáž na tablet až ve chvíli, kdy klient přijde: zvolí masérnu (a případně jinou masérku)
+    if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+        $akce = $_POST['akce'] ?? '';
+        $r = rezervace_detail((int)($_POST['rez_id'] ?? 0));
+        if ($r && $akce === 'tablet_dnes') {
+            $mid = (int)($_POST['maserka_id'] ?? 0);
+            if ($mid && $mid !== (int)$r['maserka_id']) {
+                $kol = kolize($mid, $r['zacatek'], $r['konec'], (int)$r['id']);
+                q('UPDATE rezervace SET maserka_id=?, zmeneno=?, zmenil=? WHERE id=?', [$mid, nyni(), kdo(), $r['id']]);
+                zapis_log('rezervace_maserka', "#{$r['id']} → masérka $mid");
+                if ($kol) flash('Pozor: ' . qv('SELECT jmeno FROM maserky WHERE id=?', [$mid]) . ' má v tu dobu podle plánu i ' . jmeno_z($kol[0]) . ' (' . date('H:i', strtotime($kol[0]['zacatek'])) . ') – zkontrolujte kalendář.', 'warn');
+                $r = rezervace_detail((int)$r['id']);
+            }
+            $err = tablet_poslat($r, (int)($_POST['mistnost_id'] ?? 0));
+            $mn = qv('SELECT nazev FROM mistnosti WHERE id=?', [(int)($_POST['mistnost_id'] ?? 0)]);
+            flash($err ?? jmeno_z($r) . ' → ' . $mn . ' (' . ($r['maserka'] ?? '') . ')', $err ? 'err' : 'ok');
+        } elseif ($r && $akce === 'tablet_stahnout') {
+            q("UPDATE sezeni SET stav='zruseno', zavreno=? WHERE rezervace_id=? AND stav='cekani'", [nyni(), $r['id']]);
+            zapis_log('tablet_zruseno', "rez #{$r['id']}");
+            flash(jmeno_z($r) . ': staženo z tabletu.');
+        }
+        presmeruj('/?r=dnes');
+    }
     $zadosti = q("SELECT r.*, z.jmeno, z.prijmeni, z.telefon, s.nazev AS sluzba, v.popis AS var_popis
         FROM rezervace r JOIN zakaznici z ON z.id=r.zakaznik_id LEFT JOIN varianty v ON v.id=r.varianta_id
         LEFT JOIN sluzby s ON s.id=v.sluzba_id WHERE r.stav='zadost' ORDER BY r.vytvoreno")->fetchAll();
@@ -97,21 +120,66 @@ function stranka_dnes(array $u): void
     </section>
     <?php endif ?>
 
+    <?php
+    $mistnosti = q('SELECT * FROM mistnosti WHERE aktivni=1 ORDER BY poradi, nazev')->fetchAll();
+    $stavMist = [];   // id masérny => sezení (s příjmením) nebo null
+    foreach ($mistnosti as $m) {
+        $sz = sezeni_aktivni((int)$m['id']);
+        if ($sz) $sz += q1('SELECT z.prijmeni, z.jmeno, ma.jmeno AS maserka FROM rezervace r JOIN zakaznici z ON z.id=r.zakaznik_id LEFT JOIN maserky ma ON ma.id=? WHERE r.id=?', [$sz['maserka_id'], $sz['rezervace_id']]) ?: [];
+        $stavMist[(int)$m['id']] = $sz;
+    }
+    $sezRez = [];     // rezervace_id => aktivní sezení
+    foreach ($stavMist as $mid => $sz) if ($sz) $sezRez[(int)$sz['rezervace_id']] = $sz + ['mistnost' => $mid];
+    $maserkyAkt = q('SELECT id, jmeno FROM maserky WHERE aktivni=1 ORDER BY poradi, id')->fetchAll(PDO::FETCH_KEY_PAIR);
+    $nazMist = array_column($mistnosti, 'nazev', 'id');
+    ?>
+    <?php if ($mistnosti): ?>
+    <section class="card mistnosti-ted">
+      <h2>Masérny teď</h2>
+      <div class="mist-grid">
+      <?php foreach ($mistnosti as $m): $sz = $stavMist[(int)$m['id']]; ?>
+        <div class="mist <?= $sz ? 'm-' . h($sz['stav']) : 'm-volno' ?>"><b><?= h($m['nazev']) ?></b>
+          <span><?php if (!$sz): ?>volná<?php else: ?><?= h(SEZENI_STAVY[$sz['stav']] ?? $sz['stav']) ?> · <?= h(trim($sz['prijmeni'] ?: $sz['jmeno'])) ?><?= $sz['maserka'] ? ' · ' . h($sz['maserka']) : '' ?><?= $sz['stav'] === 'bezi' && $sz['plan_konec'] ? ' · do ' . h(substr($sz['plan_konec'], 11, 5)) : '' ?><?php endif ?></span></div>
+      <?php endforeach ?>
+      </div>
+    </section>
+    <?php endif ?>
+
     <section class="card">
       <h2>Dnešní plán <span class="muted">(<?= count($plan) ?>)</span></h2>
       <?php if (!$plan): ?><p class="muted">Na dnešek nic naplánováno. <a href="/?r=rez_nova">Přidat rezervaci</a></p><?php endif ?>
       <?php foreach ($plan as $r): ?>
-        <a class="row-item link" href="/?r=rezervace&id=<?= $r['id'] ?>">
-          <div class="time"><?= date('H:i', strtotime($r['zacatek'])) ?><br><span class="muted small"><?= date('H:i', strtotime($r['konec'])) ?></span></div>
+        <div class="row-item plan-row">
+          <a class="time" href="/?r=rezervace&id=<?= $r['id'] ?>"><?= date('H:i', strtotime($r['zacatek'])) ?><br><span class="muted small"><?= date('H:i', strtotime($r['konec'])) ?></span></a>
           <div class="grow">
-            <b><?= h(jmeno_z($r)) ?></b> <?= stav_html($r['stav']) ?><br>
+            <a href="/?r=rezervace&id=<?= $r['id'] ?>"><b><?= h(jmeno_z($r)) ?></b></a> <?= stav_html($r['stav']) ?><br>
             <?= h($r['sluzba'] . ' – ' . $r['var_popis']) ?> · <?= h($r['maserka'] ?? 'bez masérky') ?>
             <?php if ($r['platba']): ?> · <?= h(PLATBY[$r['platba']]) ?><?php endif ?>
             <?php $pref = trim(($r['pref_tlak'] ? 'tlak ' . TLAK[$r['pref_tlak']] . '. ' : '') . $r['pref_text']);
                   if ($pref): ?><br><span class="pref">💬 <?= h(mb_strimwidth($pref, 0, 140, '…')) ?></span><?php endif ?>
             <?php if ($r['zdravi_text'] && $r['zdravi_souhlas']): ?><br><span class="pref warn">⚕ <?= h(mb_strimwidth($r['zdravi_text'], 0, 120, '…')) ?></span><?php if (!$r['zdravi_text_en']): ?> <span class="pref warn" title="Masérka na tabletu uvidí zdraví jen česky">🇬🇧 chybí anglicky</span><?php endif ?><?php endif ?>
           </div>
-        </a>
+          <?php $sz = $sezRez[(int)$r['id']] ?? null;
+          if ($mistnosti && $r['stav'] === 'potvrzeno' && strtotime($r['konec']) > time()): ?>
+          <div class="tab-send">
+            <?php if ($sz && $sz['stav'] !== 'cekani'): ?>
+              <span class="tab-st bezi">▶ <?= h($nazMist[$sz['mistnost']] ?? '') ?> · <?= h(SEZENI_STAVY[$sz['stav']] ?? '') ?></span>
+            <?php else: ?>
+            <form method="post">
+              <?= csrf_pole() ?><input type="hidden" name="akce" value="tablet_dnes"><input type="hidden" name="rez_id" value="<?= $r['id'] ?>">
+              <?php if ($sz): ?><span class="tab-st cek">📲 čeká v <?= h($nazMist[$sz['mistnost']] ?? '') ?></span><?php endif ?>
+              <select name="maserka_id" title="Masérka – jde změnit těsně před masáží"><?php foreach ($maserkyAkt as $mid => $mj): ?><option value="<?= $mid ?>" <?= (int)$r['maserka_id'] === (int)$mid ? 'selected' : '' ?>><?= h($mj) ?></option><?php endforeach ?></select>
+              <?php foreach ($mistnosti as $m): $obs = $stavMist[(int)$m['id']]; $tady = $sz && (int)$sz['mistnost'] === (int)$m['id'];
+                    $zabrana = $obs && in_array($obs['stav'], ['bezi', 'konec'], true); ?>
+                <button class="btn small<?= $tady ? ' on' : '' ?>" name="mistnost_id" value="<?= $m['id'] ?>" <?= $zabrana ? 'disabled' : '' ?>
+                  title="<?= $zabrana ? 'Masérna je obsazená' : ($tady ? 'Poslat znovu (např. po změně masérky)' : '') . ($obs && !$tady ? 'Na tabletu čeká ' . h(trim($obs['prijmeni'] ?: $obs['jmeno'])) . ' – přepíše se' : ($tady ? '' : 'Poslat sem')) ?>"><?= $sz ? '↪ ' : '📲 ' ?><?= h($m['nazev']) ?><?= $zabrana ? ' ⛔' : ($obs && !$tady ? ' ⏳' : '') ?></button>
+              <?php endforeach ?>
+              <?php if ($sz): ?><button class="btn small" name="akce" value="tablet_stahnout">Stáhnout</button><?php endif ?>
+            </form>
+            <?php endif ?>
+          </div>
+          <?php endif ?>
+        </div>
       <?php endforeach ?>
     </section>
     <?php paticka();
@@ -186,7 +254,7 @@ function rez_uloz(array $p, ?array $puvodni, bool $potvrdit): array
 {
     $tel = telefon_norm($p['telefon'] ?? '');
     if (!$puvodni && $tel === '') return ['Zadejte platný telefon.', []];
-    $var = q1('SELECT * FROM varianty WHERE id=?', [(int)($p['varianta_id'] ?? 0)]);
+    $var = q1('SELECT v.*, s.kat FROM varianty v JOIN sluzby s ON s.id=v.sluzba_id WHERE v.id=?', [(int)($p['varianta_id'] ?? 0)]);
     if (!$var) return ['Vyberte masáž / službu.', []];
     if (!preg_match('~^\d{4}-\d{2}-\d{2}$~', $p['datum'] ?? '') || !preg_match('~^\d{2}:\d{2}$~', $p['cas'] ?? ''))
         return ['Zadejte datum a čas.', []];
@@ -199,6 +267,18 @@ function rez_uloz(array $p, ?array $puvodni, bool $potvrdit): array
 
     $kol = $mas ? kolize($mas, $zac, $kon, (int)($puvodni['id'] ?? 0)) : [];
     if ($kol && empty($p['presto'])) return [null, $kol];
+    if (!$mas && empty($p['presto']) && ($var['kat'] ?? '') !== 'wellness') {
+        $aktivni = (int)qv('SELECT COUNT(*) FROM maserky WHERE aktivni=1');
+        $obsazene = (int)qv("SELECT COUNT(DISTINCT maserka_id) FROM rezervace WHERE maserka_id IS NOT NULL AND stav IN ('potvrzeno','probehlo') AND id<>? AND zacatek < ? AND konec > ?",
+            [(int)($puvodni['id'] ?? 0), $kon, $zac]);
+        if ($aktivni && $obsazene >= $aktivni) return ['V tu dobu jsou obsazené všechny masérky. Zvolte jiný čas (přehled obsazenosti je pod formulářem), nebo zaškrtněte „Přesto uložit“.', []];
+    }
+    // stejný zákazník nemůže mít ve stejnou dobu dvě masáže
+    if (empty($p['presto'])) {
+        $zidKontrola = $puvodni ? (int)$puvodni['zakaznik_id'] : (int)(qv('SELECT id FROM zakaznici WHERE telefon=?', [$tel]) ?? 0);
+        if ($zidKontrola && qv("SELECT 1 FROM rezervace WHERE zakaznik_id=? AND id<>? AND stav IN ('potvrzeno','probehlo') AND zacatek < ? AND konec > ?", [$zidKontrola, (int)($puvodni['id'] ?? 0), $kon, $zac]))
+            return ['Zákazník už má ve stejnou dobu jinou masáž. Zkontrolujte, jestli nejde o dvojí zápis (nebo zaškrtněte „Přesto uložit“).', []];
+    }
 
     if ($puvodni) {
         $zid = (int)$puvodni['zakaznik_id'];
@@ -244,7 +324,7 @@ function posli_potvrzeni(int $rid): void
         . "Když nebudete moct přijít, dejte nám prosím vědět co nejdřív na +420 778 429 329.\n\nTěšíme se na vás,\nThajské masáže Most\n");
 }
 
-function rez_formular(array $v, bool $novy, string $tlacitko): void
+function rez_formular(array $v, bool $novy, string $tlacitko, int $rezId = 0): void
 {
     $minuty = $v['delka'] ?? ''; ?>
     <?php if ($novy): ?>
@@ -262,7 +342,7 @@ function rez_formular(array $v, bool $novy, string $tlacitko): void
       <label>Objednal se<select name="zdroj"><?= moznosti(['telefon' => 'telefonicky', 'osobne' => 'osobně na recepci', 'recepce' => 'jinak'], $v['zdroj'] ?? 'telefon') ?></select></label>
     </fieldset>
     <?php endif ?>
-    <fieldset><legend>Termín</legend>
+    <fieldset id="termin" data-mimo="<?= $rezId ?>"><legend>Termín</legend>
       <label>Masáž / služba *<select name="varianta_id" id="var" required><?= varianty_select(isset($v['varianta_id']) ? (int)$v['varianta_id'] : null) ?></select></label>
       <div class="grid3">
         <label>Datum *<input type="date" name="datum" required value="<?= h($v['datum'] ?? date('Y-m-d')) ?>"></label>
@@ -274,6 +354,7 @@ function rez_formular(array $v, bool $novy, string $tlacitko): void
         <label>Platba<select name="platba"><?= moznosti(PLATBY, $v['platba'] ?? '') ?></select></label>
         <label>Cena (Kč)<input type="number" name="cena" value="<?= h($v['cena'] ?? '') ?>" placeholder="podle ceníku"></label>
       </div>
+      <div id="obs" class="obs" aria-live="polite"></div>
       <?php if ($novy): ?><label>Poznámka<input name="poznamka" value="<?= h($v['poznamka'] ?? '') ?>"></label><?php endif ?>
       <label class="check"><input type="checkbox" name="poslat_email" value="1" <?= !empty($v['poslat_email']) ? 'checked' : '' ?>> Poslat zákazníkovi potvrzení e-mailem (když má e-mail)</label>
     </fieldset>
@@ -284,6 +365,73 @@ function rez_formular(array $v, bool $novy, string $tlacitko): void
     const sel = document.getElementById('var'), del = document.getElementById('delka');
     sel && sel.addEventListener('change', () => { del.placeholder = varMin[sel.value] ? varMin[sel.value] + ' (podle služby)' : 'zadejte délku'; });
     sel && sel.dispatchEvent(new Event('change'));
+    // ---- živá kontrola obsazenosti: kdo je v ten den volný, kolize u zvolené masérky, přepnutí na jinou ----
+    (function () {
+      const fs = document.getElementById('termin'); if (!fs) return;
+      const f = n => fs.querySelector('[name=' + n + ']'), box = document.getElementById('obs');
+      const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+      const m2 = s => { const [h, m] = s.split(':').map(Number); return h * 60 + m; }, hm = n => String(Math.floor(n / 60)).padStart(2, '0') + ':' + String(n % 60).padStart(2, '0');
+      let t, posl = 0, data = null;
+      function delka() { return parseInt(f('delka').value) || varMin[f('varianta_id').value] || 0; }
+      async function nacti() {
+        const d = f('datum').value, dl = delka();
+        if (!d || !dl) { box.innerHTML = ''; return; }
+        const my = ++posl;
+        const r = await fetch('/?r=den_obs&d=' + d + '&delka=' + dl + '&mimo=' + fs.dataset.mimo);
+        if (my !== posl) return; data = await r.json(); kresli();
+      }
+      function nastav(cas, mid) { if (cas) f('cas').value = cas; if (mid !== undefined) f('maserka_id').value = String(mid); kresli(); }
+      function kresli() {
+        if (!data || !data.ok) { box.innerHTML = ''; return; }
+        const cas = f('cas').value, mid = parseInt(f('maserka_id').value) || 0, dl = delka();
+        const od = m2(data.od), do_ = m2(data.do), sir = do_ - od;
+        let h = '';
+        // stav vybraného termínu
+        if (cas) {
+          const s = m2(cas), e = s + dl, volniTed = data.maserky.filter(m => !m.bloky.some(b => m2(b.od) < e && m2(b.do) > s));
+          const alt = volniTed.filter(m => m.id !== mid).map(m => '<button type="button" class="chip" data-m="' + m.id + '">' + esc(m.jmeno) + '</button>').join(' ');
+          if (mid) {
+            const m = data.maserky.find(x => x.id === mid), kol = m ? m.bloky.filter(b => m2(b.od) < e && m2(b.do) > s) : [];
+            if (s + dl > do_) h += '<div class="obs-st bad">⚠ Masáž by skončila po zavírací době (' + data.do + ').</div>';
+            if (kol.length) {
+              const dalsi = (m.volne || []).filter(x => m2(x) >= s).slice(0, 6).map(x => '<button type="button" class="chip" data-t="' + x + '">' + x + '</button>').join(' ');
+              h += '<div class="obs-st bad">⚠ <b>' + esc(m.jmeno) + ' je obsazená</b>: ' + kol.map(b => b.od + '–' + b.do + ' ' + esc(b.kdo)).join(', ') + '.'
+                + (alt ? '<br>V ' + cas + ' jsou volné: ' + alt : '<br>V ' + cas + ' není volná žádná masérka.')
+                + (dalsi ? '<br>' + esc(m.jmeno) + ' má volno v: ' + dalsi : '') + '</div>';
+            } else if (s + dl <= do_) h += '<div class="obs-st ok">✓ ' + esc(m ? m.jmeno : '') + ' je v ' + cas + '–' + hm(e) + ' volná.' + (alt ? ' Volné jsou i: ' + alt : '') + '</div>';
+          } else {
+            h += '<div class="obs-st ' + (volniTed.length ? 'ok' : 'bad') + '">' + (volniTed.length ? 'V ' + cas + '–' + hm(e) + ' jsou volné: ' + alt : '⚠ V ' + cas + ' není volná žádná masérka.') + '</div>';
+          }
+        }
+        // přehled dne: řádek na masérku, šedé = obsazeno, zlatá = vybraný termín; klepnutím do řádku se vybere čas a masérka
+        h += '<div class="obs-den"><div class="obs-hl"><span>Obsazenost ' + esc(data.datum) + '</span><span class="muted small">klepněte do volného místa</span></div>';
+        data.maserky.forEach(m => {
+          let bar = m.bloky.map(b => '<i class="b" style="left:' + ((m2(b.od) - od) / sir * 100) + '%;width:' + ((m2(b.do) - m2(b.od)) / sir * 100) + '%" title="' + esc(b.od + '–' + b.do + ' ' + b.kdo) + '"></i>').join('');
+          if (cas && m.id === mid) { const s = m2(cas); bar += '<i class="v" style="left:' + ((s - od) / sir * 100) + '%;width:' + (dl / sir * 100) + '%"></i>'; }
+          h += '<div class="obs-r' + (m.id === mid ? ' on' : '') + '"><button type="button" class="obs-n" data-m="' + m.id + '" style="border-color:' + esc(m.barva) + '">' + esc(m.jmeno) + '<small>' + m.volne.length + ' volných</small></button>'
+            + '<div class="obs-bar" data-m="' + m.id + '">' + bar + '</div></div>';
+        });
+        let osa = ''; for (let x = Math.ceil(od / 60) * 60; x <= do_; x += 60) osa += '<span style="left:' + ((x - od) / sir * 100) + '%">' + (x / 60) + '</span>';
+        h += '<div class="obs-osa">' + osa + '</div></div>';
+        box.innerHTML = h;
+      }
+      box.addEventListener('click', e => {
+        const b = e.target.closest('button');
+        if (b) { e.preventDefault(); if (b.dataset.t) nastav(b.dataset.t); else if (b.dataset.m) nastav(null, b.dataset.m); return; }
+        const bar = e.target.closest('.obs-bar'); if (!bar || !data) return;
+        const r = bar.getBoundingClientRect(), od = m2(data.od), sir = m2(data.do) - od;
+        let min = od + Math.round(((e.clientX - r.left) / r.width * sir) / 15) * 15;
+        const m = data.maserky.find(x => x.id === parseInt(bar.dataset.m));
+        // posunout na nejbližší volný začátek u té masérky
+        const vol = (m.volne || []).map(m2); if (!vol.length) return;
+        min = vol.reduce((a, c) => Math.abs(c - min) < Math.abs(a - min) ? c : a, vol[0]);
+        nastav(hm(min), m.id);
+      });
+      ['datum', 'delka', 'varianta_id'].forEach(n => f(n).addEventListener('change', () => { clearTimeout(t); t = setTimeout(nacti, 150); }));
+      f('delka').addEventListener('input', () => { clearTimeout(t); t = setTimeout(nacti, 400); });
+      ['cas', 'maserka_id'].forEach(n => { f(n).addEventListener('change', kresli); f(n).addEventListener('input', kresli); });
+      nacti();
+    })();
     const zh = document.getElementById('zhledej'), zv = document.getElementById('zvysl');
     if (zh) {
       let zt, zs = 0;
@@ -316,6 +464,15 @@ function rez_formular(array $v, bool $novy, string $tlacitko): void
     <?php
 }
 
+/** Chyba formuláře rezervace; u varování, která jde vědomě přeskočit, přidá „Přesto uložit“. */
+function chyba_html(?string $chyba): string
+{
+    if (!$chyba) return '';
+    $o = '<div class="flash err">' . h($chyba);
+    if (str_contains($chyba, 'Přesto uložit')) $o .= '<label class="check"><input type="checkbox" name="presto" value="1"> Přesto uložit</label>';
+    return $o . '</div>';
+}
+
 function kolize_html(array $kol): string
 {
     $o = '<div class="flash warn"><b>Masérka má v tu dobu jinou rezervaci:</b><ul>';
@@ -344,7 +501,7 @@ function stranka_rez_nova(array $u): void
     <h1>Nová rezervace</h1>
     <form method="post" class="card">
       <?= csrf_pole() ?>
-      <?php if ($chyba): ?><div class="flash err"><?= h($chyba) ?></div><?php endif ?>
+      <?= chyba_html($chyba) ?>
       <?php if ($kol) echo kolize_html($kol) ?>
       <?php rez_formular($v, true, 'Uložit rezervaci') ?>
     </form>
@@ -439,9 +596,9 @@ function stranka_rezervace(array $u): void
           <input type="hidden" name="akce" value="<?= $zadost ? 'naplanovat' : 'upravit' ?>">
           <h2><?= $zadost ? 'Naplánovat a potvrdit' : 'Upravit termín' ?></h2>
           <?php if ($zadost): ?><p class="muted">Domluvte termín se zákazníkem (zavolejte na <a href="tel:<?= h($r['telefon']) ?>"><?= h(telefon_cz($r['telefon'])) ?></a>) a uložte ho. Tím se žádost potvrdí.</p><?php endif ?>
-          <?php if ($chyba): ?><div class="flash err"><?= h($chyba) ?></div><?php endif ?>
+          <?= chyba_html($chyba) ?>
           <?php if ($kol) echo kolize_html($kol) ?>
-          <?php rez_formular($formData, false, $zadost ? 'Potvrdit termín' : 'Uložit změny') ?>
+          <?php rez_formular($formData, false, $zadost ? 'Potvrdit termín' : 'Uložit změny', (int)$r['id']) ?>
         </form>
 
         <?php if (!$zadost): ?>
@@ -541,3 +698,41 @@ function uvolneny_termin(array $r): void
       <?php endif ?>
     </section>
 <?php }
+
+
+/** JSON: obsazenost masérek v daný den (pro živou kontrolu ve formuláři rezervace). */
+function stranka_den_obs(array $u): void
+{
+    header('Content-Type: application/json; charset=utf-8');
+    $d = preg_match('~^\d{4}-\d{2}-\d{2}$~', $_GET['d'] ?? '') ? $_GET['d'] : date('Y-m-d');
+    $delka = max(5, min(300, (int)($_GET['delka'] ?? 60)));
+    $mimo = (int)($_GET['mimo'] ?? 0);
+    $od = nastaveni('oteviraci_od', '09:00'); $do = nastaveni('oteviraci_do', '20:00');
+    $minOd = (int)substr($od, 0, 2) * 60 + (int)substr($od, 3, 2); $minDo = (int)substr($do, 0, 2) * 60 + (int)substr($do, 3, 2);
+    $rez = q("SELECT r.id, r.maserka_id, r.zacatek, r.konec, z.jmeno, z.prijmeni FROM rezervace r JOIN zakaznici z ON z.id=r.zakaznik_id
+        WHERE r.maserka_id IS NOT NULL AND r.stav IN ('potvrzeno','probehlo') AND r.id<>? AND r.zacatek < ? AND r.konec > ? ORDER BY r.zacatek",
+        [$mimo, date('Y-m-d', strtotime("$d +1 day")), $d])->fetchAll();
+    $bloky = [];
+    foreach ($rez as $r) {
+        $a = max($minOd, (int)date('G', strtotime($r['zacatek'])) * 60 + (int)date('i', strtotime($r['zacatek'])));
+        $b = (int)date('G', strtotime($r['konec'])) * 60 + (int)date('i', strtotime($r['konec']));
+        $bloky[(int)$r['maserka_id']][] = [$a, $b, trim($r['prijmeni'] ?: $r['jmeno'])];
+    }
+    $ted = $d === date('Y-m-d') ? (int)date('G') * 60 + (int)date('i') : ($d < date('Y-m-d') ? 99999 : -1);
+    $hm = fn($n) => sprintf('%02d:%02d', intdiv($n, 60), $n % 60);
+    $out = [];
+    foreach (q('SELECT id, jmeno, barva FROM maserky WHERE aktivni=1 ORDER BY poradi, id')->fetchAll() as $m) {
+        $bl = $bloky[(int)$m['id']] ?? [];
+        $volne = [];
+        for ($t = $minOd; $t + $delka <= $minDo; $t += 15) {
+            if ($t < $ted) continue;
+            $ok = true;
+            foreach ($bl as [$a, $b]) if ($a < $t + $delka && $b > $t) { $ok = false; break; }
+            if ($ok) $volne[] = $hm($t);
+        }
+        $out[] = ['id' => (int)$m['id'], 'jmeno' => $m['jmeno'], 'barva' => $m['barva'],
+                  'bloky' => array_map(fn($x) => ['od' => $hm($x[0]), 'do' => $hm($x[1]), 'kdo' => $x[2]], $bl), 'volne' => $volne];
+    }
+    echo json_encode(['ok' => true, 'datum' => date('j. n. Y', strtotime($d)), 'od' => $od, 'do' => $do, 'maserky' => $out], JSON_UNESCAPED_UNICODE);
+    exit;
+}

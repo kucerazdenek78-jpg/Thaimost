@@ -63,7 +63,7 @@ $stranky = [
     'masterny' => 'stranka_masterny', 'odmena' => 'stranka_odmena',
     'tym' => 'stranka_maserky', 'maserky' => 'stranka_maserky', 'maserka' => 'stranka_maserka', 'recepcni' => 'stranka_recepcni', 'uzivatele' => 'stranka_recepcni', 'smeny' => 'stranka_smeny',
     'hledej_zak' => 'stranka_hledej_zak', 'karty' => 'stranka_karty', 'karty_tisk' => 'stranka_karty_tisk',
-    'volno' => 'stranka_volno', 'import' => 'stranka_import', 'poukaz_tisk' => 'stranka_poukaz_tisk',
+    'volno' => 'stranka_volno', 'den_obs' => 'stranka_den_obs', 'import' => 'stranka_import', 'poukaz_tisk' => 'stranka_poukaz_tisk',
 ];
 if (!isset($stranky[$r])) { http_response_code(404); $r = 'dnes'; }
 if ($_SERVER['REQUEST_METHOD'] === 'POST') over_csrf();

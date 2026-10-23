@@ -58,3 +58,10 @@ Ochrana: honeypot pole `web`, limit 10 požadavků z IP za hodinu, CORS jen z po
 
 ## Fotka masáže na tabletu
 Během masáže je na pozadí tabletu poloprůhledně fotka zvolené masáže (stejné fotky jako na webu – seznam `MASAZ_FOTO` v `app/stranky_tablet.php`). Vlastní fotku stačí nahrát jako `public/foto-<kód>.jpg` (např. `foto-tradicni.jpg`, kódy viz `app/seed-sluzby.json`) – má přednost.
+
+## Rezervace: kontrola obsazenosti
+Ve formuláři rezervace (nová, naplánování žádosti z webu, úprava) se pod termínem ukazuje **obsazenost dne pro všechny masérky** (šedé = obsazeno, zlatě = vybraný termín). Klepnutím do řádku masérky se vybere nejbližší volný začátek a ta masérka. Při kolizi se hned ukáže, kdo je v tu dobu volný, a nejbližší volné časy zvolené masérky. Při uložení server znovu kontroluje: kolizi masérky, stav „všechny masérky obsazené“ (bez zvolené masérky) a dvě masáže téhož zákazníka ve stejnou dobu – vždy jde vědomě „Přesto uložit“.
+Stránka **Volné termíny** ukazuje ve výchozím stavu všechny masérky (oblíbená ★ první), nahoře jdou přepnout jednou klepnutí.
+
+## Tablety: posílání z recepce v přehledu Dnes
+V přehledu **Dnes** je karta **Masérny teď** (volná / čeká / běží do…) a u každé dnešní potvrzené masáže tlačítka masérn. Recepce pošle masáž na tablet až ve chvíli, kdy klient přijde – zvolí masérnu a případně na místě změní masérku (zapíše se do rezervace). Čekající masáž jde jedním klepnutím **přesunout** do jiné masérny nebo **stáhnout**. Masérnu, kde masáž běží, nejde obsadit (⛔); kde jen čeká jiný klient (⏳), se přepíše.
