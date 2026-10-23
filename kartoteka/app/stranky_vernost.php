@@ -301,24 +301,31 @@ function stranka_volno(array $u): void
         $minDo = (int)substr($zacDo, 0, 2) * 60 + (int)substr($zacDo, 3, 2);
         $konecRozsahu = date('Y-m-d', strtotime("$od +$dny days"));
         $obs = [];
-        foreach (q("SELECT maserka_id, zacatek, konec FROM rezervace WHERE maserka_id IS NOT NULL AND stav IN ('potvrzeno','probehlo') AND zacatek < ? AND konec > ?", [$konecRozsahu, $od])->fetchAll() as $r)
-            $obs[(int)$r['maserka_id']][] = [strtotime($r['zacatek']), strtotime($r['konec'])];
+        foreach (q("SELECT maserka_id, maserka2_id, zacatek, COALESCE(masaz_konec, konec) AS mk FROM rezervace WHERE (maserka_id IS NOT NULL OR maserka2_id IS NOT NULL) AND stav IN ('potvrzeno','probehlo') AND zacatek < ? AND konec > ?", [$konecRozsahu, $od])->fetchAll() as $r)
+            foreach (array_filter([$r['maserka_id'], $r['maserka2_id']]) as $mid) $obs[(int)$mid][] = [strtotime($r['zacatek']), strtotime($r['mk'])];
+        $pocetMas = (int)$var['maserky'];
+        $mdelka = $var['maserky_min'] && (int)$var['maserky_min'] < $delka ? (int)$var['maserky_min'] : $delka;   // jak dlouho jsou potřeba masérky
         for ($i = 0; $i < $dny; $i++) {
             $d = date('Y-m-d', strtotime("$od +$i days"));
-            for ($t = $minOd; $t + $delka <= $minDo; $t += $krok) {
+            for ($t = $minOd; $t + ($pocetMas ? $mdelka : 0) <= $minDo && $t < $minDo; $t += $krok) {
                 $hh = sprintf('%02d:%02d', intdiv($t, 60), $t % 60);
                 if ($oknoOd && $hh < $oknoOd) continue;
                 if ($oknoDo && $hh > $oknoDo) continue;
                 $s = strtotime("$d $hh:00"); $e = $s + $delka * 60;
                 if ($s < time()) continue;
                 $zacS = "$d $hh:00"; $konS = date('Y-m-d H:i:s', $e);
-                if (kapacita_problem($zacS, $konS, ($var['kat'] ?? '') === 'wellness')) continue;
+                if (kapacita_problem($zacS, $konS, (int)$var['wellness_mistnost'] === 1)) continue;
+                if ($pocetMas === 0) { $volno[$d][$hh][] = 0; continue; }   // whirlpool/sauna: stačí volná masérna (i o víkendu – So–Ne pouze wellness)
+                $me = $s + $mdelka * 60; $mKonS = date('Y-m-d H:i:s', $me);
+                $volni = [];
                 foreach ($kandidati as $m) {
-                    if (!maserka_pracuje((int)$m['id'], $zacS, $konS)) continue;
+                    if (!maserka_pracuje((int)$m['id'], $zacS, $mKonS)) continue;
                     $kol = false;
-                    foreach ($obs[(int)$m['id']] ?? [] as [$a, $b]) if ($a < $e && $b > $s) { $kol = true; break; }
-                    if (!$kol) $volno[$d][$hh][] = (int)$m['id'];
+                    foreach ($obs[(int)$m['id']] ?? [] as [$a, $b]) if ($a < $me && $b > $s) { $kol = true; break; }
+                    if (!$kol) $volni[] = (int)$m['id'];
                 }
+                if ($pocetMas >= 2) { if (count($volni) >= 2) $volno[$d][$hh][] = [$volni[0], $volni[1]]; }   // párová: první dvě volné
+                else foreach ($volni as $mid) $volno[$d][$hh][] = $mid;
             }
         }
     }
@@ -364,8 +371,10 @@ function stranka_volno(array $u): void
       <?php foreach ($volno as $d => $casy): ?>
         <section class="card"><h2><?= $dnyCz[(int)date('w', strtotime($d))] ?> <?= h(date('j. n. Y', strtotime($d))) ?></h2>
           <div class="slots"><?php foreach ($casy as $hh => $ids): foreach ($ids as $mid):
-              $url = '/?r=rez_nova&d=' . $d . '&t=' . $hh . '&m=' . $mid . '&v=' . $varId . ($delka !== (int)$var['minuty'] ? '&delka=' . $delka : '') . ($z ? '&z=' . $z['id'] : ''); ?>
-            <a class="slotbtn" style="border-color:<?= h($barvy[$mid] ?? '#b07a3a') ?>" href="<?= h($url) ?>"><b><?= $hh ?></b> <span><?= h($nazvy[$mid] ?? '') ?><?= $oblib === $mid ? ' ★' : '' ?></span></a>
+              $par = is_array($mid);
+              $url = '/?r=rez_nova&d=' . $d . '&t=' . $hh . ($par ? '&m=' . $mid[0] . '&m2=' . $mid[1] : ($mid ? '&m=' . $mid : '')) . '&v=' . $varId . ($delka !== (int)$var['minuty'] ? '&delka=' . $delka : '') . ($z ? '&z=' . $z['id'] : '');
+              $popis = $par ? ($nazvy[$mid[0]] ?? '') . ' + ' . ($nazvy[$mid[1]] ?? '') : ($mid ? ($nazvy[$mid] ?? '') . ($oblib === $mid ? ' ★' : '') : 'wellness masérna'); ?>
+            <a class="slotbtn" style="border-color:<?= h(!$par && $mid ? ($barvy[$mid] ?? '#b07a3a') : '#888') ?>" href="<?= h($url) ?>"><b><?= $hh ?></b> <span><?= h($popis) ?></span></a>
           <?php endforeach; endforeach ?></div></section>
       <?php endforeach ?>
     <?php endif ?>

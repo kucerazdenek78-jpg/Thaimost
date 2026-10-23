@@ -60,6 +60,17 @@ function stranka_dnes(array $u): void
             $err = tablet_poslat($r, (int)($_POST['mistnost_id'] ?? 0));
             $mn = qv('SELECT nazev FROM mistnosti WHERE id=?', [(int)($_POST['mistnost_id'] ?? 0)]);
             flash($err ?? jmeno_z($r) . ' → ' . $mn . ' (' . ($r['maserka'] ?? '') . ')', $err ? 'err' : 'ok');
+        } elseif ($r && $akce === 'tablet_par') {
+            // párová: obě lůžka jedné masérny – první lůžko 1. masérka, druhé 2. masérka
+            $kl = (string)($_POST['skupina'] ?? '');
+            $luzka = array_values(array_filter(q('SELECT * FROM mistnosti WHERE aktivni=1 ORDER BY poradi, id')->fetchAll(), fn($t) => maserna_klic($t) === $kl));
+            $mas = array_values(array_filter([(int)$r['maserka_id'], (int)$r['maserka2_id']]));
+            if (count($luzka) < 2 || count($mas) < 2) flash('Párová potřebuje masérnu se dvěma lůžky a dvě vybrané masérky.', 'err');
+            else {
+                $e1 = tablet_poslat($r, (int)$luzka[0]['id'], $mas[0], true);
+                $e2 = $e1 ? null : tablet_poslat($r, (int)$luzka[1]['id'], $mas[1], false);
+                flash(($e1 ?? $e2) ?? jmeno_z($r) . ' → ' . $luzka[0]['nazev'] . ' (' . $r['maserka'] . ') + ' . $luzka[1]['nazev'] . ' (' . $r['maserka2'] . ')', ($e1 ?? $e2) ? 'err' : 'ok');
+            }
         } elseif ($r && $akce === 'tablet_stahnout') {
             q("UPDATE sezeni SET stav='zruseno', zavreno=? WHERE rezervace_id=? AND stav='cekani'", [nyni(), $r['id']]);
             zapis_log('tablet_zruseno', "rez #{$r['id']}");
@@ -72,9 +83,9 @@ function stranka_dnes(array $u): void
         LEFT JOIN sluzby s ON s.id=v.sluzba_id WHERE r.stav='zadost' ORDER BY r.vytvoreno")->fetchAll();
     $dnes = date('Y-m-d');
     $plan = q("SELECT r.*, z.jmeno, z.prijmeni, z.telefon, z.pref_tlak, z.pref_text, z.zdravi_text, z.zdravi_text_en, z.zdravi_souhlas,
-        s.nazev AS sluzba, v.popis AS var_popis, m.jmeno AS maserka
+        s.nazev AS sluzba, v.popis AS var_popis, m.jmeno AS maserka, m2.jmeno AS maserka2
         FROM rezervace r JOIN zakaznici z ON z.id=r.zakaznik_id LEFT JOIN varianty v ON v.id=r.varianta_id
-        LEFT JOIN sluzby s ON s.id=v.sluzba_id LEFT JOIN maserky m ON m.id=r.maserka_id
+        LEFT JOIN sluzby s ON s.id=v.sluzba_id LEFT JOIN maserky m ON m.id=r.maserka_id LEFT JOIN maserky m2 ON m2.id=r.maserka2_id
         WHERE r.zacatek >= ? AND r.zacatek < ? AND r.stav NOT IN ('zadost','odmitnuto')
         ORDER BY r.zacatek", [$dnes, date('Y-m-d', strtotime('+1 day'))])->fetchAll();
     $neodeslane = (int)qv("SELECT COUNT(*) FROM emaily WHERE stav<>'odeslano'");
@@ -115,7 +126,7 @@ function stranka_dnes(array $u): void
           <?= csrf_pole() ?><input type="hidden" name="akce" value="stav"><input type="hidden" name="zpet" value="dnes">
           <div class="time"><?= date('H:i', strtotime($r['zacatek'])) ?><br><span class="muted small"><?= date('j. n.', strtotime($r['zacatek'])) ?></span></div>
           <div class="grow"><a href="/?r=rezervace&id=<?= $r['id'] ?>"><b><?= h(jmeno_z($r)) ?></b></a> · <a href="tel:<?= h($r['telefon']) ?>"><?= h(telefon_cz($r['telefon'])) ?></a><br>
-            <?= h($r['sluzba'] . ' – ' . $r['var_popis']) ?> · <?= h($r['maserka'] ?? 'bez masérky') ?></div>
+            <?= h($r['sluzba'] . ' – ' . $r['var_popis']) ?> · <?= h(($r['maserka'] ?? 'bez masérky') . (!empty($r['maserka2']) ? ' + ' . $r['maserka2'] : '')) ?></div>
           <button name="stav" value="probehlo" class="btn primary">✓ Proběhlo</button>
           <button name="stav" value="neprisel" class="btn danger">Nepřišel</button>
           <button name="stav" value="zruseno_pozde" class="btn">Zrušeno pozdě</button>
@@ -164,8 +175,12 @@ function stranka_dnes(array $u): void
             <?php if ($r['zdravi_text'] && $r['zdravi_souhlas']): ?><br><span class="pref warn">⚕ <?= h(mb_strimwidth($r['zdravi_text'], 0, 120, '…')) ?></span><?php if (!$r['zdravi_text_en']): ?> <span class="pref warn" title="Masérka na tabletu uvidí zdraví jen česky">🇬🇧 chybí anglicky</span><?php endif ?><?php endif ?>
           </div>
           <?php $sz = $sezRez[(int)$r['id']] ?? null;
-          if ($mistnosti && $r['stav'] === 'potvrzeno' && strtotime($r['konec']) > time()): ?>
+          if ($mistnosti && $r['stav'] === 'potvrzeno' && strtotime($r['konec']) > time() && ($r['maserka_id'] || $r['maserka2_id'])): ?>
           <div class="tab-send">
+            <?php if ($r['maserka2_id'] && (!$sz || $sz['stav'] === 'cekani')): foreach (kapacita()['masery'] as $kl => $mk): if ($mk['luzka'] < 2) continue; ?>
+              <form method="post" class="inline"><?= csrf_pole() ?><input type="hidden" name="akce" value="tablet_par"><input type="hidden" name="rez_id" value="<?= $r['id'] ?>"><input type="hidden" name="skupina" value="<?= h($kl) ?>">
+                <button class="btn small primary">📲👥 <?= h($mk['nazev']) ?> – obě lůžka</button></form>
+            <?php endforeach; endif ?>
             <?php if ($sz && $sz['stav'] !== 'cekani'): ?>
               <span class="tab-st bezi">▶ <?= h($nazMist[$sz['mistnost']] ?? '') ?> · <?= h(SEZENI_STAVY[$sz['stav']] ?? '') ?></span>
             <?php else: ?>
@@ -201,14 +216,22 @@ function stranka_kalendar(array $u): void
         foreach ($okna[(int)$m['id']] as [$x, $y]) { $minOd = min($minOd, $x); $minDo = max($minDo, $y); }
     }
     $px = 1.4; // pixelů na minutu
-    $sloupce = array_merge($maserky, [['id' => 0, 'jmeno' => 'Wellness / bez masérky', 'barva' => '#888']]);
-    $rez = q("SELECT r.*, z.jmeno, z.prijmeni, s.nazev AS sluzba, v.popis AS var_popis
+    $sloupce = array_merge($maserky, [['id' => 0, 'jmeno' => 'Wellness masérna / bez masérky', 'barva' => '#888']]);
+    $rez = q("SELECT r.*, z.jmeno, z.prijmeni, s.nazev AS sluzba, v.popis AS var_popis, COALESCE(v.wellness_mistnost, 0) AS w
         FROM rezervace r JOIN zakaznici z ON z.id=r.zakaznik_id LEFT JOIN varianty v ON v.id=r.varianta_id
         LEFT JOIN sluzby s ON s.id=v.sluzba_id
         WHERE r.zacatek >= ? AND r.zacatek < ? AND r.stav NOT IN ('zadost','odmitnuto')",
         [$d, date('Y-m-d', strtotime($d . ' +1 day'))])->fetchAll();
     $poSloupcich = [];
-    foreach ($rez as $r) $poSloupcich[(int)$r['maserka_id']][] = $r;
+    foreach ($rez as $r) {
+        // u masérek jen část s masérkami (párová 60 min), ve sloupci wellness masérny celá doba
+        $rm = $r; $rm['konec_zobr'] = rez_masaz_konec($r);
+        if ($r['maserka_id']) $poSloupcich[(int)$r['maserka_id']][] = $rm;
+        if ($r['maserka2_id']) $poSloupcich[(int)$r['maserka2_id']][] = $rm;
+        if ((int)$r['w'] === 1 || (!$r['maserka_id'] && !$r['maserka2_id'])) $poSloupcich[0][] = $r + ['konec_zobr' => $r['konec']];
+        $minDo = max($minDo, $minz_ = (int)date('G', strtotime($r['konec'])) * 60 + (int)date('i', strtotime($r['konec'])));   // wellness po zavírací době
+    }
+    $minDo = (int)(ceil($minDo / 30) * 30);
     $prev = date('Y-m-d', strtotime("$d -1 day")); $next = date('Y-m-d', strtotime("$d +1 day"));
     $sv = svatek($d);
     $minz = fn($dt) => (int)date('G', strtotime($dt)) * 60 + (int)date('i', strtotime($dt));
@@ -234,7 +257,7 @@ function stranka_kalendar(array $u): void
         $aktivni = array_values(array_filter($bloky, fn($r) => in_array($r['stav'], ['potvrzeno', 'probehlo'], true)));
         $ok = $mid ? $okna[$mid] : [[$minOd, $minDo]];
         // volná okna = pracovní doba minus rezervace
-        $volna = $mid ? intervaly_minus($ok, array_map(fn($r) => [$minz($r['zacatek']), $minz($r['konec'])], $aktivni)) : [];
+        $volna = $mid ? intervaly_minus($ok, array_map(fn($r) => [$minz($r['zacatek']), $minz($r['konec_zobr'])], $aktivni)) : [];
         $volna = array_values(array_filter($volna, fn($x) => $x[1] - $x[0] >= 30 && ($d > date('Y-m-d') || ($d === date('Y-m-d') && $x[1] > (int)date('G') * 60 + (int)date('i')))));
         $volnoMin = array_sum(array_map(fn($x) => $x[1] - $x[0], $volna));
         $popis = $mid ? maserka_den_popis($mid, $d) : []; ?>
@@ -257,18 +280,18 @@ function stranka_kalendar(array $u): void
           <?php
           // překrývající se rezervace (kolize) zobrazit vedle sebe
           $drahy = [];
-          foreach ($bloky as $i => $r) { $dr = 0; foreach ($drahy as $j => $kon) if ($kon <= $r['zacatek']) { $dr = $j; break; } else $dr = count($drahy); $drahy[$dr] = $r['konec']; $bloky[$i]['draha'] = $dr; }
+          foreach ($bloky as $i => $r) { $dr = 0; foreach ($drahy as $j => $kon) if ($kon <= $r['zacatek']) { $dr = $j; break; } else $dr = count($drahy); $drahy[$dr] = $r['konec_zobr']; $bloky[$i]['draha'] = $dr; }
           $pocetDrah = max(1, count($drahy));
           foreach ($bloky as $r):
-              $t1 = strtotime($r['zacatek']); $t2 = strtotime($r['konec']);
+              $t1 = strtotime($r['zacatek']); $t2 = strtotime($r['konec_zobr']);
               $top = ($minz($r['zacatek']) - $minOd) * $px;
               $hgt = max(26, ($t2 - $t1) / 60 * $px - 2);
               $w = 100 / $pocetDrah; $l = $r['draha'] * $w;
-              $mimoSm = $mid && in_array($r['stav'], ['potvrzeno'], true) && !maserka_pracuje($mid, $r['zacatek'], $r['konec']); ?>
+              $mimoSm = $mid && in_array($r['stav'], ['potvrzeno'], true) && !maserka_pracuje($mid, $r['zacatek'], $r['konec_zobr']); ?>
             <a class="blk s-<?= h($r['stav']) ?><?= $mimoSm ? ' konfl' : '' ?>" href="/?r=rezervace&id=<?= $r['id'] ?>"
                style="top:<?= $top ?>px;height:<?= $hgt ?>px;left:calc(<?= $l ?>% + 3px);width:calc(<?= $w ?>% - 6px);border-color:<?= h($s['barva']) ?>"
                <?= $mimoSm ? 'title="Masérka v tu dobu nepracuje – vyřešit"' : '' ?>>
-              <b><?= $mimoSm ? '⚠ ' : '' ?><?= date('H:i', $t1) ?>–<?= date('H:i', $t2) ?></b> <?= h(jmeno_z($r)) ?><br>
+              <b><?= $mimoSm ? '⚠ ' : '' ?><?= date('H:i', $t1) ?>–<?= date('H:i', $t2) ?></b> <?= h(jmeno_z($r)) ?><?= $r['maserka2_id'] ? ' 👥' : '' ?><br>
               <span><?= h($r['sluzba'] . ' ' . $r['var_popis']) ?></span>
             </a>
           <?php endforeach ?>
@@ -304,19 +327,27 @@ function rez_uloz(array $p, ?array $puvodni, bool $potvrdit): array
     $delka = (int)($p['delka'] ?? 0) ?: ((int)$var['minuty'] ?: 60);
     $zac = $p['datum'] . ' ' . $p['cas'] . ':00';
     $kon = date('Y-m-d H:i:s', strtotime($zac) + $delka * 60);
-    $mas = (int)($p['maserka_id'] ?? 0) ?: null;
+    $pocet = (int)$var['maserky'];          // 0 = bez masérky (whirlpool), 1, 2 = párová
+    $mas = $pocet >= 1 ? ((int)($p['maserka_id'] ?? 0) ?: null) : null;
+    $mas2 = $pocet >= 2 ? ((int)($p['maserka2_id'] ?? 0) ?: null) : null;
+    if ($mas2 && $mas2 === $mas) return ['U párové vyberte dvě různé masérky.', []];
+    // masérky jsou potřeba jen první část (např. párová: 60 min masáž, pak whirlpool a sauna bez masérek)
+    $mKon = $var['maserky_min'] && (int)$var['maserky_min'] < $delka ? date('Y-m-d H:i:s', strtotime($zac) + (int)$var['maserky_min'] * 60) : null;
+    $mKonec = $mKon ?? $kon;
     $platba = array_key_exists((string)($p['platba'] ?? ''), PLATBY) ? (string)$p['platba'] : '';
     $cena = ($p['cena'] ?? '') !== '' ? (int)$p['cena'] : (int)$var['cena'];
 
-    $kol = $mas ? kolize($mas, $zac, $kon, (int)($puvodni['id'] ?? 0)) : [];
+    if ($pocet >= 2 && (!$mas || !$mas2) && empty($p['presto'])) return [$var['popis'] . ' potřebuje dvě masérky – vyberte obě (nebo zaškrtněte „Přesto uložit“).', []];
+    $kol = [];
+    foreach (array_filter([$mas, $mas2]) as $m) $kol = array_merge($kol, kolize($m, $zac, $mKonec, (int)($puvodni['id'] ?? 0)));
     if ($kol && empty($p['presto'])) return [null, $kol];
-    if ($mas && empty($p['presto']) && !maserka_pracuje($mas, $zac, $kon)) {
-        $pop = array_column(maserka_den_popis($mas, $p['datum']), 1);
-        return [qv('SELECT jmeno FROM maserky WHERE id=?', [$mas]) . ' v tu dobu nepracuje' . ($pop ? ' (' . implode(', ', $pop) . ')' : '') . '. Vyberte jinou masérku nebo čas, zapište jí přesčas (Volna a přesčasy), nebo zaškrtněte „Přesto uložit“.', []];
+    foreach (array_filter([$mas, $mas2]) as $m) if (empty($p['presto']) && !maserka_pracuje($m, $zac, $mKonec)) {
+        $pop = array_column(maserka_den_popis($m, $p['datum']), 1);
+        return [qv('SELECT jmeno FROM maserky WHERE id=?', [$m]) . ' v tu dobu nepracuje' . ($pop ? ' (' . implode(', ', $pop) . ')' : '') . '. Vyberte jinou masérku nebo čas, zapište jí přesčas (Volna a přesčasy), nebo zaškrtněte „Přesto uložit“.', []];
     }
-    if (empty($p['presto']) && ($kp = kapacita_problem($zac, $kon, ($var['kat'] ?? '') === 'wellness', (int)($puvodni['id'] ?? 0))))
+    if (empty($p['presto']) && ($kp = kapacita_problem($zac, $kon, (int)$var['wellness_mistnost'] === 1, (int)($puvodni['id'] ?? 0))))
         return [$kp . ' Zvolte jiný čas, nebo zaškrtněte „Přesto uložit“.', []];
-    if (!$mas && empty($p['presto']) && ($var['kat'] ?? '') !== 'wellness') {
+    if (!$mas && $pocet >= 1 && empty($p['presto'])) {
         $aktivni = (int)qv('SELECT COUNT(*) FROM maserky WHERE aktivni=1');
         $obsazene = (int)qv("SELECT COUNT(DISTINCT maserka_id) FROM rezervace WHERE maserka_id IS NOT NULL AND stav IN ('potvrzeno','probehlo') AND id<>? AND zacatek < ? AND konec > ?",
             [(int)($puvodni['id'] ?? 0), $kon, $zac]);
@@ -346,14 +377,14 @@ function rez_uloz(array $p, ?array $puvodni, bool $potvrdit): array
     if ($potvrdit) $stav = 'potvrzeno';
 
     if ($puvodni) {
-        q('UPDATE rezervace SET varianta_id=?, maserka_id=?, zacatek=?, konec=?, stav=?, platba=?, cena=?, zmeneno=?, zmenil=? WHERE id=?',
-            [$var['id'], $mas, $zac, $kon, $stav, $platba, $cena, nyni(), kdo(), $puvodni['id']]);
+        q('UPDATE rezervace SET varianta_id=?, maserka_id=?, maserka2_id=?, masaz_konec=?, zacatek=?, konec=?, stav=?, platba=?, cena=?, zmeneno=?, zmenil=? WHERE id=?',
+            [$var['id'], $mas, $mas2, $mKon, $zac, $kon, $stav, $platba, $cena, nyni(), kdo(), $puvodni['id']]);
         $rid = (int)$puvodni['id'];
         zapis_log('rezervace_uprava', "#$rid $zac");
     } else {
-        q("INSERT INTO rezervace(zakaznik_id,varianta_id,maserka_id,zacatek,konec,stav,zdroj,platba,cena,poznamka_zakaznik,zmenil)
-           VALUES(?,?,?,?,?,'potvrzeno',?,?,?,?,?)",
-            [$zid, $var['id'], $mas, $zac, $kon, in_array($p['zdroj'] ?? '', ['telefon', 'osobne'], true) ? $p['zdroj'] : 'recepce',
+        q("INSERT INTO rezervace(zakaznik_id,varianta_id,maserka_id,maserka2_id,masaz_konec,zacatek,konec,stav,zdroj,platba,cena,poznamka_zakaznik,zmenil)
+           VALUES(?,?,?,?,?,?,?,'potvrzeno',?,?,?,?,?)",
+            [$zid, $var['id'], $mas, $mas2, $mKon, $zac, $kon, in_array($p['zdroj'] ?? '', ['telefon', 'osobne'], true) ? $p['zdroj'] : 'recepce',
              $platba, $cena, trim($p['poznamka'] ?? ''), kdo()]);
         $rid = (int)db()->lastInsertId();
         zapis_log('rezervace_nova', "#$rid $zac");
@@ -399,7 +430,8 @@ function rez_formular(array $v, bool $novy, string $tlacitko, int $rezId = 0): v
         <label>Délka (min)<input type="number" name="delka" id="delka" min="10" max="300" step="5" value="<?= h($minuty) ?>" placeholder="podle služby"></label>
       </div>
       <div class="grid3">
-        <label>Masérka<select name="maserka_id"><?= maserky_select(isset($v['maserka_id']) ? (int)$v['maserka_id'] : null) ?></select></label>
+        <label id="lmas">Masérka<select name="maserka_id"><?= maserky_select(isset($v['maserka_id']) ? (int)$v['maserka_id'] : null) ?></select></label>
+        <label id="lmas2" hidden>2. masérka (párová)<select name="maserka2_id"><?= maserky_select(isset($v['maserka2_id']) ? (int)$v['maserka2_id'] : null, true, '— vyberte —') ?></select></label>
         <label>Platba<select name="platba"><?= moznosti(PLATBY, $v['platba'] ?? '') ?></select></label>
         <label>Cena (Kč)<input type="number" name="cena" value="<?= h($v['cena'] ?? '') ?>" placeholder="podle ceníku"></label>
       </div>
@@ -411,7 +443,9 @@ function rez_formular(array $v, bool $novy, string $tlacitko, int $rezId = 0): v
     <script>
     // délka podle zvolené služby + rychlé dohledání zákazníka podle telefonu
     const varMin = <?= json_encode(q('SELECT id, minuty FROM varianty')->fetchAll(PDO::FETCH_KEY_PAIR)) ?>;
-    const varWell = <?= json_encode(q("SELECT v.id, CASE WHEN s.kat='wellness' THEN 1 ELSE 0 END FROM varianty v JOIN sluzby s ON s.id=v.sluzba_id")->fetchAll(PDO::FETCH_KEY_PAIR)) ?>;
+    const varWell = <?= json_encode(q("SELECT id, wellness_mistnost FROM varianty")->fetchAll(PDO::FETCH_KEY_PAIR)) ?>;
+    const varMas = <?= json_encode(q("SELECT id, maserky FROM varianty")->fetchAll(PDO::FETCH_KEY_PAIR)) ?>;
+    const varMasMin = <?= json_encode(q("SELECT id, maserky_min FROM varianty WHERE maserky_min IS NOT NULL")->fetchAll(PDO::FETCH_KEY_PAIR)) ?>;
     const sel = document.getElementById('var'), del = document.getElementById('delka');
     sel && sel.addEventListener('change', () => { del.placeholder = varMin[sel.value] ? varMin[sel.value] + ' (podle služby)' : 'zadejte délku'; });
     sel && sel.dispatchEvent(new Event('change'));
@@ -423,29 +457,55 @@ function rez_formular(array $v, bool $novy, string $tlacitko, int $rezId = 0): v
       const m2 = s => { const [h, m] = s.split(':').map(Number); return h * 60 + m; }, hm = n => String(Math.floor(n / 60)).padStart(2, '0') + ':' + String(n % 60).padStart(2, '0');
       let t, posl = 0, data = null;
       function delka() { return parseInt(f('delka').value) || varMin[f('varianta_id').value] || 0; }
+      function mdelka() { const v = f('varianta_id').value, m = parseInt(varMasMin[v]) || 0, d = delka(); return m && m < d ? m : d; }
+      function pocetMas() { const v = f('varianta_id').value; return v in varMas ? parseInt(varMas[v]) : 1; }
+      function prepniMas() {
+        const n = pocetMas(), l1 = document.getElementById('lmas'), l2 = document.getElementById('lmas2');
+        l1.hidden = n === 0; l2.hidden = n < 2;
+        if (n === 0) f('maserka_id').value = '';
+        if (n < 2) f('maserka2_id').value = '';
+      }
       async function nacti() {
         const d = f('datum').value, dl = delka();
         if (!d || !dl) { box.innerHTML = ''; return; }
         const my = ++posl;
-        const r = await fetch('/?r=den_obs&d=' + d + '&delka=' + dl + '&mimo=' + fs.dataset.mimo + '&w=' + (varWell[f('varianta_id').value] ? 1 : 0));
+        const r = await fetch('/?r=den_obs&d=' + d + '&delka=' + dl + '&mdelka=' + mdelka() + '&mimo=' + fs.dataset.mimo + '&w=' + (parseInt(varWell[f('varianta_id').value]) ? 1 : 0));
         if (my !== posl) return; data = await r.json(); kresli();
       }
-      function nastav(cas, mid) { if (cas) f('cas').value = cas; if (mid !== undefined) f('maserka_id').value = String(mid); kresli(); }
+      // výběr masérky: u párové se doplní nejdřív první, pak druhá (klepnutí na už vybranou ji zruší)
+      function nastav(cas, mid) {
+        if (cas) f('cas').value = cas;
+        if (mid !== undefined && pocetMas() > 0) {
+          const a = f('maserka_id'), b = f('maserka2_id'); mid = String(mid);
+          if (pocetMas() < 2) a.value = mid;
+          else if (a.value === mid) a.value = '';
+          else if (b.value === mid) b.value = '';
+          else if (!a.value) a.value = mid; else b.value = mid;
+        }
+        kresli();
+      }
       function kresli() {
         if (!data || !data.ok) { box.innerHTML = ''; return; }
-        const cas = f('cas').value, mid = parseInt(f('maserka_id').value) || 0, dl = delka();
+        const cas = f('cas').value, dl = mdelka(), cel = delka(), n = pocetMas();
+        const vybrane = [f('maserka_id').value, f('maserka2_id').value].map(x => parseInt(x) || 0).filter(x => x);
+        const mid = vybrane[0] || 0;
         const od = m2(data.od), do_ = m2(data.do), sir = do_ - od;
         let h = '';
+        if (n >= 2) { const kon = m2(data.zavreno) - dl; if (kon >= m2(data.od)) h += '<div class="obs-st">👥 Párová na konec směny: <button type="button" class="chip" data-t="' + hm(kon) + '">' + hm(kon) + '</button> (masáž do ' + data.zavreno + (cel > dl ? ', pak whirlpool a sauna do ' + hm(m2(data.zavreno) + cel - dl) + ' s recepční' : '') + ')</div>'; if (vybrane.length < 2) h += '<div class="obs-st bad">Vyberte dvě masérky – klepněte na jména v přehledu níže.</div>'; }
         // stav vybraného termínu
         if (cas) {
           const s = m2(cas), e = s + dl, vSmene = m => !m.mimo.some(b => m2(b.od) < e && m2(b.do) > s);
           const plno = data.plno.includes(cas);
           const volniTed = plno ? [] : data.maserky.filter(m => vSmene(m) && !m.bloky.some(b => m2(b.od) < e && m2(b.do) > s));
           if (plno) h += '<div class="obs-st bad">⚠ V ' + cas + ' se masáž nevejde do masérn – lůžka jsou obsazená.</div>';
-          const alt = volniTed.filter(m => m.id !== mid).map(m => '<button type="button" class="chip" data-m="' + m.id + '">' + esc(m.jmeno) + '</button>').join(' ');
-          if (mid) {
+          const alt = volniTed.filter(m => !vybrane.includes(m.id)).map(m => '<button type="button" class="chip" data-m="' + m.id + '">' + esc(m.jmeno) + '</button>').join(' ');
+          if (n === 0) {
+            h += plno ? '' : '<div class="obs-st ok">✓ Wellness masérna je v ' + cas + '–' + hm(s + cel) + ' volná (bez masérky).</div>';
+          }
+          if (cel > dl || n === 0) { if (s + cel > m2(data.zavreno)) h += '<div class="obs-st ok">ℹ Whirlpool a sauna po zavírací době (' + data.zavreno + ') do ' + hm(s + cel) + ' – zákazníci zůstávají s recepční.</div>'; }
+          vybrane.forEach(mid => {
             const m = data.maserky.find(x => x.id === mid), kol = m ? m.bloky.filter(b => m2(b.od) < e && m2(b.do) > s) : [];
-            if (s + dl > do_) h += '<div class="obs-st bad">⚠ Masáž by skončila po zavírací době (' + data.do + ').</div>';
+            if (n === 1 && s + dl > m2(data.zavreno)) h += '<div class="obs-st bad">⚠ Masáž by skončila po zavírací době (' + data.zavreno + ').</div>';
             if (m && !vSmene(m)) {
               const dalsi = (m.volne || []).slice(0, 6).map(x => '<button type="button" class="chip" data-t="' + x + '">' + x + '</button>').join(' ');
               h += '<div class="obs-st bad">⚠ <b>' + esc(m.jmeno) + ' v tu dobu nepracuje</b>' + (m.popis ? ' (' + esc(m.popis) + ')' : '') + '.'
@@ -456,7 +516,8 @@ function rez_formular(array $v, bool $novy, string $tlacitko, int $rezId = 0): v
                 + (alt ? '<br>V ' + cas + ' jsou volné: ' + alt : '<br>V ' + cas + ' není volná žádná masérka.')
                 + (dalsi ? '<br>' + esc(m.jmeno) + ' má volno v: ' + dalsi : '') + '</div>';
             } else if (s + dl <= do_) h += '<div class="obs-st ok">✓ ' + esc(m ? m.jmeno : '') + ' je v ' + cas + '–' + hm(e) + ' volná.' + (alt ? ' Volné jsou i: ' + alt : '') + '</div>';
-          } else {
+          });
+          if (!vybrane.length && n > 0) {
             h += '<div class="obs-st ' + (volniTed.length ? 'ok' : 'bad') + '">' + (volniTed.length ? 'V ' + cas + '–' + hm(e) + ' jsou volné: ' + alt : '⚠ V ' + cas + ' není volná žádná masérka.') + '</div>';
           }
         }
@@ -464,8 +525,8 @@ function rez_formular(array $v, bool $novy, string $tlacitko, int $rezId = 0): v
         h += '<div class="obs-den"><div class="obs-hl"><span>Obsazenost ' + esc(data.datum) + (data.svatek ? ' · 🎌 ' + esc(data.svatek) : '') + '</span><span class="muted small">klepněte do volného místa</span></div>';
         data.maserky.forEach(m => {
           let bar = (m.mimo || []).map(b => '<i class="x" style="left:' + ((m2(b.od) - od) / sir * 100) + '%;width:' + ((m2(b.do) - m2(b.od)) / sir * 100) + '%" title="nepracuje"></i>').join('') + m.bloky.map(b => '<i class="b" style="left:' + ((m2(b.od) - od) / sir * 100) + '%;width:' + ((m2(b.do) - m2(b.od)) / sir * 100) + '%" title="' + esc(b.od + '–' + b.do + ' ' + b.kdo) + '"></i>').join('');
-          if (cas && m.id === mid) { const s = m2(cas); bar += '<i class="v" style="left:' + ((s - od) / sir * 100) + '%;width:' + (dl / sir * 100) + '%"></i>'; }
-          h += '<div class="obs-r' + (m.id === mid ? ' on' : '') + '"><button type="button" class="obs-n" data-m="' + m.id + '" style="border-color:' + esc(m.barva) + '">' + esc(m.jmeno) + '<small>' + (m.popis ? esc(m.popis) : 'volno ' + m.volne.length + '×') + '</small></button>'
+          if (cas && vybrane.includes(m.id)) { const s = m2(cas); bar += '<i class="v" style="left:' + ((s - od) / sir * 100) + '%;width:' + (dl / sir * 100) + '%"></i>'; }
+          h += '<div class="obs-r' + (vybrane.includes(m.id) ? ' on' : '') + '"><button type="button" class="obs-n" data-m="' + m.id + '" style="border-color:' + esc(m.barva) + '">' + esc(m.jmeno) + '<small>' + (m.popis ? esc(m.popis) : 'volno ' + m.volne.length + '×') + '</small></button>'
             + '<div class="obs-bar" data-m="' + m.id + '">' + bar + '</div></div>';
         });
         let osa = ''; for (let x = Math.ceil(od / 60) * 60; x <= do_; x += 60) osa += '<span style="left:' + ((x - od) / sir * 100) + '%">' + (x / 60) + '</span>';
@@ -484,7 +545,9 @@ function rez_formular(array $v, bool $novy, string $tlacitko, int $rezId = 0): v
         min = vol.reduce((a, c) => Math.abs(c - min) < Math.abs(a - min) ? c : a, vol[0]);
         nastav(hm(min), m.id);
       });
-      ['datum', 'delka', 'varianta_id'].forEach(n => f(n).addEventListener('change', () => { clearTimeout(t); t = setTimeout(nacti, 150); }));
+      ['datum', 'delka', 'varianta_id'].forEach(n => f(n).addEventListener('change', () => { prepniMas(); clearTimeout(t); t = setTimeout(nacti, 150); }));
+      f('maserka2_id').addEventListener('change', kresli);
+      prepniMas();
       f('delka').addEventListener('input', () => { clearTimeout(t); t = setTimeout(nacti, 400); });
       ['cas', 'maserka_id'].forEach(n => { f(n).addEventListener('change', kresli); f(n).addEventListener('input', kresli); });
       nacti();
@@ -539,7 +602,7 @@ function kolize_html(array $kol): string
 
 function stranka_rez_nova(array $u): void
 {
-    $v = ['datum' => $_GET['d'] ?? date('Y-m-d'), 'cas' => $_GET['t'] ?? '', 'maserka_id' => $_GET['m'] ?? null, 'poslat_email' => 1,
+    $v = ['datum' => $_GET['d'] ?? date('Y-m-d'), 'cas' => $_GET['t'] ?? '', 'maserka_id' => $_GET['m'] ?? null, 'maserka2_id' => $_GET['m2'] ?? null, 'poslat_email' => 1,
           'varianta_id' => ($_GET['v'] ?? '') !== '' ? (int)$_GET['v'] : null, 'delka' => $_GET['delka'] ?? ''];
     if (!empty($_GET['z'])) {
         $z = q1('SELECT * FROM zakaznici WHERE id=?', [(int)$_GET['z']]);
@@ -624,7 +687,7 @@ function stranka_rezervace(array $u): void
     $poukazy = zakaznik_poukazy((int)$z['id']);
     $zadost = $r['stav'] === 'zadost';
     $formData = $_SERVER['REQUEST_METHOD'] === 'POST' && ($chyba || $kol) ? $_POST : [
-        'varianta_id' => $r['varianta_id'], 'maserka_id' => $r['maserka_id'] ?: $z['pref_maserka_id'],
+        'varianta_id' => $r['varianta_id'], 'maserka_id' => $r['maserka_id'] ?: $z['pref_maserka_id'], 'maserka2_id' => $r['maserka2_id'],
         'datum' => $r['zacatek'] ? substr($r['zacatek'], 0, 10) : date('Y-m-d'),
         'cas' => $r['zacatek'] ? substr($r['zacatek'], 11, 5) : '',
         'delka' => $r['zacatek'] && $r['konec'] ? (strtotime($r['konec']) - strtotime($r['zacatek'])) / 60 : '',
@@ -642,7 +705,7 @@ function stranka_rezervace(array $u): void
             <?php if ($r['zacatek']): ?><dt>Kdy</dt><dd><?= h(datum_cz($r['zacatek'])) ?>–<?= date('H:i', strtotime($r['konec'])) ?></dd><?php endif ?>
             <?php if ($r['preferovano']): ?><dt>Hodí se mu</dt><dd><?= h($r['preferovano']) ?></dd><?php endif ?>
             <?php if ($r['poznamka_zakaznik']): ?><dt>Poznámka</dt><dd><?= nl2br(h($r['poznamka_zakaznik'])) ?></dd><?php endif ?>
-            <dt>Masérka</dt><dd><?= h($r['maserka'] ?? '—') ?></dd>
+            <dt>Masérka</dt><dd><?= h(($r['maserka'] ?? '—') . ($r['maserka2'] ? ' + ' . $r['maserka2'] : '')) ?><?= $r['masaz_konec'] ? ' <span class="muted small">(masáž do ' . h(date('H:i', strtotime($r['masaz_konec']))) . ', pak bez masérek)</span>' : '' ?></dd>
             <dt>Platba</dt><dd><?= h(PLATBY[$r['platba']] ?? '') ?> · <?= kc($r['cena']) ?></dd>
             <dt>Zdroj</dt><dd><?= h($r['zdroj']) ?> · vytvořeno <?= h(datum_cz($r['vytvoreno'])) ?><?= $r['zmenil'] ? ' · naposledy ' . h($r['zmenil']) : '' ?></dd>
           </dl>
@@ -763,6 +826,7 @@ function stranka_den_obs(array $u): void
     header('Content-Type: application/json; charset=utf-8');
     $d = preg_match('~^\d{4}-\d{2}-\d{2}$~', $_GET['d'] ?? '') ? $_GET['d'] : date('Y-m-d');
     $delka = max(5, min(300, (int)($_GET['delka'] ?? 60)));
+    $mdelka = max(5, min($delka, (int)($_GET['mdelka'] ?? $delka)));   // jak dlouho jsou potřeba masérky (párová: 60 z 120)
     $mimo = (int)($_GET['mimo'] ?? 0);
     $od = nastaveni('oteviraci_od', '09:00'); $do = nastaveni('oteviraci_do', '20:00');
     $minOd = (int)substr($od, 0, 2) * 60 + (int)substr($od, 3, 2); $minDo = (int)substr($do, 0, 2) * 60 + (int)substr($do, 3, 2);
@@ -772,23 +836,27 @@ function stranka_den_obs(array $u): void
         $okna[(int)$mid] = maserka_okna((int)$mid, $d);
         foreach ($okna[(int)$mid] as [$a, $b]) { $minOd = min($minOd, $a); $minDo = max($minDo, $b); }   // přesčas mimo otevírací dobu
     }
-    $od = hhmm($minOd); $do = hhmm($minDo);
-    $rez = q("SELECT r.id, r.maserka_id, r.zacatek, r.konec, z.jmeno, z.prijmeni FROM rezervace r JOIN zakaznici z ON z.id=r.zakaznik_id
-        WHERE r.maserka_id IS NOT NULL AND r.stav IN ('potvrzeno','probehlo') AND r.id<>? AND r.zacatek < ? AND r.konec > ? ORDER BY r.zacatek",
+    $zavreno = $minDo;   // zavírací doba (bez wellness po ní)
+    $rez = q("SELECT r.id, r.maserka_id, r.maserka2_id, r.zacatek, r.konec, COALESCE(r.masaz_konec, r.konec) AS m_konec, z.jmeno, z.prijmeni FROM rezervace r JOIN zakaznici z ON z.id=r.zakaznik_id
+        WHERE (r.maserka_id IS NOT NULL OR r.maserka2_id IS NOT NULL) AND r.stav IN ('potvrzeno','probehlo') AND r.id<>? AND r.zacatek < ? AND r.konec > ? ORDER BY r.zacatek",
         [$mimo, date('Y-m-d', strtotime("$d +1 day")), $d])->fetchAll();
     $bloky = [];
     foreach ($rez as $r) {
         $a = max($minOd, (int)date('G', strtotime($r['zacatek'])) * 60 + (int)date('i', strtotime($r['zacatek'])));
-        $b = (int)date('G', strtotime($r['konec'])) * 60 + (int)date('i', strtotime($r['konec']));
-        $bloky[(int)$r['maserka_id']][] = [$a, $b, trim($r['prijmeni'] ?: $r['jmeno'])];
+        $b = (int)date('G', strtotime($r['m_konec'])) * 60 + (int)date('i', strtotime($r['m_konec']));
+        foreach (array_filter([$r['maserka_id'], $r['maserka2_id']]) as $mid) $bloky[(int)$mid][] = [$a, $b, trim($r['prijmeni'] ?: $r['jmeno'])];
     }
+    // wellness po zavírací době (zákazníci zůstávají s recepční): osa se prodlouží
+    $poslKonec = (int)qv("SELECT MAX(CAST(strftime('%H', konec) AS INTEGER) * 60 + CAST(strftime('%M', konec) AS INTEGER)) FROM rezervace WHERE stav IN ('potvrzeno','probehlo') AND date(zacatek)=? AND date(konec)=?", [$d, $d]);
+    $minDoOsa = max($minDo, $poslKonec, $wellness ? $minDo + ($delka - $mdelka) : 0);
+    $od = hhmm($minOd); $do = hhmm($minDoOsa);
     $ted = $d === date('Y-m-d') ? (int)date('G') * 60 + (int)date('i') : ($d < date('Y-m-d') ? 99999 : -1);
     $hm = fn($n) => sprintf('%02d:%02d', intdiv($n, 60), $n % 60);
     // časy, kdy se masáž nevejde do masérn (plná lůžka / wellness masérna)
     $plno = [];
     $soubDen = q("SELECT r.id, r.zacatek, r.konec, s.kat FROM rezervace r LEFT JOIN varianty v ON v.id=r.varianta_id LEFT JOIN sluzby s ON s.id=v.sluzba_id
         WHERE r.stav IN ('potvrzeno','probehlo') AND r.id<>? AND r.zacatek < ? AND r.konec > ?", [$mimo, date('Y-m-d', strtotime("$d +1 day")), $d])->fetchAll();
-    for ($t = $minOd; $t + $delka <= $minDo; $t += 15) {
+    for ($t = $minOd; $t + $mdelka <= $minDo; $t += 15) {
         $zac = "$d " . $hm($t) . ':00'; $kon = date('Y-m-d H:i:s', strtotime($zac) + $delka * 60);
         $tu = array_values(array_filter($soubDen, fn($r) => $r['zacatek'] < $kon && $r['konec'] > $zac));
         if (kapacita_problem($zac, $kon, $wellness, $mimo, $tu)) $plno[$hm($t)] = true;
@@ -798,22 +866,22 @@ function stranka_den_obs(array $u): void
         $bl = $bloky[(int)$m['id']] ?? [];
         $ok_ = $okna[(int)$m['id']] ?? [];
         $volne = [];
-        for ($t = $minOd; $t + $delka <= $minDo; $t += 15) {
+        for ($t = $minOd; $t + $mdelka <= $minDo; $t += 15) {
             if ($t < $ted || isset($plno[$hm($t)])) continue;
             $vSmene = false;
-            foreach ($ok_ as [$a, $b]) if ($t >= $a && $t + $delka <= $b) { $vSmene = true; break; }
+            foreach ($ok_ as [$a, $b]) if ($t >= $a && $t + $mdelka <= $b) { $vSmene = true; break; }
             if (!$vSmene) continue;
             $ok = true;
-            foreach ($bl as [$a, $b]) if ($a < $t + $delka && $b > $t) { $ok = false; break; }
+            foreach ($bl as [$a, $b]) if ($a < $t + $mdelka && $b > $t) { $ok = false; break; }
             if ($ok) $volne[] = $hm($t);
         }
-        $mimoSm = intervaly_minus([[$minOd, $minDo]], $ok_);
+        $mimoSm = intervaly_minus([[$minOd, $minDoOsa]], $ok_);
         $out[] = ['id' => (int)$m['id'], 'jmeno' => $m['jmeno'], 'barva' => $m['barva'],
                   'bloky' => array_map(fn($x) => ['od' => $hm($x[0]), 'do' => $hm($x[1]), 'kdo' => $x[2]], $bl), 'volne' => $volne,
                   'mimo' => array_map(fn($x) => ['od' => $hm($x[0]), 'do' => $hm($x[1])], $mimoSm),
                   'popis' => implode(', ', array_column(maserka_den_popis((int)$m['id'], $d), 1))];
     }
     echo json_encode(['ok' => true, 'datum' => date('j. n. Y', strtotime($d)), 'od' => $od, 'do' => $do, 'maserky' => $out,
-        'plno' => array_keys($plno), 'svatek' => svatek($d)], JSON_UNESCAPED_UNICODE);
+        'plno' => array_keys($plno), 'svatek' => svatek($d), 'zavreno' => hhmm($zavreno)], JSON_UNESCAPED_UNICODE);
     exit;
 }

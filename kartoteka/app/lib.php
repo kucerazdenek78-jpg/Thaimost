@@ -233,21 +233,24 @@ function varianty_select(?int $vybrana = null): string
     return $o . '</optgroup>';
 }
 
-/** Kolize: jiná aktivní rezervace stejné masérky ve stejném čase. */
+/** Kolize: jiná aktivní rezervace, kde je masérka (jako první nebo druhá) ve stejném čase. U párové masérky končí dřív (masaz_konec). */
 function kolize(int $maserka, string $od, string $do, int $mimoId = 0): array
 {
-    return q("SELECT r.*, z.jmeno, z.prijmeni, z.telefon FROM rezervace r JOIN zakaznici z ON z.id=r.zakaznik_id
-        WHERE r.maserka_id=? AND r.stav IN ('potvrzeno','probehlo') AND r.id<>? AND r.zacatek < ? AND r.konec > ?",
-        [$maserka, $mimoId, $do, $od])->fetchAll();
+    return q("SELECT r.*, z.jmeno, z.prijmeni, z.telefon, COALESCE(r.masaz_konec, r.konec) AS m_konec FROM rezervace r JOIN zakaznici z ON z.id=r.zakaznik_id
+        WHERE (r.maserka_id=? OR r.maserka2_id=?) AND r.stav IN ('potvrzeno','probehlo') AND r.id<>? AND r.zacatek < ? AND COALESCE(r.masaz_konec, r.konec) > ?",
+        [$maserka, $maserka, $mimoId, $do, $od])->fetchAll();
 }
+
+/** Do kdy jsou u rezervace potřeba masérky. */
+function rez_masaz_konec(array $r): string { return $r['masaz_konec'] ?: $r['konec']; }
 
 function rezervace_detail(int $id): ?array
 {
-    return q1("SELECT r.*, v.popis AS var_popis, v.minuty, v.cena AS var_cena, s.nazev AS sluzba, m.jmeno AS maserka,
-        z.jmeno, z.prijmeni, z.telefon, z.email
+    return q1("SELECT r.*, v.popis AS var_popis, v.minuty, v.cena AS var_cena, v.maserky AS var_maserky, v.maserky_min, v.wellness_mistnost,
+        s.nazev AS sluzba, m.jmeno AS maserka, m2.jmeno AS maserka2, z.jmeno, z.prijmeni, z.telefon, z.email
         FROM rezervace r JOIN zakaznici z ON z.id=r.zakaznik_id
         LEFT JOIN varianty v ON v.id=r.varianta_id LEFT JOIN sluzby s ON s.id=v.sluzba_id
-        LEFT JOIN maserky m ON m.id=r.maserka_id WHERE r.id=?", [$id]);
+        LEFT JOIN maserky m ON m.id=r.maserka_id LEFT JOIN maserky m2 ON m2.id=r.maserka2_id WHERE r.id=?", [$id]);
 }
 
 // ---------- Poukazy ----------

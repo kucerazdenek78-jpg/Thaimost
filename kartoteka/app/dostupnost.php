@@ -140,7 +140,7 @@ function kapacita(): array
 /** Rezervace, které se v čase [zac, kon) překrývají (aktivní), s druhem služby. */
 function soubezne(string $zac, string $kon, int $mimoId = 0): array
 {
-    return q("SELECT r.id, r.zacatek, r.konec, s.kat FROM rezervace r LEFT JOIN varianty v ON v.id=r.varianta_id LEFT JOIN sluzby s ON s.id=v.sluzba_id
+    return q("SELECT r.id, r.zacatek, r.konec, COALESCE(v.wellness_mistnost, 0) AS w FROM rezervace r LEFT JOIN varianty v ON v.id=r.varianta_id
         WHERE r.stav IN ('potvrzeno','probehlo') AND r.id<>? AND r.zacatek < ? AND r.konec > ?", [$mimoId, $kon, $zac])->fetchAll();
 }
 
@@ -155,7 +155,7 @@ function kapacita_problem(string $zac, string $kon, bool $wellness, int $mimoId 
     foreach ($soub as $r) { $t = strtotime($r['zacatek']); if ($t > strtotime($zac) && $t < strtotime($kon)) $body[] = $t; }
     foreach ($body as $t) {
         $w = $wellness ? 1 : 0; $mas = $wellness ? 0 : 1;
-        foreach ($soub as $r) if (strtotime($r['zacatek']) <= $t && strtotime($r['konec']) > $t) { if (($r['kat'] ?? '') === 'wellness') $w++; else $mas++; }
+        foreach ($soub as $r) if (strtotime($r['zacatek']) <= $t && strtotime($r['konec']) > $t) { if ((int)($r['w'] ?? 0) === 1) $w++; else $mas++; }
         if ($w > $k['wellness_mist']) return $k['wellness_mist'] ? 'Wellness masérna je v tu dobu obsazená.' : 'Žádná masérna není nastavená pro wellness (Tým → Masérny).';
         $volnaLuzka = $k['luzka'] - $w * $k['luzka_wellness'];
         if ($mas > $volnaLuzka) return 'V ' . date('H:i', $t) . ' jsou obsazená všechna lůžka (' . $k['luzka'] . ($w ? ', z toho wellness masérna' : '') . ').';
@@ -167,11 +167,17 @@ function kapacita_problem(string $zac, string $kon, bool $wellness, int $mimoId 
 function konflikty_dostupnosti(?string $od = null, ?string $do = null): array
 {
     $od = $od ?? nyni(); $do = $do ?? date('Y-m-d', strtotime('+120 days'));
-    $rows = q("SELECT r.*, z.jmeno, z.prijmeni, z.telefon, s.nazev AS sluzba, s.kat, v.popis AS var_popis, m.jmeno AS maserka
+    $rows = q("SELECT r.*, z.jmeno, z.prijmeni, z.telefon, s.nazev AS sluzba, s.kat, v.popis AS var_popis, m.jmeno AS maserka, m2.jmeno AS maserka2
         FROM rezervace r JOIN zakaznici z ON z.id=r.zakaznik_id LEFT JOIN varianty v ON v.id=r.varianta_id
-        LEFT JOIN sluzby s ON s.id=v.sluzba_id LEFT JOIN maserky m ON m.id=r.maserka_id
-        WHERE r.stav='potvrzeno' AND r.maserka_id IS NOT NULL AND r.konec > ? AND r.zacatek < ? ORDER BY r.zacatek", [$od, $do])->fetchAll();
-    return array_values(array_filter($rows, fn($r) => !maserka_pracuje((int)$r['maserka_id'], $r['zacatek'], $r['konec'])));
+        LEFT JOIN sluzby s ON s.id=v.sluzba_id LEFT JOIN maserky m ON m.id=r.maserka_id LEFT JOIN maserky m2 ON m2.id=r.maserka2_id
+        WHERE r.stav='potvrzeno' AND (r.maserka_id IS NOT NULL OR r.maserka2_id IS NOT NULL) AND r.konec > ? AND r.zacatek < ? ORDER BY r.zacatek", [$od, $do])->fetchAll();
+    $out = [];
+    foreach ($rows as $r) {
+        // u párové může nepracovat jen jedna z obou – do konfliktu jde ta (slot = 1 nebo 2)
+        foreach ([[1, 'maserka_id', 'maserka'], [2, 'maserka2_id', 'maserka2']] as [$slot, $col, $jm])
+            if ($r[$col] && !maserka_pracuje((int)$r[$col], $r['zacatek'], rez_masaz_konec($r))) $out[] = $r + ['slot' => $slot, 'konf_mid' => (int)$r[$col], 'konf_jmeno' => $r[$jm]];
+    }
+    return $out;
 }
 
 // ---------- Stránka Volna a přesčasy ----------
@@ -201,8 +207,9 @@ function stranka_dostupnost(array $u): void
         } elseif ($akce === 'preradit') {
             $r = rezervace_detail((int)($_POST['rez_id'] ?? 0));
             $nova = (int)($_POST['maserka_id'] ?? 0);
+            $col = ($_POST['slot'] ?? '1') === '2' ? 'maserka2_id' : 'maserka_id';
             if ($r && $nova) {
-                q('UPDATE rezervace SET maserka_id=?, zmeneno=?, zmenil=? WHERE id=?', [$nova, nyni(), kdo(), $r['id']]);
+                q("UPDATE rezervace SET $col=?, zmeneno=?, zmenil=? WHERE id=?", [$nova, nyni(), kdo(), $r['id']]);
                 q("UPDATE sezeni SET stav='zruseno', zavreno=? WHERE rezervace_id=? AND stav='cekani'", [nyni(), $r['id']]);
                 $pozn = trim($_POST['poznamka'] ?? '');
                 if ($pozn !== '') q('UPDATE rezervace SET poznamka_masaz=TRIM(poznamka_masaz || ?) WHERE id=?', ["\n" . date('j. n.') . ': ' . $pozn, $r['id']]);
@@ -231,16 +238,16 @@ function stranka_dostupnost(array $u): void
       <?php foreach ($konflikty as $r):
           $soub = soubezne($r['zacatek'], $r['konec'], (int)$r['id']); ?>
         <form method="post" class="row-item konf">
-          <?= csrf_pole() ?><input type="hidden" name="akce" value="preradit"><input type="hidden" name="rez_id" value="<?= $r['id'] ?>">
-          <div class="time"><?= h(date('j. n.', strtotime($r['zacatek']))) ?><br><b><?= date('H:i', strtotime($r['zacatek'])) ?></b>–<?= date('H:i', strtotime($r['konec'])) ?></div>
+          <?= csrf_pole() ?><input type="hidden" name="akce" value="preradit"><input type="hidden" name="rez_id" value="<?= $r['id'] ?>"><input type="hidden" name="slot" value="<?= (int)$r['slot'] ?>">
+          <div class="time"><?= h(date('j. n.', strtotime($r['zacatek']))) ?><br><b><?= date('H:i', strtotime($r['zacatek'])) ?></b>–<?= date('H:i', strtotime(rez_masaz_konec($r))) ?></div>
           <div class="grow"><a href="/?r=rezervace&id=<?= $r['id'] ?>"><b><?= h(jmeno_z($r)) ?></b></a> · <a href="tel:<?= h($r['telefon']) ?>">📞 <?= h(telefon_cz($r['telefon'])) ?></a><br>
-            <?= h($r['sluzba'] . ' – ' . $r['var_popis']) ?> · u <b><?= h($r['maserka']) ?></b> <span class="tag nesp">nepracuje</span>
+            <?= h($r['sluzba'] . ' – ' . $r['var_popis']) ?> · u <b><?= h($r['konf_jmeno']) ?></b> <span class="tag nesp">nepracuje</span><?= $r['maserka2_id'] ? ' <span class="muted small">(párová: ' . h($r['maserka'] . ' + ' . $r['maserka2']) . ')</span>' : '' ?>
             <input name="poznamka" placeholder="poznámka (např. domluveno se zákazníkem)" class="small-in">
           </div>
           <div class="konf-btn">
-          <?php foreach ($maserky as $m): if ((int)$m['id'] === (int)$r['maserka_id']) continue;
-              $prac = maserka_pracuje((int)$m['id'], $r['zacatek'], $r['konec']);
-              $kol = $prac ? kolize((int)$m['id'], $r['zacatek'], $r['konec'], (int)$r['id']) : []; ?>
+          <?php foreach ($maserky as $m): if (in_array((int)$m['id'], [(int)$r['maserka_id'], (int)$r['maserka2_id']], true)) continue;
+              $prac = maserka_pracuje((int)$m['id'], $r['zacatek'], rez_masaz_konec($r));
+              $kol = $prac ? kolize((int)$m['id'], $r['zacatek'], rez_masaz_konec($r), (int)$r['id']) : []; ?>
             <button class="btn small <?= !$prac ? 'off' : ($kol ? 'warn' : 'primary') ?>" name="maserka_id" value="<?= $m['id'] ?>"
               <?= !$prac ? 'disabled title="nepracuje"' : ($kol ? 'title="obsazená: ' . h(jmeno_z($kol[0])) . ' ' . date('H:i', strtotime($kol[0]['zacatek'])) . ' – přeplnit" data-confirm="' . h($m['jmeno']) . ' má v tu dobu ' . h(jmeno_z($kol[0])) . '. Opravdu přeplnit?"' : 'title="volná"') ?>>
               <?= !$prac ? '' : ($kol ? '⚠ ' : '✓ ') ?><?= h($m['jmeno']) ?></button>

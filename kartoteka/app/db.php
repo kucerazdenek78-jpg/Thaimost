@@ -26,7 +26,7 @@ function q(string $sql, array $p = []): PDOStatement
 function q1(string $sql, array $p = []): ?array { $r = q($sql, $p)->fetch(); return $r ?: null; }
 function qv(string $sql, array $p = []) { $r = q($sql, $p)->fetchColumn(); return $r === false ? null : $r; }
 
-const DB_VERZE = 7;
+const DB_VERZE = 8;
 
 /** Migrace běží v jedné transakci a po získání zámku se verze ověří znovu (souběžné první požadavky). */
 function migrate(PDO $pdo): void
@@ -42,6 +42,7 @@ function migrate(PDO $pdo): void
         if ($ver < 5) migrate_v5($pdo);
         if ($ver < 6) migrate_v6($pdo);
         if ($ver < 7) migrate_v7($pdo);
+        if ($ver < 8) migrate_v8($pdo);
         $pdo->exec('PRAGMA user_version = ' . DB_VERZE);
         $pdo->exec('COMMIT');
     } catch (Throwable $e) {
@@ -155,6 +156,24 @@ function migrate_v1(PDO $pdo): void
     $sm = $pdo->prepare('INSERT INTO maserky(jmeno,poradi,barva) VALUES(?,?,?)');
     $barvy = ['#b07a3a', '#5b8a72', '#7a5ea8', '#c0605a', '#3f7fae'];
     for ($i = 1; $i <= 5; $i++) $sm->execute(["Masérka $i", $i, $barvy[$i - 1]]);
+}
+
+/** v8: kolik masérek služba potřebuje a na jak dlouho (párová: 2 masérky 60 min, pak whirlpool bez masérky),
+ *  zda zabírá wellness masérnu; u rezervace druhá masérka a konec části s masérkami. */
+function migrate_v8(PDO $pdo): void
+{
+    $pdo->exec(<<<SQL
+    ALTER TABLE varianty ADD COLUMN maserky INTEGER NOT NULL DEFAULT 1;      -- 0 = bez masérky (whirlpool, sauna), 1, 2 = párová
+    ALTER TABLE varianty ADD COLUMN maserky_min INTEGER;                    -- jak dlouho od začátku jsou masérky potřeba (prázdné = celou dobu)
+    ALTER TABLE varianty ADD COLUMN wellness_mistnost INTEGER NOT NULL DEFAULT 0;  -- zabírá celou wellness masérnu
+    ALTER TABLE rezervace ADD COLUMN maserka2_id INTEGER REFERENCES maserky(id);
+    ALTER TABLE rezervace ADD COLUMN masaz_konec TEXT;                      -- konec části s masérkami (prázdné = konec)
+    SQL);
+    // výchozí podle ceníku salonu: whirlpool/sauna bez masérky ve wellness masérně, párová = 2 masérky na 60 min + whirlpool
+    $pdo->exec("UPDATE varianty SET maserky=0, wellness_mistnost=1 WHERE sluzba_id IN (SELECT id FROM sluzby WHERE kod='whirlpool')");
+    $pdo->exec("UPDATE varianty SET maserky=2, maserky_min=60, wellness_mistnost=1 WHERE sluzba_id IN (SELECT id FROM sluzby WHERE kod='whirlpool') AND popis LIKE '%párov%'");
+    $pdo->exec("UPDATE rezervace SET masaz_konec=datetime(zacatek, '+60 minutes') WHERE varianta_id IN (SELECT id FROM varianty WHERE maserky_min=60) AND zacatek IS NOT NULL");
+    $pdo->exec("UPDATE rezervace SET maserka_id=NULL WHERE varianta_id IN (SELECT id FROM varianty WHERE maserky=0)");
 }
 
 /** v7: volna a přesčasy masérek; tablety (lůžka) seskupené do masérn, masérna pro wellness. */

@@ -19,7 +19,8 @@ function stranka_nastaveni(array $u): void
             flash('Masérky uloženy.');
         } elseif ($akce === 'cenik') {
             foreach ($_POST['v'] ?? [] as $id => $v)
-                q('UPDATE varianty SET cena=?, minuty=?, aktivni=? WHERE id=?', [(int)$v['cena'], $v['minuty'] !== '' ? (int)$v['minuty'] : null, !empty($v['aktivni']) ? 1 : 0, (int)$id]);
+                q('UPDATE varianty SET cena=?, minuty=?, aktivni=?, maserky=?, maserky_min=?, wellness_mistnost=? WHERE id=?', [(int)$v['cena'], $v['minuty'] !== '' ? (int)$v['minuty'] : null, !empty($v['aktivni']) ? 1 : 0,
+                    max(0, min(2, (int)($v['maserky'] ?? 1))), ($v['maserky_min'] ?? '') !== '' ? (int)$v['maserky_min'] : null, !empty($v['wellness_mistnost']) ? 1 : 0, (int)$id]);
             flash('Ceník uložen.');
         } elseif ($akce === 'uzivatel' && $u['role'] === 'admin') {
             $login = trim($_POST['login'] ?? ''); $heslo = $_POST['heslo'] ?? '';
@@ -75,12 +76,16 @@ function stranka_nastaveni(array $u): void
         <form method="post" class="card">
           <?= csrf_pole() ?><input type="hidden" name="akce" value="cenik">
           <details class="rozbal"><summary><h2>Ceník <span class="muted small">(<?= count($cenik) ?> položek – klepnutím rozbalíte; názvy a popisy se mění na webu v data.js)</span></h2></summary>
+          <p class="muted small">Masérek: 0 = bez masérky (whirlpool, sauna), 2 = párová. „Masérky min“ = jak dlouho jsou masérky potřeba (balíček párová + whirlpool: 60, zbytek jsou zákazníci sami – klidně i po zavírací době s recepční). „Celá wellness masérna“ = zabere obě lůžka dvoulůžkové masérny.</p>
           <table class="tbl plain">
-            <tr><th>Služba</th><th>Varianta</th><th>Minut</th><th>Kč</th><th>Aktivní</th></tr>
+            <tr><th>Služba</th><th>Varianta</th><th>Minut</th><th>Kč</th><th title="Kolik masérek služba potřebuje">Masérek</th><th title="Jak dlouho od začátku jsou masérky potřeba – prázdné = celou dobu (párová + whirlpool: 60)">Masérky min</th><th title="Zabírá celou dvoulůžkovou / wellness masérnu">Celá wellness masérna</th><th>Aktivní</th></tr>
             <?php foreach ($cenik as $c): ?>
               <tr><td><?= h($c['nazev']) ?></td><td><?= h($c['popis']) ?></td>
                   <td><input type="number" name="v[<?= $c['id'] ?>][minuty]" value="<?= h($c['minuty'] ?? '') ?>" style="width:4.5em"></td>
                   <td><input type="number" name="v[<?= $c['id'] ?>][cena]" value="<?= $c['cena'] ?>" style="width:5.5em"></td>
+                  <td><select name="v[<?= $c['id'] ?>][maserky]"><?= moznosti([0 => '0', 1 => '1', 2 => '2'], (int)$c['maserky']) ?></select></td>
+                  <td><input type="number" name="v[<?= $c['id'] ?>][maserky_min]" value="<?= h($c['maserky_min'] ?? '') ?>" style="width:4.5em" placeholder="celou"></td>
+                  <td><input type="checkbox" name="v[<?= $c['id'] ?>][wellness_mistnost]" value="1" <?= $c['wellness_mistnost'] ? 'checked' : '' ?>></td>
                   <td><input type="checkbox" name="v[<?= $c['id'] ?>][aktivni]" value="1" <?= $c['aktivni'] ? 'checked' : '' ?>></td></tr>
             <?php endforeach ?>
           </table>

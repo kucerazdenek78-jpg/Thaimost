@@ -74,3 +74,10 @@ V přehledu **Dnes** je karta **Masérny teď** (volná / čeká / běží do…
 - **Kalendář (📅 Den)**: šrafovaně = masérka nepracuje, zeleně čárkovaně = volné okno ≥ 30 min (klepnutím nová rezervace), v hlavičce volno/přesčas a kolik má kdo volných hodin; ⚠ červeně = masáž u masérky, která nepracuje. Posun po dnech: ‹ ›, šipky na klávesnici, přejetí prstem.
 - **Masérny a tablety** (Tým): jeden řádek = jedno lůžko s tabletem. Dvoulůžková masérna = dva tablety se stejným názvem masérny; zaškrtnutím „wellness“ zabere wellness celou masérnu. Kartotéka pak hlídá, aby se souběžně nenaplánovalo víc masáží, než je lůžek (2 + 2 = 4; během wellness 2). Kontrola se zapne po prvním uložení nastavení tabletů.
 - Spouštěč vzorových dat má i `vzor-obnovit.txt` (smaže a nahraje znovu).
+
+## Služby s více masérkami, bez masérky, wellness po zavírací době
+V Nastavení → Ceník má každá položka: **Masérek** (0 = whirlpool/sauna bez masérky, 1, 2 = párová), **Masérky min** (jak dlouho od začátku jsou masérky potřeba) a **Celá wellness masérna** (zabere obě lůžka dvoulůžkové masérny).
+Výchozí nastavení: whirlpool a sauna = 0 masérek, wellness masérna; balíček *120 min párová (2 asistentky + šampaňské + whirlpool + sauna)* = 2 masérky na 60 min + wellness masérna na celých 120 min. Fiji rituál a Cukrový vánek = 1 masérka na běžném lůžku.
+- Formulář u párové ukáže druhou masérku, nabídne čas **na konec směny** (masáž končí se zavírací dobou, whirlpool a sauna běží po zavírací době s recepční) a kontroluje obě masérky.
+- Kalendář: párová je u obou masérek jen na dobu masáže (👥), ve sloupci *Wellness masérna* na celou dobu; osa se prodlouží přes zavírací dobu.
+- Dnes: tlačítko **📲👥 Dvoulůžková – obě lůžka** pošle masáž na oba tablety (každé lůžko svou masérku); na tabletu se odpočítává jen masáž (60 min).

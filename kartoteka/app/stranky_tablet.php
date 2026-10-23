@@ -71,8 +71,9 @@ function cz_iban(string $ucet): ?string
 /** Délka zaplacené masáže v minutách: z rezervace, jinak z varianty, jinak 60. */
 function rezervace_minuty(array $r): int
 {
+    // na tabletu se odpočítává jen masáž (u párové 60 min; whirlpool a sauna potom už bez masérky)
     if (!empty($r['zacatek']) && !empty($r['konec'])) {
-        $m = (int)round((strtotime($r['konec']) - strtotime($r['zacatek'])) / 60);
+        $m = (int)round((strtotime($r['masaz_konec'] ?? '' ?: $r['konec']) - strtotime($r['zacatek'])) / 60);
         if ($m > 0) return $m;
     }
     $v = !empty($r['varianta_id']) ? (int)qv('SELECT minuty FROM varianty WHERE id=?', [$r['varianta_id']]) : 0;
@@ -108,18 +109,19 @@ function sezeni_aktivni(int $mistnost): ?array
 }
 
 /** Recepce: poslat rezervaci na tablet. Vrací chybu nebo null. */
-function tablet_poslat(array $r, int $mistnost): ?string
+function tablet_poslat(array $r, int $mistnost, ?int $maserka = null, bool $zrusitOstatni = true): ?string
 {
     $m = q1('SELECT * FROM mistnosti WHERE id=? AND aktivni=1', [$mistnost]);
     if (!$m) return 'Vyberte masérnu.';
-    if (!$r['maserka_id']) return 'U rezervace chybí masérka – nejdřív ji vyberte.';
+    $maserka = $maserka ?? (int)$r['maserka_id'];
+    if (!$maserka) return 'U rezervace chybí masérka – nejdřív ji vyberte.';
     if (in_array($r['stav'], ['zadost', 'odmitnuto', 'zruseno_vcas', 'zruseno_pozde'], true)) return 'Rezervace není potvrzená.';
     $akt = sezeni_aktivni($mistnost);
     if ($akt && $akt['stav'] !== 'cekani') return "V masérně „{$m['nazev']}“ právě probíhá jiná masáž.";
     if ($akt) q("UPDATE sezeni SET stav='zruseno', zavreno=? WHERE id=?", [nyni(), $akt['id']]);
-    q("UPDATE sezeni SET stav='zruseno', zavreno=? WHERE rezervace_id=? AND stav='cekani'", [nyni(), $r['id']]);
+    if ($zrusitOstatni) q("UPDATE sezeni SET stav='zruseno', zavreno=? WHERE rezervace_id=? AND stav='cekani'", [nyni(), $r['id']]);
     q('INSERT INTO sezeni(mistnost_id,rezervace_id,maserka_id,minuty,poslal,poslano) VALUES(?,?,?,?,?,?)',
-        [$mistnost, $r['id'], $r['maserka_id'], rezervace_minuty($r), kdo(), nyni()]);
+        [$mistnost, $r['id'], $maserka, rezervace_minuty($r), kdo(), nyni()]);
     zapis_log('tablet_poslano', "rez #{$r['id']} → {$m['nazev']}");
     return null;
 }

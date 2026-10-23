@@ -28,7 +28,7 @@ function demo_nahrat(): string
 
     $maserky = q('SELECT id, jmeno FROM maserky WHERE aktivni=1 ORDER BY poradi, id')->fetchAll();
     if (!$maserky) throw new RuntimeException('Nejsou žádné aktivní masérky (Tým).');
-    $var = q("SELECT v.id, v.popis, v.minuty, v.cena, s.kod, s.kat FROM varianty v JOIN sluzby s ON s.id=v.sluzba_id
+    $var = q("SELECT v.id, v.popis, v.minuty, v.cena, v.maserky, v.maserky_min, v.wellness_mistnost, s.kod, s.kat FROM varianty v JOIN sluzby s ON s.id=v.sluzba_id
               WHERE v.aktivni=1 AND s.aktivni=1 AND v.minuty IS NOT NULL")->fetchAll();
     $vKod = [];
     foreach ($var as $v) $vKod[$v['kod']][] = $v;
@@ -36,7 +36,8 @@ function demo_nahrat(): string
     $vahy = ['tradicni' => 30, 'olej' => 18, 'hlava' => 10, 'zada' => 12, 'aroma' => 6, 'nohy' => 6, 'bylinna' => 4,
              'siam' => 3, 'oblicej' => 2, 'lava' => 2, 'tehotenska' => 1, 'ventosa' => 2, 'lymfa-telo' => 1, 'lymfa-oblicej' => 1, 'poporodni' => 1];
     $vahy = array_filter($vahy, fn($k) => isset($vKod[$k]), ARRAY_FILTER_USE_KEY);
-    $wellness = array_merge($vKod['whirlpool'] ?? [], $vKod['fiji'] ?? [], $vKod['cukr'] ?? []);
+    $wellness = array_values(array_filter($vKod['whirlpool'] ?? [], fn($v) => (int)$v['maserky'] === 0));   // víkend: whirlpool/sauna bez masérky
+    $parova = array_values(array_filter($vKod['whirlpool'] ?? [], fn($v) => (int)$v['maserky'] === 2));
     $nahodna = function () use ($vahy, $vKod) {
         $r = mt_rand(1, array_sum($vahy));
         foreach ($vahy as $k => $w) { if (($r -= $w) <= 0) { $vv = $vKod[$k]; return $vv[mt_rand(0, count($vv) - 1)]; } }
@@ -109,24 +110,26 @@ function demo_nahrat(): string
         $wellMist = $kap['nastaveno'] ? $kap['wellness_mist'] : 1;
         $luzekWell = $kap['nastaveno'] ? $kap['luzka_wellness'] : 2;
         $kapM = []; $kapW = [];   // [den][15min index] => počet souběžných masáží / wellness
-        $vloz = function (int $zid, array $v, int $mid, string $den, int $odMin, string $stav, string $platba, string $zdroj = 'recepce')
+        $vloz = function (int $zid, array $v, int $mid, string $den, int $odMin, string $stav, string $platba, string $zdroj = 'recepce', int $mid2 = 0)
             use (&$obsazeno, &$zakDen, &$kapM, &$kapW, $luzek, $wellMist, $luzekWell) {
             if (isset($zakDen[$zid][$den])) return null;
             $do = $odMin + (int)$v['minuty'];
-            foreach ($obsazeno[$mid][$den] ?? [] as [$a, $b]) if ($odMin < $b && $do > $a) return null;
-            $jeW = ($v['kat'] ?? '') === 'wellness';
+            $mdo = $v['maserky_min'] && (int)$v['maserky_min'] < (int)$v['minuty'] ? $odMin + (int)$v['maserky_min'] : $do;   // masérky jen část
+            foreach (array_filter([$mid, $mid2]) as $mm) foreach ($obsazeno[$mm][$den] ?? [] as [$a, $b]) if ($odMin < $b && $mdo > $a) return null;
+            $jeW = (int)($v['wellness_mistnost'] ?? 0) === 1;
             for ($i = intdiv($odMin, 15); $i < intdiv($do + 14, 15); $i++) {
                 $w = ($kapW[$den][$i] ?? 0) + ($jeW ? 1 : 0); $m = ($kapM[$den][$i] ?? 0) + ($jeW ? 0 : 1);
                 if ($w > $wellMist || $m > $luzek - $w * $luzekWell) return null;
             }
             for ($i = intdiv($odMin, 15); $i < intdiv($do + 14, 15); $i++) { if ($jeW) $kapW[$den][$i] = ($kapW[$den][$i] ?? 0) + 1; else $kapM[$den][$i] = ($kapM[$den][$i] ?? 0) + 1; }
-            $obsazeno[$mid][$den][] = [$odMin, $do];
+            foreach (array_filter([$mid, $mid2]) as $mm) $obsazeno[$mm][$den][] = [$odMin, $mdo];
             $zakDen[$zid][$den] = true;
             $zac = sprintf('%s %02d:%02d:00', $den, intdiv($odMin, 60), $odMin % 60);
             $kon = sprintf('%s %02d:%02d:00', $den, intdiv($do, 60), $do % 60);
-            q("INSERT INTO rezervace(zakaznik_id,varianta_id,maserka_id,zacatek,konec,stav,zdroj,platba,cena,zmenil,vytvoreno)
-               VALUES(?,?,?,?,?,?,?,?,?,'VZOR',?)",
-                [$zid, $v['id'], $mid > 0 ? $mid : null, $zac, $kon, $stav, $zdroj, $platba, $platba === 'bonus' ? 0 : $v['cena'],
+            $mkon = $mdo < $do ? sprintf('%s %02d:%02d:00', $den, intdiv($mdo, 60), $mdo % 60) : null;
+            q("INSERT INTO rezervace(zakaznik_id,varianta_id,maserka_id,maserka2_id,masaz_konec,zacatek,konec,stav,zdroj,platba,cena,zmenil,vytvoreno)
+               VALUES(?,?,?,?,?,?,?,?,?,?,?,'VZOR',?)",
+                [$zid, $v['id'], $mid > 0 ? $mid : null, $mid2 > 0 ? $mid2 : null, $mkon, $zac, $kon, $stav, $zdroj, $platba, $platba === 'bonus' ? 0 : $v['cena'],
                  date('Y-m-d H:i:s', strtotime($zac . ' -' . mt_rand(1, 10) . ' days'))]);
             $rid = (int)db()->lastInsertId();
             demo_zapis('rezervace', $rid);
@@ -173,6 +176,15 @@ function demo_nahrat(): string
         for ($d = 0; $d < 14; $d++) {
             $den = date('Y-m-d', strtotime("+$d days"));
             $vikend = !je_pracovni_den($den);   // víkend nebo státní svátek: jen wellness
+            // párová + whirlpool a sauna na konec směny (masáž do zavírací doby, pak zákazníci s recepční) – zhruba každý třetí den
+            if (!$vikend && $parova && $d % 3 === 1 && count($maserky) >= 2) {
+                $ip = ($d * 2) % count($maserky); $ip2 = ($ip + 1) % count($maserky);
+                $kandP2 = array_values(array_filter($zak, fn($z) => $z['typ'] !== 'spici'));
+                for ($pokus = 0; $pokus < 8; $pokus++) {
+                    $z = $kandP2[mt_rand(0, count($kandP2) - 1)];
+                    if ($vloz($z['id'], $parova[0], (int)$maserky[$ip]['id'], $den, $doOt - (int)($parova[0]['maserky_min'] ?: 60), 'potvrzeno', '', 'recepce', (int)$maserky[$ip2]['id'])) { $budouci++; break; }
+                }
+            }
             foreach ($maserky as $mi => $m) {
                 if ($vikend) {
                     if (!$wellness || $mi > 1) continue;   // o víkendu jen wellness (bez masérky – whirlpool/sauna), 2 souběžné řady

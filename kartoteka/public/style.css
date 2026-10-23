@@ -129,3 +129,4 @@ input[type=color]{height:38px;padding:2px 4px;cursor:pointer}
 .gap:hover{background:#e3efe8}
 .blk.konfl{background:#fbe0dc !important;outline:2px dashed #c0605a}
 details.rozbal>summary{cursor:pointer;list-style:none}details.rozbal>summary::-webkit-details-marker{display:none}details.rozbal>summary h2{display:inline;margin:0}details.rozbal>summary::before{content:'▸ ';color:#b07a3a;font-weight:700}details.rozbal[open]>summary::before{content:'▾ '}details.rozbal[open]>summary{margin-bottom:10px}
+.obs-st{background:#f5efe6}
