@@ -48,6 +48,7 @@ Ochrana: honeypot pole `web`, limit 10 požadavků z IP za hodinu, CORS jen z po
 - Vzoroví zákazníci mají štítek **VZOR**, telefon `+420 999 …` (neexistující rozsah) a **žádný e-mail** – nic se jim neodešle. Nahoře v aplikaci svítí žlutý pruh, dokud v systému jsou.
 - **Smazat:** Nastavení → napsat `SMAZAT` → „Smazat všechna vzorová data“. Smaže vzorové zákazníky a vše, co u nich vzniklo (i během zkoušení). Skutečných zákazníků, masérek ani masérn se nedotkne.
 - Z příkazové řádky: `php bin/vzor.php nahrat` / `php bin/vzor.php smazat`.
+- Bez přihlášení a bez terminálu (např. přes QuickConnect, kde terminál kontejneru nefunguje): ve File Station nahrát do `docker/masaze/data/` prázdný soubor `vzor-nahrat.txt` (nebo `vzor-smazat.txt`) a otevřít libovolnou stránku kartotéky. Akce proběhne, soubor zmizí a výsledek je v `data/vzor-vysledek.txt`.
 
 ## Nepřišel / storno
 - Po skončení termínu se rezervace sama přepne na **Proběhlo jen tehdy, když masérka masáž spustila na tabletu**. Ostatní se v přehledu **Dnes** objeví v sekci **„Přišel klient?“** s tlačítky Proběhlo / Nepřišel / Zrušeno pozdě – zapomenutý „nepřišel“ se tak nepočítá jako návštěva ani do bonusu.

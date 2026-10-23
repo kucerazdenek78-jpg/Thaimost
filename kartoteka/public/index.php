@@ -23,6 +23,19 @@ if ($cesta !== '/') { http_response_code(404); exit('Nenalezeno'); }
 require $root . '/app/layout.php';
 require $root . '/app/stranky.php';
 
+// Spouštěč vzorových dat přes soubor (když nejde terminál kontejneru): nahrát do data/ prázdný soubor
+// „vzor-nahrat“ nebo „vzor-smazat“ (File Station). Při nejbližším načtení stránky se akce provede,
+// soubor se smaže a výsledek se zapíše do data/vzor-vysledek.txt. Soubor může vložit jen ten, kdo má přístup k NAS.
+foreach (['nahrat' => 'demo_nahrat', 'smazat' => 'demo_smazat'] as $k => $fn) {
+    $f = dirname(cfg()['db_path']) . "/vzor-$k";
+    foreach ([$f, "$f.txt"] as $ff) {
+        if (!is_file($ff) || !@unlink($ff)) continue;
+        try { $txt = $fn(); } catch (Throwable $e) { $txt = 'CHYBA: ' . $e->getMessage(); }
+        @file_put_contents(dirname($f) . '/vzor-vysledek.txt', date('Y-m-d H:i:s') . "  $txt\n", FILE_APPEND);
+        break 2;
+    }
+}
+
 $r = preg_replace('~[^a-z_]~', '', $_GET['r'] ?? 'dnes');
 if ($r === 'login') { stranka_login(); exit; }
 if ($r === 'ical') { stranka_ical(); }   // kalendářový odkaz chráněný tokenem, bez přihlášení
