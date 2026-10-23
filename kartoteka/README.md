@@ -65,3 +65,12 @@ Stránka **Volné termíny** ukazuje ve výchozím stavu všechny masérky (obl�
 
 ## Tablety: posílání z recepce v přehledu Dnes
 V přehledu **Dnes** je karta **Masérny teď** (volná / čeká / běží do…) a u každé dnešní potvrzené masáže tlačítka masérn. Recepce pošle masáž na tablet až ve chvíli, kdy klient přijde – zvolí masérnu a případně na místě změní masérku (zapíše se do rezervace). Čekající masáž jde jedním klepnutím **přesunout** do jiné masérny nebo **stáhnout**. Masérnu, kde masáž běží, nejde obsadit (⛔); kde jen čeká jiný klient (⏳), se přepíše.
+
+## Volna a přesčasy, svátky, kapacita masérn
+- Masérka pracuje Po–Pá v otevírací době, ve státní svátky ne (svátky ČR včetně Velikonoc se počítají samy).
+- **Volna a přesčasy** (menu): volno = nepracuje (celý den / více dní / část dne), přesčas = pracuje navíc (víkend, svátek, déle). Kalendář, Volné termíny i formulář rezervace s tím počítají.
+- Když masérka dostane volno a má na tu dobu klienty, objeví se v **K vyřešení se zákazníkem** (a v přehledu Dnes a u položky menu je počet). U každé masáže tlačítka ostatních masérek: ✓ volná, ⚠ obsazená = přeplnit (s potvrzením), šedá = nepracuje; nebo „Jiný termín…“. Přeřazení stáhne masáž i z tabletu.
+- U přesčasu je vidět, kolik hodin je už naplánováno („naplánováno 2 z 6 h“) a odkaz do kalendáře.
+- **Kalendář (📅 Den)**: šrafovaně = masérka nepracuje, zeleně čárkovaně = volné okno ≥ 30 min (klepnutím nová rezervace), v hlavičce volno/přesčas a kolik má kdo volných hodin; ⚠ červeně = masáž u masérky, která nepracuje. Posun po dnech: ‹ ›, šipky na klávesnici, přejetí prstem.
+- **Masérny a tablety** (Tým): jeden řádek = jedno lůžko s tabletem. Dvoulůžková masérna = dva tablety se stejným názvem masérny; zaškrtnutím „wellness“ zabere wellness celou masérnu. Kartotéka pak hlídá, aby se souběžně nenaplánovalo víc masáží, než je lůžek (2 + 2 = 4; během wellness 2). Kontrola se zapne po prvním uložení nastavení tabletů.
+- Spouštěč vzorových dat má i `vzor-obnovit.txt` (smaže a nahraje znovu).

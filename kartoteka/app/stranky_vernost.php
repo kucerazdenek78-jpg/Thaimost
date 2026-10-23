@@ -287,7 +287,7 @@ function stranka_volno(array $u): void
     $krok = in_array((int)($_GET['krok'] ?? 30), [15, 30, 60], true) ? (int)($_GET['krok'] ?? 30) : 30;
     $oknoOd = preg_match('~^\d{2}:\d{2}$~', $_GET['okno_od'] ?? '') ? $_GET['okno_od'] : '';
     $oknoDo = preg_match('~^\d{2}:\d{2}$~', $_GET['okno_do'] ?? '') ? $_GET['okno_do'] : '';
-    $var = $varId ? q1('SELECT v.*, s.nazev FROM varianty v JOIN sluzby s ON s.id=v.sluzba_id WHERE v.id=?', [$varId]) : null;
+    $var = $varId ? q1('SELECT v.*, s.nazev, s.kat FROM varianty v JOIN sluzby s ON s.id=v.sluzba_id WHERE v.id=?', [$varId]) : null;
     $delka = (int)($_GET['delka'] ?? 0) ?: (int)($var['minuty'] ?? 0);
 
     $maserky = q('SELECT * FROM maserky WHERE aktivni=1 ORDER BY poradi')->fetchAll();
@@ -311,7 +311,10 @@ function stranka_volno(array $u): void
                 if ($oknoDo && $hh > $oknoDo) continue;
                 $s = strtotime("$d $hh:00"); $e = $s + $delka * 60;
                 if ($s < time()) continue;
+                $zacS = "$d $hh:00"; $konS = date('Y-m-d H:i:s', $e);
+                if (kapacita_problem($zacS, $konS, ($var['kat'] ?? '') === 'wellness')) continue;
                 foreach ($kandidati as $m) {
+                    if (!maserka_pracuje((int)$m['id'], $zacS, $konS)) continue;
                     $kol = false;
                     foreach ($obs[(int)$m['id']] ?? [] as [$a, $b]) if ($a < $e && $b > $s) { $kol = true; break; }
                     if (!$kol) $volno[$d][$hh][] = (int)$m['id'];

@@ -26,7 +26,7 @@ require $root . '/app/stranky.php';
 // Spouštěč vzorových dat přes soubor (když nejde terminál kontejneru): nahrát do data/ prázdný soubor
 // „vzor-nahrat“ nebo „vzor-smazat“ (File Station). Při nejbližším načtení stránky se akce provede,
 // soubor se smaže a výsledek se zapíše do data/vzor-vysledek.txt. Soubor může vložit jen ten, kdo má přístup k NAS.
-foreach (['nahrat' => 'demo_nahrat', 'smazat' => 'demo_smazat'] as $k => $fn) {
+foreach (['nahrat' => 'demo_nahrat', 'smazat' => 'demo_smazat', 'obnovit' => fn() => demo_smazat() . ' ' . demo_nahrat()] as $k => $fn) {
     $f = dirname(cfg()['db_path']) . "/vzor-$k";
     foreach ([$f, "$f.txt"] as $ff) {
         if (!is_file($ff) || !@unlink($ff)) continue;
@@ -63,7 +63,7 @@ $stranky = [
     'masterny' => 'stranka_masterny', 'odmena' => 'stranka_odmena',
     'tym' => 'stranka_maserky', 'maserky' => 'stranka_maserky', 'maserka' => 'stranka_maserka', 'recepcni' => 'stranka_recepcni', 'uzivatele' => 'stranka_recepcni', 'smeny' => 'stranka_smeny',
     'hledej_zak' => 'stranka_hledej_zak', 'karty' => 'stranka_karty', 'karty_tisk' => 'stranka_karty_tisk',
-    'volno' => 'stranka_volno', 'den_obs' => 'stranka_den_obs', 'import' => 'stranka_import', 'poukaz_tisk' => 'stranka_poukaz_tisk',
+    'volno' => 'stranka_volno', 'den_obs' => 'stranka_den_obs', 'dostupnost' => 'stranka_dostupnost', 'import' => 'stranka_import', 'poukaz_tisk' => 'stranka_poukaz_tisk',
 ];
 if (!isset($stranky[$r])) { http_response_code(404); $r = 'dnes'; }
 if ($_SERVER['REQUEST_METHOD'] === 'POST') over_csrf();

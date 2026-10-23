@@ -48,10 +48,12 @@ function demo_nahrat(): string
         // ---------- masérny (jen pokud žádné nejsou – zůstanou i po smazání vzoru, kvůli tabletům) ----------
         $noveMistnosti = 0;
         if (!qv('SELECT COUNT(*) FROM mistnosti')) {
-            for ($i = 1; $i <= 3; $i++) {
-                q('INSERT INTO mistnosti(nazev,token,poradi) VALUES(?,?,?)', ["Masérna $i", bin2hex(random_bytes(16)), $i]);
+            // 2× jednolůžková + 1× dvoulůžková (i wellness) = 4 lůžka, na každém lůžku jeden tablet
+            foreach ([['Masérna 1', ''], ['Masérna 2', ''], ['Dvoulůžková – lůžko A', 'Dvoulůžková'], ['Dvoulůžková – lůžko B', 'Dvoulůžková']] as $i => [$n, $sk]) {
+                q('INSERT INTO mistnosti(nazev,token,poradi,skupina,wellness) VALUES(?,?,?,?,?)', [$n, bin2hex(random_bytes(16)), $i + 1, $sk, $sk ? 1 : 0]);
                 $noveMistnosti++;
             }
+            q("INSERT INTO nastaveni(klic,hodnota) VALUES('mistnosti_nastaveny','1') ON CONFLICT(klic) DO UPDATE SET hodnota='1'");
         }
 
         // ---------- zákazníci ----------
@@ -101,17 +103,30 @@ function demo_nahrat(): string
         // ---------- rozvrh: vložení rezervace bez kolize u masérky ----------
         $obsazeno = []; // [maserka][datum] => [[od,do],...] v minutách
         $zakDen = [];   // zákazník max. jednou za den
-        $vloz = function (int $zid, array $v, int $mid, string $den, int $odMin, string $stav, string $platba, string $zdroj = 'recepce') use (&$obsazeno, &$zakDen) {
+        // kapacita masérn: podle nastavení, jinak 2 jednolůžkové + 1 dvoulůžková pro wellness
+        $kap = kapacita();
+        $luzek = $kap['nastaveno'] ? $kap['luzka'] : 4;
+        $wellMist = $kap['nastaveno'] ? $kap['wellness_mist'] : 1;
+        $luzekWell = $kap['nastaveno'] ? $kap['luzka_wellness'] : 2;
+        $kapM = []; $kapW = [];   // [den][15min index] => počet souběžných masáží / wellness
+        $vloz = function (int $zid, array $v, int $mid, string $den, int $odMin, string $stav, string $platba, string $zdroj = 'recepce')
+            use (&$obsazeno, &$zakDen, &$kapM, &$kapW, $luzek, $wellMist, $luzekWell) {
             if (isset($zakDen[$zid][$den])) return null;
             $do = $odMin + (int)$v['minuty'];
             foreach ($obsazeno[$mid][$den] ?? [] as [$a, $b]) if ($odMin < $b && $do > $a) return null;
+            $jeW = ($v['kat'] ?? '') === 'wellness';
+            for ($i = intdiv($odMin, 15); $i < intdiv($do + 14, 15); $i++) {
+                $w = ($kapW[$den][$i] ?? 0) + ($jeW ? 1 : 0); $m = ($kapM[$den][$i] ?? 0) + ($jeW ? 0 : 1);
+                if ($w > $wellMist || $m > $luzek - $w * $luzekWell) return null;
+            }
+            for ($i = intdiv($odMin, 15); $i < intdiv($do + 14, 15); $i++) { if ($jeW) $kapW[$den][$i] = ($kapW[$den][$i] ?? 0) + 1; else $kapM[$den][$i] = ($kapM[$den][$i] ?? 0) + 1; }
             $obsazeno[$mid][$den][] = [$odMin, $do];
             $zakDen[$zid][$den] = true;
             $zac = sprintf('%s %02d:%02d:00', $den, intdiv($odMin, 60), $odMin % 60);
             $kon = sprintf('%s %02d:%02d:00', $den, intdiv($do, 60), $do % 60);
             q("INSERT INTO rezervace(zakaznik_id,varianta_id,maserka_id,zacatek,konec,stav,zdroj,platba,cena,zmenil,vytvoreno)
                VALUES(?,?,?,?,?,?,?,?,?,'VZOR',?)",
-                [$zid, $v['id'], $mid, $zac, $kon, $stav, $zdroj, $platba, $platba === 'bonus' ? 0 : $v['cena'],
+                [$zid, $v['id'], $mid > 0 ? $mid : null, $zac, $kon, $stav, $zdroj, $platba, $platba === 'bonus' ? 0 : $v['cena'],
                  date('Y-m-d H:i:s', strtotime($zac . ' -' . mt_rand(1, 10) . ' days'))]);
             $rid = (int)db()->lastInsertId();
             demo_zapis('rezervace', $rid);
@@ -130,7 +145,7 @@ function demo_nahrat(): string
             for ($k = 0; $k < $n; $k++) {
                 $dniZpet = $z['typ'] === 'spici' ? mt_rand(100, 200) : ($z['typ'] === 'staly' ? mt_rand(1, 170) : mt_rand(1, 120));
                 $den = date('Y-m-d', strtotime("-$dniZpet days"));
-                if ((int)date('N', strtotime($den)) >= 6) continue;
+                if (!je_pracovni_den($den)) continue;
                 $v = $nahodna();
                 $mid = $z['mas'] ?: $maserky[mt_rand(0, count($maserky) - 1)]['id'];
                 $zac = mt_rand(intdiv($od, 30), intdiv($doOt - (int)$v['minuty'], 30)) * 30;
@@ -157,15 +172,15 @@ function demo_nahrat(): string
         $budouci = 0;
         for ($d = 0; $d < 14; $d++) {
             $den = date('Y-m-d', strtotime("+$d days"));
-            $vikend = (int)date('N', strtotime($den)) >= 6;
+            $vikend = !je_pracovni_den($den);   // víkend nebo státní svátek: jen wellness
             foreach ($maserky as $mi => $m) {
                 if ($vikend) {
-                    if (!$wellness || $mi > 1) continue;   // o víkendu jen wellness, 2 masérky
+                    if (!$wellness || $mi > 1) continue;   // o víkendu jen wellness (bez masérky – whirlpool/sauna), 2 souběžné řady
                     for ($t = 10 * 60; $t + 90 <= 18 * 60; $t += mt_rand(0, 1) ? 120 : 150) {
                         if (mt_rand(1, 10) > 6) continue;
                         for ($pokus = 0; $pokus < 8; $pokus++) {
                             $z = $zak[mt_rand(0, count($zak) - 1)];
-                            if ($vloz($z['id'], $wellness[mt_rand(0, count($wellness) - 1)], (int)$m['id'], $den, $t, 'potvrzeno', '')) { $budouci++; break; }
+                            if ($vloz($z['id'], $wellness[mt_rand(0, count($wellness) - 1)], -1 - $mi, $den, $t, 'potvrzeno', '')) { $budouci++; break; }
                         }
                     }
                     continue;
@@ -185,6 +200,22 @@ function demo_nahrat(): string
                     $t += (int)$v['minuty'] + (mt_rand(1, 3) === 1 ? 30 : 0); // pauza na přípravu
                 }
             }
+        }
+
+        // ---------- volno a přesčas (po naplánování – ať je co řešit se zákazníky) ----------
+        $denVolna = date('Y-m-d', strtotime('+2 days'));
+        while (!je_pracovni_den($denVolna)) $denVolna = date('Y-m-d', strtotime("$denVolna +1 day"));
+        $mVolno = $maserky[min(1, count($maserky) - 1)];
+        q("INSERT INTO maserky_volno(maserka_id,typ,datum_od,datum_do,poznamka,kdo) VALUES(?, 'volno', ?, ?, 'VZOR – nemoc, zavolala ráno', 'VZOR')", [$mVolno['id'], $denVolna, $denVolna]);
+        demo_zapis('maserky_volno', (int)db()->lastInsertId());
+        $sobota = date('Y-m-d', strtotime('next saturday'));
+        $mPresc = $maserky[min(3, count($maserky) - 1)];
+        q("INSERT INTO maserky_volno(maserka_id,typ,datum_od,datum_do,cas_od,cas_do,poznamka,kdo) VALUES(?, 'prescas', ?, ?, '10:00', '16:00', 'VZOR – přesčas v sobotu', 'VZOR')", [$mPresc['id'], $sobota, $sobota]);
+        demo_zapis('maserky_volno', (int)db()->lastInsertId());
+        $kandP = array_values(array_filter($zak, fn($z) => $z['typ'] === 'staly'));
+        foreach ([10 * 60, 12 * 60] as $t) for ($pokus = 0; $pokus < 8; $pokus++) {
+            $z = $kandP[mt_rand(0, count($kandP) - 1)];
+            if ($vloz($z['id'], $vKod['tradicni'][0] ?? $var[0], (int)$mPresc['id'], $sobota, $t, 'potvrzeno', '')) { $budouci++; break; }
         }
 
         // ---------- žádosti z webu (čekají na recepci) ----------
@@ -231,8 +262,8 @@ function demo_nahrat(): string
         if (db()->inTransaction()) db()->rollBack();
         throw $e;
     }
-    return "Vzorová data nahrána: 120 zákazníků, " . count($probehle) . " proběhlých masáží v historii, $budouci rezervací na 14 dní, 4 žádosti z webu, 4 poukazy, 6 věrnostních karet."
-        . ($noveMistnosti ? " Založeny $noveMistnosti masérny pro tablety (po smazání vzoru zůstanou)." : '');
+    return "Vzorová data nahrána: 120 zákazníků, " . count($probehle) . " proběhlých masáží v historii, $budouci rezervací na 14 dní, 4 žádosti z webu, 4 poukazy, 6 věrnostních karet, ukázkové volno (" . $mVolno['jmeno'] . ' ' . date('j. n.', strtotime($denVolna)) . ") a přesčas (" . $mPresc['jmeno'] . ' ' . date('j. n.', strtotime($sobota)) . ")."
+        . ($noveMistnosti ? " Založena $noveMistnosti lůžka s tablety (2 jednolůžkové masérny + dvoulůžková pro wellness) (po smazání vzoru zůstanou)." : '');
 }
 
 /** Smaže všechna vzorová data – i to, co recepce během testování u vzorových zákazníků vytvořila. */
@@ -254,6 +285,7 @@ function demo_smazat(): string
         q("DELETE FROM rezervace WHERE id IN ($rez)");
         q("DELETE FROM poukazy WHERE id IN ($pou)");
         q("DELETE FROM karty WHERE zakaznik_id IN ($zak) OR id IN (SELECT rid FROM demo WHERE tab='karty')");
+        q("DELETE FROM maserky_volno WHERE id IN (SELECT rid FROM demo WHERE tab='maserky_volno') OR kdo='VZOR'");
         q("DELETE FROM zakaznici WHERE zdroj='vzor'");
         q('DELETE FROM demo');
         q("INSERT INTO log(kdo,akce,detail) VALUES(?, 'vzor_smazano', ?)", [kdo(), "zákazníků $nZak, rezervací $nRez"]);

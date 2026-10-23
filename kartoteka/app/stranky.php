@@ -8,6 +8,7 @@ require __DIR__ . '/stranky_vernost.php';
 require __DIR__ . '/stranky_import.php';
 require __DIR__ . '/stranky_tablet.php';
 require __DIR__ . '/demo.php';
+require __DIR__ . '/dostupnost.php';
 
 function stranka_login(): void
 {
@@ -102,6 +103,9 @@ function stranka_dnes(array $u): void
       <?php endforeach ?>
     </section>
 
+    <?php $konf = konflikty_dostupnosti(); if ($konf): ?>
+      <div class="flash warn">⚠ <b><?= count($konf) ?> masáž<?= count($konf) === 1 ? '' : (count($konf) < 5 ? 'e' : 'í') ?> u masérky, která v tu dobu nepracuje</b> (volno / víkend / svátek) – nejbližší <?= h(datum_cz($konf[0]['zacatek'])) ?> <?= h(jmeno_z($konf[0])) ?>. <a href="/?r=dostupnost">Vyřešit se zákazníky →</a></div>
+    <?php endif ?>
     <?php $kontrola = ke_kontrole(); if ($kontrola): ?>
     <section class="card kontrola">
       <h2>Přišel klient? <span class="muted">(<?= count($kontrola) ?> ke kontrole)</span></h2>
@@ -189,11 +193,14 @@ function stranka_dnes(array $u): void
 function stranka_kalendar(array $u): void
 {
     $d = preg_match('~^\d{4}-\d{2}-\d{2}$~', $_GET['d'] ?? '') ? $_GET['d'] : date('Y-m-d');
-    $od = nastaveni('oteviraci_od', '09:00'); $do = nastaveni('oteviraci_do', '20:00');
-    $minOd = (int)substr($od, 0, 2) * 60 + (int)substr($od, 3, 2);
-    $minDo = (int)substr($do, 0, 2) * 60 + (int)substr($do, 3, 2);
-    $px = 1.4; // pixelů na minutu
+    $minOd = min_z(nastaveni('oteviraci_od', '09:00')); $minDo = min_z(nastaveni('oteviraci_do', '20:00'));
     $maserky = q('SELECT * FROM maserky WHERE aktivni=1 ORDER BY poradi')->fetchAll();
+    $okna = [];
+    foreach ($maserky as $m) {
+        $okna[(int)$m['id']] = maserka_okna((int)$m['id'], $d);
+        foreach ($okna[(int)$m['id']] as [$x, $y]) { $minOd = min($minOd, $x); $minDo = max($minDo, $y); }
+    }
+    $px = 1.4; // pixelů na minutu
     $sloupce = array_merge($maserky, [['id' => 0, 'jmeno' => 'Wellness / bez masérky', 'barva' => '#888']]);
     $rez = q("SELECT r.*, z.jmeno, z.prijmeni, s.nazev AS sluzba, v.popis AS var_popis
         FROM rezervace r JOIN zakaznici z ON z.id=r.zakaznik_id LEFT JOIN varianty v ON v.id=r.varianta_id
@@ -202,42 +209,66 @@ function stranka_kalendar(array $u): void
         [$d, date('Y-m-d', strtotime($d . ' +1 day'))])->fetchAll();
     $poSloupcich = [];
     foreach ($rez as $r) $poSloupcich[(int)$r['maserka_id']][] = $r;
+    $prev = date('Y-m-d', strtotime("$d -1 day")); $next = date('Y-m-d', strtotime("$d +1 day"));
+    $sv = svatek($d);
+    $minz = fn($dt) => (int)date('G', strtotime($dt)) * 60 + (int)date('i', strtotime($dt));
 
     hlavicka('Kalendář', 'kalendar'); ?>
     <div class="cal-nav">
-      <a class="btn" href="/?r=kalendar&d=<?= date('Y-m-d', strtotime($d . ' -1 day')) ?>">‹</a>
+      <a class="btn" href="/?r=kalendar&d=<?= $prev ?>" title="předchozí den (←)">‹</a>
       <form><input type="hidden" name="r" value="kalendar"><input type="date" name="d" value="<?= h($d) ?>" onchange="this.form.submit()"></form>
-      <a class="btn" href="/?r=kalendar&d=<?= date('Y-m-d', strtotime($d . ' +1 day')) ?>">›</a>
+      <a class="btn" href="/?r=kalendar&d=<?= $next ?>" title="další den (→)">›</a>
       <a class="btn" href="/?r=kalendar">Dnes</a>
-      <h1><?= h(datum_cz($d, false)) ?></h1>
+      <h1><?= h(datum_cz($d, false)) ?><?= $sv ? ' <small class="tag nesp">🎌 ' . h($sv) . '</small>' : '' ?></h1>
+      <a class="btn small" href="/?r=dostupnost&d=<?= h($d) ?>">🌴 Volno / ⏱ přesčas</a>
     </div>
-    <p class="muted small">Klepnutím do volného místa přidáte rezervaci na ten čas a masérku.</p>
-    <div class="cal" style="--h:<?= ($minDo - $minOd) * $px ?>px">
+    <p class="muted small">Šrafovaně = masérka nepracuje. Zeleně čárkovaně = volné okno k zaplnění (klepnutím přidáte rezervaci). Šipky ← → nebo přejetí prstem = posun po dnech.</p>
+    <div class="cal" id="cal" style="--h:<?= ($minDo - $minOd) * $px ?>px">
       <div class="cal-hours">
-        <?php for ($m = $minOd; $m < $minDo; $m += 60): ?><div style="top:<?= ($m - $minOd) * $px ?>px"><?= sprintf('%02d:%02d', intdiv($m, 60), $m % 60) ?></div><?php endfor ?>
+        <?php for ($m = (int)ceil($minOd / 60) * 60; $m < $minDo; $m += 60): ?><div style="top:<?= ($m - $minOd) * $px ?>px"><?= hhmm($m) ?></div><?php endfor ?>
       </div>
-      <?php foreach ($sloupce as $s): ?>
+      <?php foreach ($sloupce as $s):
+        $mid = (int)$s['id'];
+        $bloky = $poSloupcich[$mid] ?? [];
+        usort($bloky, fn($a, $b) => strcmp($a['zacatek'], $b['zacatek']));
+        $aktivni = array_values(array_filter($bloky, fn($r) => in_array($r['stav'], ['potvrzeno', 'probehlo'], true)));
+        $ok = $mid ? $okna[$mid] : [[$minOd, $minDo]];
+        // volná okna = pracovní doba minus rezervace
+        $volna = $mid ? intervaly_minus($ok, array_map(fn($r) => [$minz($r['zacatek']), $minz($r['konec'])], $aktivni)) : [];
+        $volna = array_values(array_filter($volna, fn($x) => $x[1] - $x[0] >= 30 && ($d > date('Y-m-d') || ($d === date('Y-m-d') && $x[1] > (int)date('G') * 60 + (int)date('i')))));
+        $volnoMin = array_sum(array_map(fn($x) => $x[1] - $x[0], $volna));
+        $popis = $mid ? maserka_den_popis($mid, $d) : []; ?>
       <div class="cal-col">
-        <div class="cal-head" style="border-color:<?= h($s['barva']) ?>"><?= h($s['jmeno']) ?></div>
+        <div class="cal-head" style="border-color:<?= h($s['barva']) ?>"><?= h($s['jmeno']) ?>
+          <?php foreach ($popis as [$typ, $t]): ?><small class="<?= h($typ) ?>"><?= h($t) ?></small><?php endforeach ?>
+          <?php if ($mid && $ok): ?><small><?= $volnoMin ? 'volno ' . h(rtrim(rtrim(number_format($volnoMin / 60, 1, ',', ''), '0'), ',')) . ' h' : 'plno ✓' ?></small><?php endif ?>
+        </div>
         <div class="cal-body">
+          <?php if ($mid): foreach (intervaly_minus([[$minOd, $minDo]], $ok) as [$x, $y]): ?>
+            <div class="mimo-sm" style="top:<?= ($x - $minOd) * $px ?>px;height:<?= ($y - $x) * $px ?>px"></div>
+          <?php endforeach; endif ?>
           <?php for ($m = $minOd; $m < $minDo; $m += 30): ?>
             <a class="slot" style="top:<?= ($m - $minOd) * $px ?>px;height:<?= 30 * $px ?>px"
-               href="/?r=rez_nova&d=<?= h($d) ?>&t=<?= sprintf('%02d:%02d', intdiv($m, 60), $m % 60) ?>&m=<?= (int)$s['id'] ?>"></a>
+               href="/?r=rez_nova&d=<?= h($d) ?>&t=<?= hhmm($m) ?>&m=<?= $mid ?>"></a>
           <?php endfor ?>
-          <?php $bloky = $poSloupcich[(int)$s['id']] ?? [];
-          usort($bloky, fn($a, $b) => strcmp($a['zacatek'], $b['zacatek']));
+          <?php foreach ($volna as [$x, $y]): ?>
+            <a class="gap" style="top:<?= ($x - $minOd) * $px + 1 ?>px;height:<?= max(18, ($y - $x) * $px - 2) ?>px" href="/?r=rez_nova&d=<?= h($d) ?>&t=<?= hhmm($x) ?>&m=<?= $mid ?>">+ <?= hhmm($x) ?> · <?= $y - $x ?> min</a>
+          <?php endforeach ?>
+          <?php
           // překrývající se rezervace (kolize) zobrazit vedle sebe
           $drahy = [];
-          foreach ($bloky as $i => $r) { $d = 0; foreach ($drahy as $j => $kon) if ($kon <= $r['zacatek']) { $d = $j; break; } else $d = count($drahy); $drahy[$d] = $r['konec']; $bloky[$i]['draha'] = $d; }
+          foreach ($bloky as $i => $r) { $dr = 0; foreach ($drahy as $j => $kon) if ($kon <= $r['zacatek']) { $dr = $j; break; } else $dr = count($drahy); $drahy[$dr] = $r['konec']; $bloky[$i]['draha'] = $dr; }
           $pocetDrah = max(1, count($drahy));
           foreach ($bloky as $r):
               $t1 = strtotime($r['zacatek']); $t2 = strtotime($r['konec']);
-              $top = ((int)date('G', $t1) * 60 + (int)date('i', $t1) - $minOd) * $px;
+              $top = ($minz($r['zacatek']) - $minOd) * $px;
               $hgt = max(26, ($t2 - $t1) / 60 * $px - 2);
-              $w = 100 / $pocetDrah; $l = $r['draha'] * $w; ?>
-            <a class="blk s-<?= h($r['stav']) ?>" href="/?r=rezervace&id=<?= $r['id'] ?>"
-               style="top:<?= $top ?>px;height:<?= $hgt ?>px;left:calc(<?= $l ?>% + 3px);width:calc(<?= $w ?>% - 6px);border-color:<?= h($s['barva']) ?>">
-              <b><?= date('H:i', $t1) ?>–<?= date('H:i', $t2) ?></b> <?= h(jmeno_z($r)) ?><br>
+              $w = 100 / $pocetDrah; $l = $r['draha'] * $w;
+              $mimoSm = $mid && in_array($r['stav'], ['potvrzeno'], true) && !maserka_pracuje($mid, $r['zacatek'], $r['konec']); ?>
+            <a class="blk s-<?= h($r['stav']) ?><?= $mimoSm ? ' konfl' : '' ?>" href="/?r=rezervace&id=<?= $r['id'] ?>"
+               style="top:<?= $top ?>px;height:<?= $hgt ?>px;left:calc(<?= $l ?>% + 3px);width:calc(<?= $w ?>% - 6px);border-color:<?= h($s['barva']) ?>"
+               <?= $mimoSm ? 'title="Masérka v tu dobu nepracuje – vyřešit"' : '' ?>>
+              <b><?= $mimoSm ? '⚠ ' : '' ?><?= date('H:i', $t1) ?>–<?= date('H:i', $t2) ?></b> <?= h(jmeno_z($r)) ?><br>
               <span><?= h($r['sluzba'] . ' ' . $r['var_popis']) ?></span>
             </a>
           <?php endforeach ?>
@@ -245,6 +276,18 @@ function stranka_kalendar(array $u): void
       </div>
       <?php endforeach ?>
     </div>
+    <script>
+    (function () {
+      const go = d => location.href = '/?r=kalendar&d=' + d;
+      document.addEventListener('keydown', e => { if (e.target.closest('input,select,textarea')) return;
+        if (e.key === 'ArrowLeft') go('<?= $prev ?>'); if (e.key === 'ArrowRight') go('<?= $next ?>'); });
+      let x0 = null, y0 = 0; const c = document.getElementById('cal');
+      c.addEventListener('touchstart', e => { x0 = e.touches[0].clientX; y0 = e.touches[0].clientY; }, { passive: true });
+      c.addEventListener('touchend', e => { if (x0 === null) return; const dx = e.changedTouches[0].clientX - x0, dy = e.changedTouches[0].clientY - y0;
+        // jen výrazné vodorovné přejetí a jen když kalendář není širší než obrazovka (jinak se posouvá do strany)
+        if (Math.abs(dx) > 90 && Math.abs(dx) > Math.abs(dy) * 2 && c.scrollWidth <= c.clientWidth + 4) go(dx < 0 ? '<?= $next ?>' : '<?= $prev ?>'); x0 = null; });
+    })();
+    </script>
     <?php paticka();
 }
 
@@ -267,6 +310,12 @@ function rez_uloz(array $p, ?array $puvodni, bool $potvrdit): array
 
     $kol = $mas ? kolize($mas, $zac, $kon, (int)($puvodni['id'] ?? 0)) : [];
     if ($kol && empty($p['presto'])) return [null, $kol];
+    if ($mas && empty($p['presto']) && !maserka_pracuje($mas, $zac, $kon)) {
+        $pop = array_column(maserka_den_popis($mas, $p['datum']), 1);
+        return [qv('SELECT jmeno FROM maserky WHERE id=?', [$mas]) . ' v tu dobu nepracuje' . ($pop ? ' (' . implode(', ', $pop) . ')' : '') . '. Vyberte jinou masérku nebo čas, zapište jí přesčas (Volna a přesčasy), nebo zaškrtněte „Přesto uložit“.', []];
+    }
+    if (empty($p['presto']) && ($kp = kapacita_problem($zac, $kon, ($var['kat'] ?? '') === 'wellness', (int)($puvodni['id'] ?? 0))))
+        return [$kp . ' Zvolte jiný čas, nebo zaškrtněte „Přesto uložit“.', []];
     if (!$mas && empty($p['presto']) && ($var['kat'] ?? '') !== 'wellness') {
         $aktivni = (int)qv('SELECT COUNT(*) FROM maserky WHERE aktivni=1');
         $obsazene = (int)qv("SELECT COUNT(DISTINCT maserka_id) FROM rezervace WHERE maserka_id IS NOT NULL AND stav IN ('potvrzeno','probehlo') AND id<>? AND zacatek < ? AND konec > ?",
@@ -362,6 +411,7 @@ function rez_formular(array $v, bool $novy, string $tlacitko, int $rezId = 0): v
     <script>
     // délka podle zvolené služby + rychlé dohledání zákazníka podle telefonu
     const varMin = <?= json_encode(q('SELECT id, minuty FROM varianty')->fetchAll(PDO::FETCH_KEY_PAIR)) ?>;
+    const varWell = <?= json_encode(q("SELECT v.id, CASE WHEN s.kat='wellness' THEN 1 ELSE 0 END FROM varianty v JOIN sluzby s ON s.id=v.sluzba_id")->fetchAll(PDO::FETCH_KEY_PAIR)) ?>;
     const sel = document.getElementById('var'), del = document.getElementById('delka');
     sel && sel.addEventListener('change', () => { del.placeholder = varMin[sel.value] ? varMin[sel.value] + ' (podle služby)' : 'zadejte délku'; });
     sel && sel.dispatchEvent(new Event('change'));
@@ -377,7 +427,7 @@ function rez_formular(array $v, bool $novy, string $tlacitko, int $rezId = 0): v
         const d = f('datum').value, dl = delka();
         if (!d || !dl) { box.innerHTML = ''; return; }
         const my = ++posl;
-        const r = await fetch('/?r=den_obs&d=' + d + '&delka=' + dl + '&mimo=' + fs.dataset.mimo);
+        const r = await fetch('/?r=den_obs&d=' + d + '&delka=' + dl + '&mimo=' + fs.dataset.mimo + '&w=' + (varWell[f('varianta_id').value] ? 1 : 0));
         if (my !== posl) return; data = await r.json(); kresli();
       }
       function nastav(cas, mid) { if (cas) f('cas').value = cas; if (mid !== undefined) f('maserka_id').value = String(mid); kresli(); }
@@ -388,12 +438,19 @@ function rez_formular(array $v, bool $novy, string $tlacitko, int $rezId = 0): v
         let h = '';
         // stav vybraného termínu
         if (cas) {
-          const s = m2(cas), e = s + dl, volniTed = data.maserky.filter(m => !m.bloky.some(b => m2(b.od) < e && m2(b.do) > s));
+          const s = m2(cas), e = s + dl, vSmene = m => !m.mimo.some(b => m2(b.od) < e && m2(b.do) > s);
+          const plno = data.plno.includes(cas);
+          const volniTed = plno ? [] : data.maserky.filter(m => vSmene(m) && !m.bloky.some(b => m2(b.od) < e && m2(b.do) > s));
+          if (plno) h += '<div class="obs-st bad">⚠ V ' + cas + ' se masáž nevejde do masérn – lůžka jsou obsazená.</div>';
           const alt = volniTed.filter(m => m.id !== mid).map(m => '<button type="button" class="chip" data-m="' + m.id + '">' + esc(m.jmeno) + '</button>').join(' ');
           if (mid) {
             const m = data.maserky.find(x => x.id === mid), kol = m ? m.bloky.filter(b => m2(b.od) < e && m2(b.do) > s) : [];
             if (s + dl > do_) h += '<div class="obs-st bad">⚠ Masáž by skončila po zavírací době (' + data.do + ').</div>';
-            if (kol.length) {
+            if (m && !vSmene(m)) {
+              const dalsi = (m.volne || []).slice(0, 6).map(x => '<button type="button" class="chip" data-t="' + x + '">' + x + '</button>').join(' ');
+              h += '<div class="obs-st bad">⚠ <b>' + esc(m.jmeno) + ' v tu dobu nepracuje</b>' + (m.popis ? ' (' + esc(m.popis) + ')' : '') + '.'
+                + (alt ? '<br>V ' + cas + ' jsou volné: ' + alt : '') + (dalsi ? '<br>' + esc(m.jmeno) + ' má ten den volno v: ' + dalsi : '') + '</div>';
+            } else if (kol.length) {
               const dalsi = (m.volne || []).filter(x => m2(x) >= s).slice(0, 6).map(x => '<button type="button" class="chip" data-t="' + x + '">' + x + '</button>').join(' ');
               h += '<div class="obs-st bad">⚠ <b>' + esc(m.jmeno) + ' je obsazená</b>: ' + kol.map(b => b.od + '–' + b.do + ' ' + esc(b.kdo)).join(', ') + '.'
                 + (alt ? '<br>V ' + cas + ' jsou volné: ' + alt : '<br>V ' + cas + ' není volná žádná masérka.')
@@ -404,11 +461,11 @@ function rez_formular(array $v, bool $novy, string $tlacitko, int $rezId = 0): v
           }
         }
         // přehled dne: řádek na masérku, šedé = obsazeno, zlatá = vybraný termín; klepnutím do řádku se vybere čas a masérka
-        h += '<div class="obs-den"><div class="obs-hl"><span>Obsazenost ' + esc(data.datum) + '</span><span class="muted small">klepněte do volného místa</span></div>';
+        h += '<div class="obs-den"><div class="obs-hl"><span>Obsazenost ' + esc(data.datum) + (data.svatek ? ' · 🎌 ' + esc(data.svatek) : '') + '</span><span class="muted small">klepněte do volného místa</span></div>';
         data.maserky.forEach(m => {
-          let bar = m.bloky.map(b => '<i class="b" style="left:' + ((m2(b.od) - od) / sir * 100) + '%;width:' + ((m2(b.do) - m2(b.od)) / sir * 100) + '%" title="' + esc(b.od + '–' + b.do + ' ' + b.kdo) + '"></i>').join('');
+          let bar = (m.mimo || []).map(b => '<i class="x" style="left:' + ((m2(b.od) - od) / sir * 100) + '%;width:' + ((m2(b.do) - m2(b.od)) / sir * 100) + '%" title="nepracuje"></i>').join('') + m.bloky.map(b => '<i class="b" style="left:' + ((m2(b.od) - od) / sir * 100) + '%;width:' + ((m2(b.do) - m2(b.od)) / sir * 100) + '%" title="' + esc(b.od + '–' + b.do + ' ' + b.kdo) + '"></i>').join('');
           if (cas && m.id === mid) { const s = m2(cas); bar += '<i class="v" style="left:' + ((s - od) / sir * 100) + '%;width:' + (dl / sir * 100) + '%"></i>'; }
-          h += '<div class="obs-r' + (m.id === mid ? ' on' : '') + '"><button type="button" class="obs-n" data-m="' + m.id + '" style="border-color:' + esc(m.barva) + '">' + esc(m.jmeno) + '<small>' + m.volne.length + ' volných</small></button>'
+          h += '<div class="obs-r' + (m.id === mid ? ' on' : '') + '"><button type="button" class="obs-n" data-m="' + m.id + '" style="border-color:' + esc(m.barva) + '">' + esc(m.jmeno) + '<small>' + (m.popis ? esc(m.popis) : 'volno ' + m.volne.length + '×') + '</small></button>'
             + '<div class="obs-bar" data-m="' + m.id + '">' + bar + '</div></div>';
         });
         let osa = ''; for (let x = Math.ceil(od / 60) * 60; x <= do_; x += 60) osa += '<span style="left:' + ((x - od) / sir * 100) + '%">' + (x / 60) + '</span>';
@@ -709,6 +766,13 @@ function stranka_den_obs(array $u): void
     $mimo = (int)($_GET['mimo'] ?? 0);
     $od = nastaveni('oteviraci_od', '09:00'); $do = nastaveni('oteviraci_do', '20:00');
     $minOd = (int)substr($od, 0, 2) * 60 + (int)substr($od, 3, 2); $minDo = (int)substr($do, 0, 2) * 60 + (int)substr($do, 3, 2);
+    $wellness = ($_GET['w'] ?? '') === '1';
+    $okna = [];
+    foreach (q('SELECT id FROM maserky WHERE aktivni=1')->fetchAll(PDO::FETCH_COLUMN) as $mid) {
+        $okna[(int)$mid] = maserka_okna((int)$mid, $d);
+        foreach ($okna[(int)$mid] as [$a, $b]) { $minOd = min($minOd, $a); $minDo = max($minDo, $b); }   // přesčas mimo otevírací dobu
+    }
+    $od = hhmm($minOd); $do = hhmm($minDo);
     $rez = q("SELECT r.id, r.maserka_id, r.zacatek, r.konec, z.jmeno, z.prijmeni FROM rezervace r JOIN zakaznici z ON z.id=r.zakaznik_id
         WHERE r.maserka_id IS NOT NULL AND r.stav IN ('potvrzeno','probehlo') AND r.id<>? AND r.zacatek < ? AND r.konec > ? ORDER BY r.zacatek",
         [$mimo, date('Y-m-d', strtotime("$d +1 day")), $d])->fetchAll();
@@ -720,19 +784,36 @@ function stranka_den_obs(array $u): void
     }
     $ted = $d === date('Y-m-d') ? (int)date('G') * 60 + (int)date('i') : ($d < date('Y-m-d') ? 99999 : -1);
     $hm = fn($n) => sprintf('%02d:%02d', intdiv($n, 60), $n % 60);
+    // časy, kdy se masáž nevejde do masérn (plná lůžka / wellness masérna)
+    $plno = [];
+    $soubDen = q("SELECT r.id, r.zacatek, r.konec, s.kat FROM rezervace r LEFT JOIN varianty v ON v.id=r.varianta_id LEFT JOIN sluzby s ON s.id=v.sluzba_id
+        WHERE r.stav IN ('potvrzeno','probehlo') AND r.id<>? AND r.zacatek < ? AND r.konec > ?", [$mimo, date('Y-m-d', strtotime("$d +1 day")), $d])->fetchAll();
+    for ($t = $minOd; $t + $delka <= $minDo; $t += 15) {
+        $zac = "$d " . $hm($t) . ':00'; $kon = date('Y-m-d H:i:s', strtotime($zac) + $delka * 60);
+        $tu = array_values(array_filter($soubDen, fn($r) => $r['zacatek'] < $kon && $r['konec'] > $zac));
+        if (kapacita_problem($zac, $kon, $wellness, $mimo, $tu)) $plno[$hm($t)] = true;
+    }
     $out = [];
     foreach (q('SELECT id, jmeno, barva FROM maserky WHERE aktivni=1 ORDER BY poradi, id')->fetchAll() as $m) {
         $bl = $bloky[(int)$m['id']] ?? [];
+        $ok_ = $okna[(int)$m['id']] ?? [];
         $volne = [];
         for ($t = $minOd; $t + $delka <= $minDo; $t += 15) {
-            if ($t < $ted) continue;
+            if ($t < $ted || isset($plno[$hm($t)])) continue;
+            $vSmene = false;
+            foreach ($ok_ as [$a, $b]) if ($t >= $a && $t + $delka <= $b) { $vSmene = true; break; }
+            if (!$vSmene) continue;
             $ok = true;
             foreach ($bl as [$a, $b]) if ($a < $t + $delka && $b > $t) { $ok = false; break; }
             if ($ok) $volne[] = $hm($t);
         }
+        $mimoSm = intervaly_minus([[$minOd, $minDo]], $ok_);
         $out[] = ['id' => (int)$m['id'], 'jmeno' => $m['jmeno'], 'barva' => $m['barva'],
-                  'bloky' => array_map(fn($x) => ['od' => $hm($x[0]), 'do' => $hm($x[1]), 'kdo' => $x[2]], $bl), 'volne' => $volne];
+                  'bloky' => array_map(fn($x) => ['od' => $hm($x[0]), 'do' => $hm($x[1]), 'kdo' => $x[2]], $bl), 'volne' => $volne,
+                  'mimo' => array_map(fn($x) => ['od' => $hm($x[0]), 'do' => $hm($x[1])], $mimoSm),
+                  'popis' => implode(', ', array_column(maserka_den_popis((int)$m['id'], $d), 1))];
     }
-    echo json_encode(['ok' => true, 'datum' => date('j. n. Y', strtotime($d)), 'od' => $od, 'do' => $do, 'maserky' => $out], JSON_UNESCAPED_UNICODE);
+    echo json_encode(['ok' => true, 'datum' => date('j. n. Y', strtotime($d)), 'od' => $od, 'do' => $do, 'maserky' => $out,
+        'plno' => array_keys($plno), 'svatek' => svatek($d)], JSON_UNESCAPED_UNICODE);
     exit;
 }

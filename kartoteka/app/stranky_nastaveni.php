@@ -74,7 +74,7 @@ function stranka_nastaveni(array $u): void
 
         <form method="post" class="card">
           <?= csrf_pole() ?><input type="hidden" name="akce" value="cenik">
-          <h2>Ceník <span class="muted small">(názvy a popisy se mění na webu v data.js)</span></h2>
+          <details class="rozbal"><summary><h2>Ceník <span class="muted small">(<?= count($cenik) ?> položek – klepnutím rozbalíte; názvy a popisy se mění na webu v data.js)</span></h2></summary>
           <table class="tbl plain">
             <tr><th>Služba</th><th>Varianta</th><th>Minut</th><th>Kč</th><th>Aktivní</th></tr>
             <?php foreach ($cenik as $c): ?>
@@ -85,6 +85,7 @@ function stranka_nastaveni(array $u): void
             <?php endforeach ?>
           </table>
           <button class="btn">Uložit ceník</button>
+          </details>
         </form>
       </div>
       <div>

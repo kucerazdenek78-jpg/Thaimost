@@ -480,7 +480,12 @@ function stranka_masterny(array $u): void
             if ($n === '') flash('Zadejte název masérny.', 'err');
             else { q('INSERT INTO mistnosti(nazev,token,poradi) VALUES(?,?,?)', [$n, bin2hex(random_bytes(16)), (int)qv('SELECT COALESCE(MAX(poradi),0)+1 FROM mistnosti')]); flash('Masérna přidána.'); }
         } elseif ($akce === 'ulozit' && $id) {
-            q('UPDATE mistnosti SET nazev=?, aktivni=? WHERE id=?', [trim($_POST['nazev'] ?? '') ?: 'Masérna', !empty($_POST['aktivni']) ? 1 : 0, $id]);
+            q('UPDATE mistnosti SET nazev=?, aktivni=?, skupina=?, wellness=? WHERE id=?', [trim($_POST['nazev'] ?? '') ?: 'Masérna', !empty($_POST['aktivni']) ? 1 : 0,
+                trim($_POST['skupina'] ?? ''), !empty($_POST['wellness']) ? 1 : 0, $id]);
+            // wellness platí pro celou masérnu – sjednotit u všech jejích lůžek
+            $sk = trim($_POST['skupina'] ?? '');
+            if ($sk !== '') q('UPDATE mistnosti SET wellness=? WHERE LOWER(TRIM(skupina))=LOWER(?)', [!empty($_POST['wellness']) ? 1 : 0, $sk]);
+            q("INSERT INTO nastaveni(klic,hodnota) VALUES('mistnosti_nastaveny','1') ON CONFLICT(klic) DO UPDATE SET hodnota='1'");
             flash('Uloženo.');
         } elseif ($akce === 'token' && $id) {
             q('UPDATE mistnosti SET token=? WHERE id=?', [bin2hex(random_bytes(16)), $id]);
@@ -500,7 +505,11 @@ function stranka_masterny(array $u): void
     hlavicka('Masérny a tablety', 'tym'); ?>
     <h1>Tým</h1>
     <?php tym_nav('masterny'); ?>
-    <p class="muted small">Na každou masérnu jeden tablet. Odkaz níže otevřete na tabletu v prohlížeči (nejlépe v celoobrazovkovém / kiosk režimu) – nepřihlašuje se, pozná se podle tajného odkazu. Recepce pak v rezervaci tlačítkem <b>Poslat na tablet</b> pošle masáž do vybrané masérny.</p>
+    <p class="muted small">Na každé lůžko jeden tablet (natvrdo v masérně). Odkaz níže otevřete na tabletu v prohlížeči (nejlépe v celoobrazovkovém / kiosk režimu) – nepřihlašuje se, pozná se podle tajného odkazu. Recepce pak v rezervaci tlačítkem <b>Poslat na tablet</b> pošle masáž do vybrané masérny.</p>
+    <p class="muted small"><b>Jeden řádek = jedno lůžko s tabletem.</b> Dvoulůžková masérna má dva tablety – oba zařaďte do stejné masérny (pole „Masérna“).</p>
+    <?php $k = kapacita(); if (!$k['nastaveno']): ?><div class="flash warn">Zkontrolujte tablety: u dvoulůžkové masérny dejte oběma lůžkům stejný název masérny a zaškrtněte <b>wellness</b> (rozbalte „upravit“ a uložte). Dokud se to jednou neuloží, kartotéka nehlídá, kolik masáží se vejde najednou.</div><?php endif ?>
+    <p class="small">Kapacita: <b><?= $k['luzka'] ?> lůžek</b> najednou – <?= h(implode(', ', array_map(fn($m) => $m['nazev'] . ' (' . $m['luzka'] . ($m['wellness'] ? ', wellness' : '') . ')', $k['masery']))) ?>.<?= $k['wellness_mist'] ? ' Wellness zabere ' . $k['luzka_wellness'] . ' lůžka.' : ' <b class="warn">Žádná masérna není pro wellness.</b>' ?></p>
+    <datalist id="skupiny"><?php foreach (array_unique(array_filter(array_map(fn($x) => trim($x['skupina']), $mist))) as $sk): ?><option value="<?= h($sk) ?>"><?php endforeach ?></datalist>
     <table class="tbl">
       <tr><th>Masérna</th><th>Stav</th><th>Tablet</th><th>Odkaz pro tablet</th></tr>
       <?php foreach ($mist as $m):
@@ -514,7 +523,7 @@ function stranka_masterny(array $u): void
                 . ($s['neni_ona'] ? ' <b class="warn">masérka hlásí, že to není ona</b>' : '');
         } ?>
         <tr<?= $m['aktivni'] ? '' : ' class="muted"' ?>>
-          <td><b><?= h($m['nazev']) ?></b><?= $m['aktivni'] ? '' : ' <span class="tag">neaktivní</span>' ?></td>
+          <td><b><?= h($m['nazev']) ?></b><?= $m['aktivni'] ? '' : ' <span class="tag">neaktivní</span>' ?><br><span class="muted small"><?= trim($m['skupina']) !== '' ? 'masérna ' . h($m['skupina']) : 'samostatná masérna' ?><?= $m['wellness'] ? ' · wellness' : '' ?></span></td>
           <td><?= $info ?></td>
           <td><?= $on ? '🟢 online' : ($m['posledni_spojeni'] ? '⚪ naposledy ' . h(substr($m['posledni_spojeni'], 5, 11)) : '⚪ nikdy nepřipojen') ?></td>
           <td><input readonly value="<?= h(mistnost_url($m)) ?>" onclick="this.select()">
@@ -526,6 +535,8 @@ function stranka_masterny(array $u): void
         <tr><td colspan="4" style="border-top:0;padding-top:0"><details><summary class="muted small">upravit <?= h($m['nazev']) ?></summary>
           <form method="post" class="inline"><?= csrf_pole() ?><input type="hidden" name="akce" value="ulozit"><input type="hidden" name="id" value="<?= $m['id'] ?>">
             <label>Název<input name="nazev" value="<?= h($m['nazev']) ?>"></label>
+            <label>Masérna (místnost) <span class="muted small">– u dvoulůžkové napište u obou tabletů stejný název, např. „Dvoulůžková“; u jednolůžkové nechte prázdné</span><input name="skupina" value="<?= h($m['skupina']) ?>" list="skupiny"></label>
+            <label class="check"><input type="checkbox" name="wellness" value="1" <?= $m['wellness'] ? 'checked' : '' ?>> Masérna slouží i pro wellness (whirlpool, sauna, rituály) – zabere všechna její lůžka</label>
             <label class="check"><input type="checkbox" name="aktivni" value="1" <?= $m['aktivni'] ? 'checked' : '' ?>> Aktivní</label>
             <button class="btn primary">Uložit</button>
           </form>

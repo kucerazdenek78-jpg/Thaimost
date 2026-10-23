@@ -5,6 +5,7 @@
 require dirname(__DIR__) . '/app/lib.php';
 require dirname(__DIR__) . '/app/db.php';
 require dirname(__DIR__) . '/app/stranky_vernost.php'; // KARTA_ZNAKY
+require dirname(__DIR__) . '/app/dostupnost.php';
 require dirname(__DIR__) . '/app/demo.php';
 date_default_timezone_set(cfg()['casova_zona'] ?? 'Europe/Prague');
 $a = $argv[1] ?? '';

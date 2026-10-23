@@ -8,9 +8,10 @@ function hlavicka(string $titul, string $aktivni = ''): void
     $poukazyCekaji = $u ? (int)qv("SELECT COUNT(*) FROM poukazy WHERE stav='objednano'") : 0;
     $menu = [
         'dnes' => 'Dnes' . ($zadosti ? " <b class=\"cnt\">$zadosti</b>" : ''),
-        'kalendar' => 'Kalendář',
+        'kalendar' => '📅 Den',
         'zakaznici' => 'Zákazníci',
         'volno' => 'Volné termíny',
+        'dostupnost' => 'Volna a přesčasy' . (($kn = $u ? count(konflikty_dostupnosti()) : 0) ? " <b class=\"cnt\">$kn</b>" : ''),
         'poukazy' => 'Poukazy' . ($poukazyCekaji ? " <b class=\"cnt\">$poukazyCekaji</b>" : ''),
         'karty' => 'Karty',
         'tym' => 'Tým',
