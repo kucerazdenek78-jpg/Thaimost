@@ -46,21 +46,12 @@ Při prvním spuštění se založí pravidla R-01 až R-08 (z provozu salonu).
 
 ## Zapnutí na NAS
 
-1. V Claude Console (console.anthropic.com) vytvořit API klíč a nastavit měsíční limit útraty.
-2. Na NAS v `config.php` ve složce kartotéky (File Station → upravit) doplnit na konec pole:
-   ```php
-   'ai' => [
-       'api_key' => 'sk-ant-…',
-       'model' => 'claude-haiku-5-5',
-       'max_tokens' => 1500,
-       'max_kroku' => 8,
-       'denni_limit' => 300,
-   ],
-   ```
-3. Nahrát nové soubory z repa (`app/ai.php`, `app/stranky_ai.php` a změněné soubory). Restart kontejneru není potřeba – PHP si soubory načte samo; databáze se doplní sama (verze 9).
-4. Otevřít https://masage.dvere.app/?r=ai.
+1. Nahrát nové a změněné soubory z repa do složky kartotéky na NAS. Restart kontejneru není potřeba – PHP si soubory načte samo; databáze se doplní sama (verze 9).
+2. V Claude Console (console.anthropic.com → API keys) vytvořit klíč a nastavit měsíční limit útraty.
+3. V kartotéce jako admin: **🤖 Asistent → Nastavení a spotřeba** → vložit klíč, vybrat model (výchozí Haiku) → Uložit. Klíč se před uložením ověří krátkým voláním.
+4. Hotovo – stránka 🤖 Asistent je zapnutá.
 
-Klíč je jen v `config.php`, který se do gitu nenahrává.
+Klíč se uloží do `data/ai-nastaveni.json` (mimo web, mimo git, práva 0600). Zálohuje se s databází, takže zálohy chraňte. Kdo chce, může klíč místo toho dát do `config.php` (sekce `'ai' => ['api_key' => '…']`); klíč vložený v kartotéce má přednost.
 
 ## Pojistky
 

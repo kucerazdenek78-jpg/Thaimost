@@ -123,10 +123,10 @@ function stranka_ai(array $u): void
     <div class="cal-nav"><h1>🤖 Asistent <small>zkušební verze · jen navrhuje, rezervace ukládá recepce</small></h1>
       <span class="grow"></span>
       <a class="btn small" href="/?r=ai_pravidla">Pravidla salonu</a>
-      <?php if (je_admin($u)): ?><a class="btn small" href="/?r=ai_log">Log a spotřeba</a><?php endif ?>
+      <?php if (je_admin($u)): ?><a class="btn small" href="/?r=ai_log">Nastavení a spotřeba</a><?php endif ?>
     </div>
     <?php if (!ai_zapnuto()): ?>
-      <div class="flash warn">Asistent zatím není zapnutý. V <code>config.php</code> doplňte sekci <code>'ai' => ['api_key' => '…']</code> (klíč z Claude Console). Postup je v <code>docs/ai-asistent.md</code>.</div>
+      <div class="flash warn">Asistent zatím není zapnutý – chybí API klíč z Claude Console. <?= je_admin($u) ? '<a href="/?r=ai_log">Vložit klíč →</a>' : 'Vloží ho admin v Asistent → Nastavení a spotřeba.' ?></div>
     <?php endif ?>
     <div class="cols">
       <section class="card aichat">
@@ -248,13 +248,53 @@ function stranka_ai_pravidla(array $u): void
 function stranka_ai_log(array $u): void
 {
     vyzaduj_admina();
+    if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+        $akce = $_POST['akce'] ?? '';
+        $f = ai_soubor_cti();
+        $model = isset(AI_MODELY[$_POST['model'] ?? '']) ? $_POST['model'] : ai_cfg()['model'];
+        $klic = trim((string)($_POST['api_key'] ?? ''));
+        if ($akce === 'ulozit') {
+            if ($klic !== '' && !preg_match('~^sk-ant-[A-Za-z0-9_-]{20,}$~', $klic)) { flash('Tohle nevypadá jako API klíč Anthropicu (začíná „sk-ant-“).', 'err'); presmeruj('/?r=ai_log'); }
+            if ($klic !== '' && ($err = ai_test($klic, $model))) { flash('Klíč neuložen – zkušební volání selhalo: ' . $err, 'err'); presmeruj('/?r=ai_log'); }
+            if ($klic !== '') $f['api_key'] = $klic;
+            $f['model'] = $model;
+            $f['zmenil'] = kdo(); $f['zmeneno'] = nyni();
+            ai_soubor_uloz($f);
+            ai_log('nastaveni', 'model ' . $model . ($klic !== '' ? ', nový klíč …' . substr($klic, -4) : ''));
+            flash($klic !== '' ? 'Klíč ověřen a uložen, asistent je zapnutý.' : 'Nastavení uloženo.');
+        } elseif ($akce === 'odebrat') {
+            unset($f['api_key']); ai_soubor_uloz($f);
+            ai_log('nastaveni', 'klíč odebrán');
+            flash('Klíč odebrán.' . (trim((string)(cfg()['ai']['api_key'] ?? '')) !== '' ? ' Pozor: v config.php je další klíč, ten platí dál.' : ' Asistent je vypnutý.'), 'warn');
+        } elseif ($akce === 'test') {
+            $err = ai_zapnuto() ? ai_test() : 'Není vložený klíč.';
+            flash($err ? 'Spojení nefunguje: ' . $err : 'Spojení funguje (' . ai_cfg()['model'] . ').', $err ? 'err' : 'ok');
+        }
+        presmeruj('/?r=ai_log');
+    }
     $dnes = q1("SELECT COUNT(*) volani, COALESCE(SUM(tokeny_in),0) i, COALESCE(SUM(tokeny_out),0) o FROM ai_log WHERE typ='api' AND cas >= ?", [date('Y-m-d 00:00:00')]);
     $mesic = q1("SELECT COUNT(*) volani, COALESCE(SUM(tokeny_in),0) i, COALESCE(SUM(tokeny_out),0) o FROM ai_log WHERE typ='api' AND cas >= ?", [date('Y-m-01 00:00:00')]);
     $rows = q('SELECT * FROM ai_log ORDER BY id DESC LIMIT 200')->fetchAll();
     $c = ai_cfg();
-    hlavicka('Log asistenta', 'ai'); ?>
-    <div class="cal-nav"><h1>Log asistenta</h1><span class="grow"></span><a class="btn small" href="/?r=ai">← Asistent</a></div>
-    <p>Model: <code><?= h($c['model']) ?></code> · denní limit volání: <?= (int)$c['denni_limit'] ?><br>
+    $f = ai_soubor_cti();
+    hlavicka('Nastavení asistenta', 'ai'); ?>
+    <div class="cal-nav"><h1>Nastavení a spotřeba asistenta</h1><span class="grow"></span><a class="btn small" href="/?r=ai">← Asistent</a></div>
+    <form method="post" class="card"><?= csrf_pole() ?>
+      <h2>API klíč a model</h2>
+      <p class="small">Stav: <?= ai_zapnuto() ? '<b style="color:var(--ok)">zapnuto</b> – klíč …' . h(substr($c['api_key'], -4)) . ' (' . h($c['zdroj_klice'] ?? '') . ')' . (!empty($f['zmenil']) && ($c['zdroj_klice'] ?? '') === 'kartoteka' ? ', vložil ' . h($f['zmenil']) . ' ' . h(datum_cz($f['zmeneno'])) : '') : '<b class="warn">vypnuto – chybí klíč</b>' ?></p>
+      <div class="grid3">
+        <label>Nový API klíč<input type="password" name="api_key" autocomplete="off" placeholder="sk-ant-…" spellcheck="false"></label>
+        <label>Model<select name="model"><?= moznosti(AI_MODELY, $c['model']) ?></select></label>
+        <div style="display:flex;gap:6px;align-items:end;margin-bottom:10px;flex-wrap:wrap">
+          <button class="btn primary" name="akce" value="ulozit">Uložit</button>
+          <?php if (ai_zapnuto()): ?><button class="btn" name="akce" value="test">Vyzkoušet spojení</button><?php endif ?>
+          <?php if (!empty($f['api_key'])): ?><button class="btn danger" name="akce" value="odebrat" data-confirm="Odebrat klíč? Asistent se vypne.">Odebrat klíč</button><?php endif ?>
+        </div>
+      </div>
+      <p class="small muted">Klíč vytvoříte v Claude Console (console.anthropic.com → API keys); tam nastavte i měsíční limit útraty. Před uložením se klíč ověří krátkým voláním.
+        Uloží se na NAS do <code>data/</code> (mimo web, mimo git) – zálohuje se s databází, takže zálohu chraňte. Klíč už se nikde nezobrazí celý.</p>
+    </form>
+    <p>Denní limit volání: <?= (int)$c['denni_limit'] ?><br>
       Dnes: <b><?= (int)$dnes['volani'] ?></b> volání, <?= number_format((int)$dnes['i'], 0, ',', ' ') ?> vstupních / <?= number_format((int)$dnes['o'], 0, ',', ' ') ?> výstupních tokenů ·
       tento měsíc: <b><?= (int)$mesic['volani'] ?></b> volání, <?= number_format((int)$mesic['i'], 0, ',', ' ') ?> / <?= number_format((int)$mesic['o'], 0, ',', ' ') ?> tokenů.
       <span class="muted small">Cenu podle tokenů ukazuje Claude Console; tam nastavte i měsíční limit útraty.</span></p>

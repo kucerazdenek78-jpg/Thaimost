@@ -8,9 +8,31 @@
 const AI_API_URL = 'https://api.anthropic.com/v1/messages';
 const AI_API_VERZE = '2023-06-01';
 
+const AI_MODELY = [
+    'claude-haiku-5-5' => 'Haiku 5.5 – levnější (výchozí)',
+    'claude-sonnet-5-5' => 'Sonnet 5.5 – chytřejší, dražší',
+];
+
+/** Klíč a model vložené adminem v kartotéce (Asistent → Nastavení). Soubor je v data/, mimo web, do gitu nejde. */
+function ai_soubor(): string { return dirname(cfg()['db_path']) . '/ai-nastaveni.json'; }
+function ai_soubor_cti(): array
+{
+    $f = ai_soubor();
+    $d = is_file($f) ? json_decode((string)file_get_contents($f), true) : null;
+    return is_array($d) ? $d : [];
+}
+function ai_soubor_uloz(array $d): void
+{
+    $f = ai_soubor();
+    file_put_contents($f, json_encode($d, JSON_UNESCAPED_UNICODE), LOCK_EX);
+    @chmod($f, 0600);
+}
+
 function ai_cfg(): array
 {
-    return (cfg()['ai'] ?? []) + [
+    static $c = null;
+    if ($c) return $c;
+    $c = (cfg()['ai'] ?? []) + [
         'api_key' => '',
         'model' => 'claude-haiku-5-5',
         'max_tokens' => 1500,
@@ -19,6 +41,25 @@ function ai_cfg(): array
         'timeout' => 60,           // s na jedno volání API
         'api_url' => AI_API_URL,
     ];
+    $f = ai_soubor_cti();
+    if (trim((string)($f['api_key'] ?? '')) !== '') { $c['api_key'] = trim($f['api_key']); $c['zdroj_klice'] = 'kartoteka'; }
+    elseif (trim((string)$c['api_key']) !== '') $c['zdroj_klice'] = 'config.php';
+    if (isset(AI_MODELY[$f['model'] ?? ''])) $c['model'] = $f['model'];
+    return $c;
+}
+
+/** Krátké zkušební volání bez nástrojů: ověří klíč a model. Vrací null (OK) nebo text chyby. */
+function ai_test(?string $klic = null, ?string $model = null): ?string
+{
+    $c = ai_cfg();
+    try {
+        $odp = ai_api(['model' => $model ?? $c['model'], 'max_tokens' => 20, 'messages' => [['role' => 'user', 'content' => 'Odpověz jedním slovem: funguješ?']]], $klic);
+        ai_log('test', ($model ?? $c['model']) . ' OK', (int)($odp['usage']['input_tokens'] ?? 0), (int)($odp['usage']['output_tokens'] ?? 0));
+        return null;
+    } catch (Throwable $e) {
+        ai_log('test', 'chyba: ' . $e->getMessage());
+        return $e->getMessage();
+    }
 }
 function ai_zapnuto(): bool { return trim((string)ai_cfg()['api_key']) !== ''; }
 
@@ -279,11 +320,11 @@ function ai_nastroj(string $jmeno, array $in, array &$navrhy): array
 }
 
 // ---------------- Volání Claude API ----------------
-function ai_api(array $telo): array
+function ai_api(array $telo, ?string $klic = null): array
 {
     $c = ai_cfg();
     $json = json_encode($telo, JSON_UNESCAPED_UNICODE | JSON_INVALID_UTF8_SUBSTITUTE);
-    $hlav = ['content-type: application/json', 'x-api-key: ' . trim($c['api_key']), 'anthropic-version: ' . AI_API_VERZE];
+    $hlav = ['content-type: application/json', 'x-api-key: ' . trim($klic ?? $c['api_key']), 'anthropic-version: ' . AI_API_VERZE];
     if (function_exists('curl_init')) {
         $ch = curl_init($c['api_url']);
         curl_setopt_array($ch, [CURLOPT_POST => true, CURLOPT_POSTFIELDS => $json, CURLOPT_HTTPHEADER => $hlav,
@@ -315,7 +356,7 @@ function ai_api(array $telo): array
 function ai_dotaz(string $dotaz, array $historie, array $u): array
 {
     $c = ai_cfg();
-    if (!ai_zapnuto()) throw new RuntimeException('Asistent není zapnutý: v config.php chybí ai → api_key.');
+    if (!ai_zapnuto()) throw new RuntimeException('Asistent není zapnutý: admin musí vložit API klíč v Asistent → Nastavení a spotřeba.');
     $zpravy = [];
     foreach (array_slice($historie, -12) as $h) $zpravy[] = ['role' => $h['role'], 'content' => $h['text']];
     $zpravy[] = ['role' => 'user', 'content' => $dotaz];
