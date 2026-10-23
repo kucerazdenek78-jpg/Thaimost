@@ -19,7 +19,7 @@
     grid.innerHTML = D.sluzby.filter(s => kat === "vse" || s.kat === kat).map(s => {
       const od = Math.min(...s.ceny.map(c => c[1]));
       const img = s.foto
-        ? `<img src="${/^https?:/.test(s.foto) ? s.foto : D.img + s.foto}" alt="${V.esc(s.nazev)}" loading="lazy" onerror="this.remove()">${s.ilustracni ? '<span class="sv-ilu">ilustrační foto</span>' : ""}`
+        ? `<img src="${/^https?:/.test(s.foto) ? s.foto : D.img + s.foto}" alt="${V.esc(s.nazev)}" loading="lazy" onerror="this.remove()">${s.ilustracni ? '<span class="sv-ilu">VZOR</span>' : ""}`
         : "";
       return `<article class="sv reveal in">
         <div class="sv-img"><div class="ph">${LOTUS}</div>${img}${s.top ? '<span class="sv-tag">Oblíbené</span>' : ""}</div>
