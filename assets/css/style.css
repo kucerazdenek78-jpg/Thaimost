@@ -82,6 +82,7 @@ header.nav{position:sticky;top:0;z-index:50;background:rgba(248,242,233,.88);bac
 .sv-img .ph{position:absolute;inset:0;display:grid;place-items:center;color:var(--gold)}
 .sv-img .ph svg{width:90px}
 .sv-tag{position:absolute;top:14px;left:14px;background:var(--teak);color:var(--gold-l);font-size:.72rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;padding:6px 12px;border-radius:999px}
+.sv-ilu{position:absolute;right:10px;bottom:8px;font-size:.68rem;color:#fff;background:rgba(43,30,22,.55);padding:2px 8px;border-radius:999px}
 .sv-body{padding:22px 24px 24px;display:flex;flex-direction:column;flex:1}
 .sv h3{font-size:1.6rem;margin-bottom:8px}
 .sv p{font-size:.93rem;color:var(--muted);margin-bottom:16px}
