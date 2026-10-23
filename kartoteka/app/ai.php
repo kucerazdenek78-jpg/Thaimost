@@ -12,7 +12,7 @@ function ai_cfg(): array
 {
     return (cfg()['ai'] ?? []) + [
         'api_key' => '',
-        'model' => 'claude-sonnet-5-5',
+        'model' => 'claude-haiku-5-5',
         'max_tokens' => 1500,
         'max_kroku' => 8,          // kolikrát smí model za jeden dotaz zavolat nástroje
         'denni_limit' => 300,      // max. volání API za den (pojistka proti útratě)

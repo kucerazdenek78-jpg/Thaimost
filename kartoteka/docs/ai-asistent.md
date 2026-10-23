@@ -51,7 +51,7 @@ Při prvním spuštění se založí pravidla R-01 až R-08 (z provozu salonu).
    ```php
    'ai' => [
        'api_key' => 'sk-ant-…',
-       'model' => 'claude-sonnet-5-5',
+       'model' => 'claude-haiku-5-5',
        'max_tokens' => 1500,
        'max_kroku' => 8,
        'denni_limit' => 300,
