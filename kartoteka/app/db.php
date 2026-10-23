@@ -26,7 +26,7 @@ function q(string $sql, array $p = []): PDOStatement
 function q1(string $sql, array $p = []): ?array { $r = q($sql, $p)->fetch(); return $r ?: null; }
 function qv(string $sql, array $p = []) { $r = q($sql, $p)->fetchColumn(); return $r === false ? null : $r; }
 
-const DB_VERZE = 8;
+const DB_VERZE = 9;
 
 /** Migrace běží v jedné transakci a po získání zámku se verze ověří znovu (souběžné první požadavky). */
 function migrate(PDO $pdo): void
@@ -43,6 +43,7 @@ function migrate(PDO $pdo): void
         if ($ver < 6) migrate_v6($pdo);
         if ($ver < 7) migrate_v7($pdo);
         if ($ver < 8) migrate_v8($pdo);
+        if ($ver < 9) migrate_v9($pdo);
         $pdo->exec('PRAGMA user_version = ' . DB_VERZE);
         $pdo->exec('COMMIT');
     } catch (Throwable $e) {
@@ -156,6 +157,47 @@ function migrate_v1(PDO $pdo): void
     $sm = $pdo->prepare('INSERT INTO maserky(jmeno,poradi,barva) VALUES(?,?,?)');
     $barvy = ['#b07a3a', '#5b8a72', '#7a5ea8', '#c0605a', '#3f7fae'];
     for ($i = 1; $i <= 5; $i++) $sm->execute(["Masérka $i", $i, $barvy[$i - 1]]);
+}
+
+/** v9: AI asistent – pravidla salonu (jediný „trénink“ agenta), návrhy ke schválení recepcí, log volání. */
+function migrate_v9(PDO $pdo): void
+{
+    $pdo->exec(<<<SQL
+    CREATE TABLE ai_pravidla (
+        id INTEGER PRIMARY KEY, kod TEXT NOT NULL DEFAULT '', typ TEXT NOT NULL DEFAULT 'tvrde',   -- tvrde | mekke
+        text TEXT NOT NULL, aktivni INTEGER NOT NULL DEFAULT 1, stav TEXT NOT NULL DEFAULT 'schvaleno',  -- navrh | schvaleno
+        autor TEXT NOT NULL DEFAULT '', schvalil TEXT NOT NULL DEFAULT '',
+        vytvoreno TEXT NOT NULL DEFAULT (datetime('now','localtime')), zmeneno TEXT
+    );
+    CREATE TABLE ai_navrhy (
+        id INTEGER PRIMARY KEY, typ TEXT NOT NULL DEFAULT 'rezervace',
+        zakaznik_id INTEGER REFERENCES zakaznici(id), varianta_id INTEGER REFERENCES varianty(id),
+        maserka_id INTEGER REFERENCES maserky(id), maserka2_id INTEGER REFERENCES maserky(id),
+        zacatek TEXT, delka INTEGER, zduvodneni TEXT NOT NULL DEFAULT '',
+        stav TEXT NOT NULL DEFAULT 'ceka',            -- ceka | otevreno | prijato | zamitnuto
+        duvod TEXT NOT NULL DEFAULT '', rozhodl TEXT NOT NULL DEFAULT '', rozhodnuto TEXT,
+        rezervace_id INTEGER REFERENCES rezervace(id), pro_uzivatele TEXT NOT NULL DEFAULT '',
+        vytvoreno TEXT NOT NULL DEFAULT (datetime('now','localtime'))
+    );
+    CREATE INDEX ai_navrhy_stav ON ai_navrhy(stav);
+    CREATE TABLE ai_log (
+        id INTEGER PRIMARY KEY, cas TEXT NOT NULL DEFAULT (datetime('now','localtime')), kdo TEXT NOT NULL DEFAULT '',
+        typ TEXT NOT NULL, detail TEXT NOT NULL DEFAULT '', tokeny_in INTEGER NOT NULL DEFAULT 0, tokeny_out INTEGER NOT NULL DEFAULT 0
+    );
+    CREATE INDEX ai_log_cas ON ai_log(cas);
+    SQL);
+    // první verze pravidel z provozu salonu (admin je upraví v Asistent → Pravidla)
+    $st = $pdo->prepare("INSERT INTO ai_pravidla(kod,typ,text,autor,schvalil) VALUES(?,?,?,'výchozí','výchozí')");
+    foreach ([
+        ['R-01', 'tvrde', 'Rezervaci vždy potvrzuje recepce. Asistent jen navrhuje, sám nic neukládá ani neruší.'],
+        ['R-02', 'tvrde', 'Salon má 2 jednolůžkové masérny a 1 dvoulůžkovou, která slouží i pro wellness. Na každém lůžku je tablet.'],
+        ['R-03', 'tvrde', 'Masáže trvají 30, 60 nebo 90 minut podle varianty v ceníku.'],
+        ['R-04', 'tvrde', 'Párový balíček (párová masáž + vířivka a sauna) = 2 masérky na 1 hodinu ve dvoulůžkové masérně; plánovat na konec směny, wellness pak běží po zavírací době jen s recepční.'],
+        ['R-05', 'tvrde', 'Samotná párová masáž je jiná služba než wellness balíček.'],
+        ['R-06', 'mekke', 'Cíl: každý den co nejplnější, bez prázdných hodin.'],
+        ['R-07', 'tvrde', 'Každá 5. zaplacená návštěva s věrnostní kartou je zdarma.'],
+        ['R-08', 'mekke', 'Při výpadku masérky nabídnout zákazníkovi jinou masérku nebo přeplánování.'],
+    ] as $r) $st->execute($r);
 }
 
 /** v8: kolik masérek služba potřebuje a na jak dlouho (párová: 2 masérky 60 min, pak whirlpool bez masérky),

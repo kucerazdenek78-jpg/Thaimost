@@ -14,6 +14,7 @@ function hlavicka(string $titul, string $aktivni = ''): void
         'dostupnost' => 'Volna a přesčasy' . (($kn = $u ? count(konflikty_dostupnosti()) : 0) ? " <b class=\"cnt\">$kn</b>" : ''),
         'poukazy' => 'Poukazy' . ($poukazyCekaji ? " <b class=\"cnt\">$poukazyCekaji</b>" : ''),
         'karty' => 'Karty',
+        'ai' => '🤖 Asistent' . (($an = $u ? (int)qv("SELECT COUNT(*) FROM ai_navrhy WHERE stav IN ('ceka','otevreno') AND zacatek > ?", [nyni()]) : 0) ? " <b class=\"cnt\">$an</b>" : ''),
         'tym' => 'Tým',
         'smeny' => 'Směny',
         'nastaveni' => 'Nastavení',
@@ -24,7 +25,7 @@ function hlavicka(string $titul, string $aktivni = ''): void
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex, nofollow">
 <title><?= h($titul) ?> · Kartotéka Thai Most</title>
-<link rel="stylesheet" href="/style.css?v=7">
+<link rel="stylesheet" href="/style.css?v=8">
 </head><body>
 <?php if ($u): ?>
 <header class="top">

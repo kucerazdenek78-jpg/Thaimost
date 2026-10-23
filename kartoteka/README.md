@@ -4,6 +4,9 @@ Interní systém pro recepci: rezervace, kalendář, zákazníci s preferencemi 
 
 Web na GitHub Pages posílá žádosti o termín a objednávky poukazů na `/api/...` – nic jiného API neumí a nic z kartotéky nevrací.
 
+## AI asistent
+Stránka **🤖 Asistent**: recepce se ptá česky, asistent (Claude API) dohledá data a navrhne termíny; rezervaci vždy ukládá recepce. Zapnutí a pravidla: `docs/ai-asistent.md`.
+
 ## Technika
 PHP 8.3 + SQLite, bez frameworku a bez závislostí. Schéma se vytvoří samo při prvním spuštění (`app/db.php`), ceník se naplní z `app/seed-sluzby.json` (vygenerováno z `assets/js/data.js` webu).
 

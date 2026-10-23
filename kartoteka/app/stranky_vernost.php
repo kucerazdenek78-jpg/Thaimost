@@ -294,41 +294,7 @@ function stranka_volno(array $u): void
     $kandidati = array_values(array_filter($maserky, fn($m) => !$mas || (int)$m['id'] === $mas));
     usort($kandidati, fn($a, $b) => ((int)$b['id'] === $oblib) <=> ((int)$a['id'] === $oblib));
 
-    $volno = [];   // [datum => [čas => [masérka_id, ...]]]
-    if ($var && $delka > 0) {
-        $zacOd = nastaveni('oteviraci_od', '09:00'); $zacDo = nastaveni('oteviraci_do', '20:00');
-        $minOd = (int)substr($zacOd, 0, 2) * 60 + (int)substr($zacOd, 3, 2);
-        $minDo = (int)substr($zacDo, 0, 2) * 60 + (int)substr($zacDo, 3, 2);
-        $konecRozsahu = date('Y-m-d', strtotime("$od +$dny days"));
-        $obs = [];
-        foreach (q("SELECT maserka_id, maserka2_id, zacatek, COALESCE(masaz_konec, konec) AS mk FROM rezervace WHERE (maserka_id IS NOT NULL OR maserka2_id IS NOT NULL) AND stav IN ('potvrzeno','probehlo') AND zacatek < ? AND konec > ?", [$konecRozsahu, $od])->fetchAll() as $r)
-            foreach (array_filter([$r['maserka_id'], $r['maserka2_id']]) as $mid) $obs[(int)$mid][] = [strtotime($r['zacatek']), strtotime($r['mk'])];
-        $pocetMas = (int)$var['maserky'];
-        $mdelka = $var['maserky_min'] && (int)$var['maserky_min'] < $delka ? (int)$var['maserky_min'] : $delka;   // jak dlouho jsou potřeba masérky
-        for ($i = 0; $i < $dny; $i++) {
-            $d = date('Y-m-d', strtotime("$od +$i days"));
-            for ($t = $minOd; $t + ($pocetMas ? $mdelka : 0) <= $minDo && $t < $minDo; $t += $krok) {
-                $hh = sprintf('%02d:%02d', intdiv($t, 60), $t % 60);
-                if ($oknoOd && $hh < $oknoOd) continue;
-                if ($oknoDo && $hh > $oknoDo) continue;
-                $s = strtotime("$d $hh:00"); $e = $s + $delka * 60;
-                if ($s < time()) continue;
-                $zacS = "$d $hh:00"; $konS = date('Y-m-d H:i:s', $e);
-                if (kapacita_problem($zacS, $konS, (int)$var['wellness_mistnost'] === 1)) continue;
-                if ($pocetMas === 0) { $volno[$d][$hh][] = 0; continue; }   // whirlpool/sauna: stačí volná masérna (i o víkendu – So–Ne pouze wellness)
-                $me = $s + $mdelka * 60; $mKonS = date('Y-m-d H:i:s', $me);
-                $volni = [];
-                foreach ($kandidati as $m) {
-                    if (!maserka_pracuje((int)$m['id'], $zacS, $mKonS)) continue;
-                    $kol = false;
-                    foreach ($obs[(int)$m['id']] ?? [] as [$a, $b]) if ($a < $me && $b > $s) { $kol = true; break; }
-                    if (!$kol) $volni[] = (int)$m['id'];
-                }
-                if ($pocetMas >= 2) { if (count($volni) >= 2) $volno[$d][$hh][] = [$volni[0], $volni[1]]; }   // párová: první dvě volné
-                else foreach ($volni as $mid) $volno[$d][$hh][] = $mid;
-            }
-        }
-    }
+    $volno = $var ? volne_sloty($var, $delka, $kandidati, $od, $dny, $krok, $oknoOd, $oknoDo) : [];   // [datum => [čas => [masérka_id, ...]]]
     $nazvy = array_column($maserky, 'jmeno', 'id');
     $barvy = array_column($maserky, 'barva', 'id');
     $dnyCz = ['Neděle', 'Pondělí', 'Úterý', 'Středa', 'Čtvrtek', 'Pátek', 'Sobota'];
@@ -379,6 +345,48 @@ function stranka_volno(array $u): void
       <?php endforeach ?>
     <?php endif ?>
     <?php paticka();
+}
+
+
+/** Volné začátky pro variantu: [datum => [čas => [masérka_id | [id1,id2] | 0 (bez masérky), ...]]].
+ *  Kandidáti = masérky v pořadí, v jakém se mají nabízet (oblíbená první). Sdílí stránka Volné termíny a AI asistent. */
+function volne_sloty(array $var, int $delka, array $kandidati, string $od, int $dny, int $krok, string $oknoOd = '', string $oknoDo = ''): array
+{
+    $volno = [];
+    if ($delka <= 0) return $volno;
+    $zacOd = nastaveni('oteviraci_od', '09:00'); $zacDo = nastaveni('oteviraci_do', '20:00');
+    $minOd = (int)substr($zacOd, 0, 2) * 60 + (int)substr($zacOd, 3, 2);
+    $minDo = (int)substr($zacDo, 0, 2) * 60 + (int)substr($zacDo, 3, 2);
+    $konecRozsahu = date('Y-m-d', strtotime("$od +$dny days"));
+    $obs = [];
+    foreach (q("SELECT maserka_id, maserka2_id, zacatek, COALESCE(masaz_konec, konec) AS mk FROM rezervace WHERE (maserka_id IS NOT NULL OR maserka2_id IS NOT NULL) AND stav IN ('potvrzeno','probehlo') AND zacatek < ? AND konec > ?", [$konecRozsahu, $od])->fetchAll() as $r)
+        foreach (array_filter([$r['maserka_id'], $r['maserka2_id']]) as $mid) $obs[(int)$mid][] = [strtotime($r['zacatek']), strtotime($r['mk'])];
+    $pocetMas = (int)$var['maserky'];
+    $mdelka = $var['maserky_min'] && (int)$var['maserky_min'] < $delka ? (int)$var['maserky_min'] : $delka;   // jak dlouho jsou potřeba masérky
+    for ($i = 0; $i < $dny; $i++) {
+        $d = date('Y-m-d', strtotime("$od +$i days"));
+        for ($t = $minOd; $t + ($pocetMas ? $mdelka : 0) <= $minDo && $t < $minDo; $t += $krok) {
+            $hh = sprintf('%02d:%02d', intdiv($t, 60), $t % 60);
+            if ($oknoOd && $hh < $oknoOd) continue;
+            if ($oknoDo && $hh > $oknoDo) continue;
+            $s = strtotime("$d $hh:00"); $e = $s + $delka * 60;
+            if ($s < time()) continue;
+            $zacS = "$d $hh:00"; $konS = date('Y-m-d H:i:s', $e);
+            if (kapacita_problem($zacS, $konS, (int)$var['wellness_mistnost'] === 1)) continue;
+            if ($pocetMas === 0) { $volno[$d][$hh][] = 0; continue; }   // whirlpool/sauna: stačí volná masérna (i o víkendu – So–Ne pouze wellness)
+            $me = $s + $mdelka * 60; $mKonS = date('Y-m-d H:i:s', $me);
+            $volni = [];
+            foreach ($kandidati as $m) {
+                if (!maserka_pracuje((int)$m['id'], $zacS, $mKonS)) continue;
+                $kol = false;
+                foreach ($obs[(int)$m['id']] ?? [] as [$a, $b]) if ($a < $me && $b > $s) { $kol = true; break; }
+                if (!$kol) $volni[] = (int)$m['id'];
+            }
+            if ($pocetMas >= 2) { if (count($volni) >= 2) $volno[$d][$hh][] = [$volni[0], $volni[1]]; }   // párová: první dvě volné
+            else foreach ($volni as $mid) $volno[$d][$hh][] = $mid;
+        }
+    }
+    return $volno;
 }
 
 // ---------- Tisk poukazu ----------

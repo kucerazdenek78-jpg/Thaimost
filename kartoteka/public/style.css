@@ -130,3 +130,12 @@ input[type=color]{height:38px;padding:2px 4px;cursor:pointer}
 .blk.konfl{background:#fbe0dc !important;outline:2px dashed #c0605a}
 details.rozbal>summary{cursor:pointer;list-style:none}details.rozbal>summary::-webkit-details-marker{display:none}details.rozbal>summary h2{display:inline;margin:0}details.rozbal>summary::before{content:'▸ ';color:#b07a3a;font-weight:700}details.rozbal[open]>summary::before{content:'▾ '}details.rozbal[open]>summary{margin-bottom:10px}
 .obs-st{background:#f5efe6}
+
+/* AI asistent */
+.aichat .aimsg{padding:10px 14px;border-radius:10px;margin:0 0 10px;max-width:92%}
+.aimsg.ja{background:#f3e8d6;margin-left:auto}.aimsg.on{background:#faf6f0;border:1px solid var(--bd)}
+.aimsg ul{margin:4px 0 4px 18px;padding:0}.aiz{font-weight:600}
+.ainavrh{border:1px solid var(--zl);border-left-width:4px;border-radius:8px;padding:8px 10px;margin:8px 0;background:#fff;font-size:.9rem}
+.ainavrh.s-prijato{border-color:var(--ok)}.ainavrh.s-zamitnuto{border-color:#ccc;opacity:.7}
+.ainavrh-akce{display:flex;gap:6px;flex-wrap:wrap;align-items:flex-start;margin-top:6px}.ainavrh-akce details summary{list-style:none}
+.airychle{margin-top:8px}

@@ -9,6 +9,7 @@ require __DIR__ . '/stranky_import.php';
 require __DIR__ . '/stranky_tablet.php';
 require __DIR__ . '/demo.php';
 require __DIR__ . '/dostupnost.php';
+require __DIR__ . '/stranky_ai.php';
 
 function stranka_login(): void
 {
@@ -615,7 +616,11 @@ function stranka_rez_nova(array $u): void
         $v = $_POST;
         $res = rez_uloz($_POST, null, true);
         [$chyba, $kol] = $res;
-        if (!$chyba && !$kol) { flash('Rezervace uložena.'); presmeruj('/?r=rezervace&id=' . $res[2]); }
+        if (!$chyba && !$kol) {
+            // rezervace z návrhu asistenta: návrh je tím přijatý
+            if (!empty($_GET['ai'])) q("UPDATE ai_navrhy SET stav='prijato', rezervace_id=?, rozhodl=?, rozhodnuto=? WHERE id=? AND stav IN ('ceka','otevreno')", [$res[2], kdo(), nyni(), (int)$_GET['ai']]);
+            flash('Rezervace uložena.'); presmeruj('/?r=rezervace&id=' . $res[2]);
+        }
     }
     hlavicka('Nová rezervace', ''); ?>
     <h1>Nová rezervace</h1>

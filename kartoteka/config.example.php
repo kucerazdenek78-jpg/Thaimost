@@ -29,4 +29,14 @@ return [
     'url' => 'https://masage.dvere.app',
 
     'casova_zona' => 'Europe/Prague',
+
+    // AI asistent recepce (Claude API). Dokud je api_key prázdný, asistent je vypnutý.
+    // Klíč: Claude Console → API keys. Tamtéž nastavte měsíční limit útraty.
+    'ai' => [
+        'api_key' => '',
+        'model' => 'claude-sonnet-5-5',   // levnější: claude-haiku-5-5
+        'max_tokens' => 1500,
+        'max_kroku' => 8,                 // kolik kol s nástroji smí jeden dotaz mít
+        'denni_limit' => 300,             // max. volání API za den
+    ],
 ];

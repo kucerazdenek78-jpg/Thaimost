@@ -64,6 +64,7 @@ $stranky = [
     'tym' => 'stranka_maserky', 'maserky' => 'stranka_maserky', 'maserka' => 'stranka_maserka', 'recepcni' => 'stranka_recepcni', 'uzivatele' => 'stranka_recepcni', 'smeny' => 'stranka_smeny',
     'hledej_zak' => 'stranka_hledej_zak', 'karty' => 'stranka_karty', 'karty_tisk' => 'stranka_karty_tisk',
     'volno' => 'stranka_volno', 'den_obs' => 'stranka_den_obs', 'dostupnost' => 'stranka_dostupnost', 'import' => 'stranka_import', 'poukaz_tisk' => 'stranka_poukaz_tisk',
+    'ai' => 'stranka_ai', 'ai_pravidla' => 'stranka_ai_pravidla', 'ai_log' => 'stranka_ai_log',
 ];
 if (!isset($stranky[$r])) { http_response_code(404); $r = 'dnes'; }
 if ($_SERVER['REQUEST_METHOD'] === 'POST') over_csrf();
