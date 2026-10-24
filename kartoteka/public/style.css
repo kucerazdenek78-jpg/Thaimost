@@ -139,3 +139,28 @@ details.rozbal>summary{cursor:pointer;list-style:none}details.rozbal>summary::-w
 .ainavrh.s-prijato{border-color:var(--ok)}.ainavrh.s-zamitnuto{border-color:#ccc;opacity:.7}
 .ainavrh-akce{display:flex;gap:6px;flex-wrap:wrap;align-items:flex-start;margin-top:6px}.ainavrh-akce details summary{list-style:none}
 .airychle{margin-top:8px}
+
+/* Plovoucí ikona asistenta + okno */
+.aipom-btn{position:fixed;right:max(16px,env(safe-area-inset-right,0px));bottom:max(16px,env(safe-area-inset-bottom,0px));z-index:9998;width:60px;height:60px;border-radius:50%;border:0;background:var(--hn);color:#fff;font-size:30px;line-height:1;box-shadow:0 6px 20px rgba(60,40,20,.35);cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0}
+.aipom-btn:focus-visible{outline:3px solid var(--zl);outline-offset:2px}
+@media (hover:hover){.aipom-btn:hover{background:var(--zl)}}
+.aipom-n{position:absolute;top:-2px;right:-2px;background:#e85d3a;color:#fff;border-radius:999px;font:700 12px/1 -apple-system,"Segoe UI",Roboto,sans-serif;padding:4px 7px}
+.aipom-okno{position:fixed;right:16px;bottom:88px;z-index:9999;width:420px;max-width:calc(100vw - 32px);height:min(680px,calc(100vh - 110px));background:var(--bg);border-radius:14px;box-shadow:0 12px 40px rgba(60,40,20,.35);display:none;flex-direction:column;overflow:hidden}
+.aipom-okno.on{display:flex}
+.aipom-hl{display:flex;align-items:center;gap:4px;background:var(--hn);color:#fff;padding:8px 8px 8px 14px;font-weight:600}
+.aipom-hl span{flex:1}
+.aipom-hl a,.aipom-hl button{color:#fff;background:transparent;border:0;font:600 20px/1 inherit;cursor:pointer;text-decoration:none;padding:8px 10px;border-radius:8px}
+@media (hover:hover){.aipom-hl a:hover,.aipom-hl button:hover{background:rgba(255,255,255,.15)}}
+.aipom-okno iframe{flex:1;border:0;width:100%;background:var(--bg)}
+@media (max-width:600px){.aipom-okno{right:0;bottom:0;width:100%;max-width:100%;height:100%;height:100dvh;border-radius:0}}
+@media print{.aipom-btn,.aipom-okno{display:none!important}}
+/* obsah okna (?okno=1) */
+body.okno main{padding:8px 10px 0;max-width:none}
+body.okno .aichat{border:0;background:transparent;padding:0;margin:0}
+body.okno .aichat .aimsg{max-width:100%}
+body.okno #aiform{position:sticky;bottom:0;background:var(--bg);padding:8px 0 10px;border-top:1px solid var(--bd)}
+body.okno .airychle .chip{font-size:.8rem}
+.aicekaji{background:#fff;border:1px solid var(--bd);border-radius:8px;padding:6px 10px;margin-bottom:10px}.aicekaji summary{cursor:pointer;font-weight:600;color:var(--hn)}
+.aipata{margin:6px 0 12px}
+.aicti{margin-top:6px}
+#aimic.nahrava{background:#fbe9e7;border-color:var(--err);color:var(--err)}

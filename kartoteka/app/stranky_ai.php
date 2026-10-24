@@ -66,7 +66,7 @@ function ai_navrh_karta(array $n): void
           <details><summary class="btn small">Zamítnout…</summary>
             <select name="duvod_typ" class="small-in"><?= moznosti(AI_DUVODY, 'cas') ?></select>
             <input name="duvod" class="small-in" placeholder="Upřesnění (pomůže asistentovi příště)">
-            <button class="btn small danger" name="akce" value="zamitnout">Zamítnout</button>
+            <button class="btn small danger" name="akce" value="zamitnout" formtarget="_self">Zamítnout</button>
           </details>
         </form>
       <?php endif ?>
@@ -103,7 +103,7 @@ function stranka_ai(array $u): void
             $_SESSION['ai_hist'] = [];
         } elseif (in_array($akce, ['prijmout', 'zamitnout'], true)) {
             $n = q1("SELECT * FROM ai_navrhy WHERE id=? AND stav IN ('ceka','otevreno')", [(int)($_POST['navrh_id'] ?? 0)]);
-            if (!$n) flash('Návrh už je vyřízený.', 'warn');
+            if (!$n) { flash('Návrh už je vyřízený.', 'warn'); if ($akce === 'prijmout') presmeruj('/?r=ai'); }   // Přijmout jde z okna na celou stránku
             elseif ($akce === 'prijmout') {
                 q("UPDATE ai_navrhy SET stav='otevreno', rozhodl=?, rozhodnuto=? WHERE id=?", [kdo(), nyni(), $n['id']]);
                 presmeruj(ai_navrh_url($n));
@@ -114,58 +114,86 @@ function stranka_ai(array $u): void
                 flash('Návrh zamítnut, důvod je uložený.');
             }
         }
-        presmeruj('/?r=ai#konec');
+        presmeruj('/?r=ai' . (je_okno() ? '&okno=1' : '') . '#konec');
     }
 
     $hist = $_SESSION['ai_hist'];
     $cekaji = q("SELECT * FROM ai_navrhy WHERE stav IN ('ceka','otevreno') AND zacatek > ? ORDER BY zacatek", [nyni()])->fetchAll();
+    $okno = je_okno();
     hlavicka('Asistent', 'ai'); ?>
+    <?php if (!$okno): ?>
     <div class="cal-nav"><h1>🤖 Asistent <small>zkušební verze · jen navrhuje, rezervace ukládá recepce</small></h1>
       <span class="grow"></span>
       <a class="btn small" href="/?r=ai_pravidla">Pravidla salonu</a>
       <?php if (je_admin($u)): ?><a class="btn small" href="/?r=ai_log">Nastavení a spotřeba</a><?php endif ?>
     </div>
+    <?php endif ?>
     <?php if (!ai_zapnuto()): ?>
       <div class="flash warn">Asistent zatím není zapnutý – chybí API klíč z Claude Console. <?= je_admin($u) ? '<a href="/?r=ai_log">Vložit klíč →</a>' : 'Vloží ho admin v Asistent → Nastavení a spotřeba.' ?></div>
     <?php endif ?>
-    <div class="cols">
+    <div class="<?= $okno ? 'aiokno' : 'cols' ?>">
+      <?php if ($okno && $cekaji): ?>
+        <details class="aicekaji"><summary>📋 Návrhy čekající na recepci (<?= count($cekaji) ?>)</summary><?php foreach ($cekaji as $n) ai_navrh_karta($n); ?></details>
+      <?php endif ?>
       <section class="card aichat">
         <?php if (!$hist): ?>
           <p class="muted">Zeptejte se třeba: „Najdi Novákové termín na úterý odpoledne“, „Kdo je zítra volný od 14:00?“, „Co dnes hlídat?“. Asistent vidí rozvrh, zákazníky (bez telefonů a zdravotních poznámek), masérky, volna a hodnocení.</p>
         <?php endif ?>
         <?php foreach ($hist as $h): ?>
           <div class="aimsg <?= $h['role'] === 'user' ? 'ja' : 'on' ?>">
-            <?= $h['role'] === 'user' ? nl2br(h($h['text'])) : ai_html($h['text']) ?>
+            <?= $h['role'] === 'user' ? nl2br(h($h['text'])) : '<div class="aitext">' . ai_html($h['text']) . '</div>' ?>
             <?php if (!empty($h['nastroje'])): ?><div class="small muted">🔎 <?= h(implode(', ', array_unique($h['nastroje']))) ?></div><?php endif ?>
             <?php foreach ($h['navrhy'] ?? [] as $nid) if ($n = q1('SELECT * FROM ai_navrhy WHERE id=?', [$nid])) ai_navrh_karta($n); ?>
           </div>
         <?php endforeach ?>
         <a id="konec"></a>
-        <form method="post" id="aiform">
+        <form method="post" id="aiform" target="_self">
           <?= csrf_pole() ?><input type="hidden" name="akce" value="dotaz">
           <textarea name="dotaz" id="aidotaz" rows="3" maxlength="2000" placeholder="Napište dotaz… (Ctrl+Enter odešle)" <?= ai_zapnuto() ? '' : 'disabled' ?>></textarea>
           <div style="display:flex;gap:8px;align-items:center;margin-top:8px;flex-wrap:wrap">
             <button class="btn primary" id="aibtn" <?= ai_zapnuto() ? '' : 'disabled' ?>>Zeptat se</button>
+            <button type="button" class="btn" id="aimic" hidden title="Říct dotaz nahlas – odešle se sám a odpověď se přečte">🎤 Říct nahlas</button>
             <span id="aiwait" class="muted small" hidden>⏳ Asistent hledá v kartotéce… (může trvat i 30 s)</span>
             <span class="grow"></span>
-            <?php if ($hist): ?><button class="btn small" name="akce" value="vymazat" formnovalidate>Nová konverzace</button><?php endif ?>
+            <?php if ($hist): ?><button class="btn small" name="akce" value="vymazat" formnovalidate>🧹 Nová konverzace</button><?php endif ?>
           </div>
           <div class="airychle"><?php foreach (AI_RYCHLE as $q): ?><button type="button" class="chip" data-q="<?= h($q) ?>"><?= h(mb_strimwidth(strtok($q, ':?(') ?: $q, 0, 40, '…')) ?></button><?php endforeach ?></div>
         </form>
       </section>
+      <?php if (!$okno): ?>
       <aside class="card side">
         <h2>Návrhy čekající na recepci</h2>
         <?php if (!$cekaji): ?><p class="muted small">Žádné.</p><?php endif ?>
         <?php foreach ($cekaji as $n) ai_navrh_karta($n); ?>
         <p class="small muted">Přijmout = otevře se předvyplněná rezervace; uložením ji potvrdíte vy. Zamítnutí s důvodem slouží k vylepšení pravidel.</p>
       </aside>
+      <?php else: ?>
+        <p class="small muted aipata"><a href="/?r=ai_pravidla">Pravidla salonu</a><?= je_admin($u) ? ' · <a href="/?r=ai_log">Nastavení a spotřeba</a>' : '' ?> · Asistent jen navrhuje, rezervaci ukládá recepce.</p>
+      <?php endif ?>
     </div>
     <script>
     (function(){var f=document.getElementById('aiform'),t=document.getElementById('aidotaz'),b=document.getElementById('aibtn'),w=document.getElementById('aiwait');if(!f)return;
     f.addEventListener('submit',function(e){var s=e.submitter;if(s&&s.value==='vymazat')return;if(!t.value.trim()){e.preventDefault();return}b.disabled=true;w.hidden=false});
     t.addEventListener('keydown',function(e){if(e.key==='Enter'&&(e.ctrlKey||e.metaKey)){e.preventDefault();f.requestSubmit(b)}});
     document.querySelectorAll('.airychle .chip').forEach(function(c){c.addEventListener('click',function(){t.value=c.dataset.q;f.requestSubmit(b)})});
-    var k=document.getElementById('konec');if(k&&location.hash==='#konec')k.scrollIntoView();})();
+    var k=document.getElementById('konec');if(k&&location.hash==='#konec')k.scrollIntoView();
+    // 🔊 přečíst odpověď nahlas (čeština, pokud ji prohlížeč má)
+    function precti(el){try{speechSynthesis.cancel();var u=new SpeechSynthesisUtterance(el.innerText);u.lang='cs-CZ';u.rate=.95;speechSynthesis.speak(u)}catch(e){}}
+    var odp=document.querySelectorAll('.aimsg.on .aitext');
+    if('speechSynthesis' in window)odp.forEach(function(el){var a=document.createElement('button');a.type='button';a.className='btn small aicti';a.textContent='🔊 Přečíst';a.onclick=function(){precti(el)};el.parentNode.insertBefore(a,el.nextSibling)});
+    // dotaz položený hlasem: po načtení odpovědi ji rovnou přečíst
+    try{if(sessionStorage.getItem('ai-hlas')==='1'){sessionStorage.removeItem('ai-hlas');if(odp.length&&'speechSynthesis' in window)precti(odp[odp.length-1])}}catch(e){}
+    // 🎤 diktování (Chrome, Edge, Android, Safari) – rozpoznaný text se odešle sám
+    var SR=window.SpeechRecognition||window.webkitSpeechRecognition,m=document.getElementById('aimic');
+    if(SR&&m&&!t.disabled){m.hidden=false;var r=null;
+      m.onclick=function(){if(r){r.stop();return}try{speechSynthesis.cancel()}catch(e){}
+        r=new SR();r.lang='cs-CZ';r.interimResults=true;r.continuous=false;var zaklad=t.value.trim(),hotovo='';
+        m.textContent='⏹ Poslouchám…';m.classList.add('nahrava');
+        r.onresult=function(ev){var p='';hotovo='';for(var i=0;i<ev.results.length;i++){if(ev.results[i].isFinal)hotovo+=ev.results[i][0].transcript;else p+=ev.results[i][0].transcript}t.value=(zaklad+' '+hotovo+p).trim()};
+        r.onerror=function(ev){if(ev.error==='not-allowed'||ev.error==='service-not-allowed')alert('Prohlížeč nepovolil mikrofon. Povolte ho u adresy kartotéky (ikona zámku vedle adresy).')};
+        r.onend=function(){r=null;m.textContent='🎤 Říct nahlas';m.classList.remove('nahrava');if(hotovo.trim()){try{sessionStorage.setItem('ai-hlas','1')}catch(e){}f.requestSubmit(b)}};
+        r.start()}}
+    })();
     </script>
     <?php paticka();
 }

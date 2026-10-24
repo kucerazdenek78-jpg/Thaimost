@@ -6,7 +6,7 @@ require $root . '/app/lib.php';
 require $root . '/app/db.php';
 
 date_default_timezone_set(cfg()['casova_zona'] ?? 'Europe/Prague');
-header('X-Frame-Options: DENY');
+header('X-Frame-Options: SAMEORIGIN');   // okno asistenta je iframe ze stejné adresy; cizí weby kartotéku vložit nesmí
 header('X-Content-Type-Options: nosniff');
 header('Referrer-Policy: same-origin');
 

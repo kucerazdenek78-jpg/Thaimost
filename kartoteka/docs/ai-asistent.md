@@ -1,6 +1,12 @@
 # AI asistent recepce (zkušební verze)
 
-Asistent je stránka **🤖 Asistent** v kartotéce. Recepce se ho ptá běžnou češtinou, on si sám dohledá data v kartotéce a odpoví. Rezervace **jen navrhuje** – nic neukládá, nemění ani neruší.
+Asistent je plovoucí ikona **🤖** vpravo dole na každé stránce kartotéky (není v menu; zkratka Alt+A). Otevře okno s chatem, na mobilu přes celou obrazovku; tlačítkem ⤢ jde otevřít na celou stránku (`/?r=ai`). Recepce se ho ptá běžnou češtinou, on si sám dohledá data v kartotéce a odpoví. Rezervace **jen navrhuje** – nic neukládá, nemění ani neruší.
+
+- Číslo na ikoně = návrhy čekající na recepci.
+- Konverzace zůstává při přechodu mezi stránkami; otevřené okno se na počítači po přechodu otevře znovu.
+- **🎤 Říct nahlas** – diktování (Chrome, Edge, Android, Safari). Rozpoznaný dotaz se odešle sám a odpověď se přečte nahlas. Napoprvé prohlížeč požádá o povolení mikrofonu.
+- **🔊 Přečíst** u každé odpovědi.
+- Přijmout návrh otevře předvyplněnou rezervaci v hlavním okně.
 
 ## Jak to funguje
 
@@ -36,7 +42,7 @@ Asistent běží přímo v kontejneru `masaze` (PHP), žádný další kontejner
 
 ## Pravidla salonu („učení“)
 
-Stránka **Asistent → Pravidla salonu**. Každý dotaz dostane všechna schválená a zapnutá pravidla.
+Odkaz **Pravidla salonu** dole v okně asistenta (`/?r=ai_pravidla`). Každý dotaz dostane všechna schválená a zapnutá pravidla.
 - Admin a hlavní pracovník pravidla přidávají, upravují, vypínají a schvalují.
 - Recepce může pravidlo jen navrhnout – čeká na schválení.
 - Vpravo jsou důvody zamítnutých návrhů za 30 dní – podklad pro nová pravidla.
@@ -48,8 +54,8 @@ Při prvním spuštění se založí pravidla R-01 až R-08 (z provozu salonu).
 
 1. Nahrát nové a změněné soubory z repa do složky kartotéky na NAS. Restart kontejneru není potřeba – PHP si soubory načte samo; databáze se doplní sama (verze 9).
 2. V Claude Console (console.anthropic.com → API keys) vytvořit klíč a nastavit měsíční limit útraty.
-3. V kartotéce jako admin: **🤖 Asistent → Nastavení a spotřeba** → vložit klíč, vybrat model (výchozí Haiku) → Uložit. Klíč se před uložením ověří krátkým voláním.
-4. Hotovo – stránka 🤖 Asistent je zapnutá.
+3. V kartotéce jako admin: ikona **🤖** → odkaz **Nastavení a spotřeba** dole v okně (`/?r=ai_log`) → vložit klíč, vybrat model (výchozí Haiku) → Uložit. Klíč se před uložením ověří krátkým voláním.
+4. Hotovo – asistent je zapnutý.
 
 Klíč se uloží do `data/ai-nastaveni.json` (mimo web, mimo git, práva 0600). Zálohuje se s databází, takže zálohy chraňte. Kdo chce, může klíč místo toho dát do `config.php` (sekce `'ai' => ['api_key' => '…']`); klíč vložený v kartotéce má přednost.
 
@@ -57,7 +63,7 @@ Klíč se uloží do `data/ai-nastaveni.json` (mimo web, mimo git, práva 0600).
 
 - `denni_limit` – max. volání API za den (výchozí 300).
 - `max_kroku` – max. kol s nástroji na jeden dotaz (výchozí 8); poslední kolo musí model odpovědět.
-- Log a spotřeba tokenů: **Asistent → Log a spotřeba** (jen admin). Cenu podle tokenů ukazuje Claude Console.
+- Log a spotřeba tokenů: **Nastavení a spotřeba** (jen admin). Cenu podle tokenů ukazuje Claude Console.
 
 ## Co zkušební verze zatím neumí
 

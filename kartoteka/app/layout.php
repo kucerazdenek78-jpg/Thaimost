@@ -1,8 +1,12 @@
 <?php
 // Společná kostra stránek kartotéky.
 
+/** Stránka otevřená uvnitř plovoucího okna asistenta (iframe, ?okno=1): bez horní lišty a bez další plovoucí ikony. */
+function je_okno(): bool { return isset($_GET['okno']); }
+
 function hlavicka(string $titul, string $aktivni = ''): void
 {
+    $GLOBALS['__stranka_aktivni'] = $aktivni;
     $u = uzivatel();
     $zadosti = $u ? (int)qv("SELECT COUNT(*) FROM rezervace WHERE stav='zadost'") : 0;
     $poukazyCekaji = $u ? (int)qv("SELECT COUNT(*) FROM poukazy WHERE stav='objednano'") : 0;
@@ -14,7 +18,6 @@ function hlavicka(string $titul, string $aktivni = ''): void
         'dostupnost' => 'Volna a přesčasy' . (($kn = $u ? count(konflikty_dostupnosti()) : 0) ? " <b class=\"cnt\">$kn</b>" : ''),
         'poukazy' => 'Poukazy' . ($poukazyCekaji ? " <b class=\"cnt\">$poukazyCekaji</b>" : ''),
         'karty' => 'Karty',
-        'ai' => '🤖 Asistent' . (($an = $u ? (int)qv("SELECT COUNT(*) FROM ai_navrhy WHERE stav IN ('ceka','otevreno') AND zacatek > ?", [nyni()]) : 0) ? " <b class=\"cnt\">$an</b>" : ''),
         'tym' => 'Tým',
         'smeny' => 'Směny',
         'nastaveni' => 'Nastavení',
@@ -25,9 +28,10 @@ function hlavicka(string $titul, string $aktivni = ''): void
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex, nofollow">
 <title><?= h($titul) ?> · Kartotéka Thai Most</title>
-<link rel="stylesheet" href="/style.css?v=8">
-</head><body>
-<?php if ($u): ?>
+<link rel="stylesheet" href="/style.css?v=9">
+<?php if (je_okno()): ?><base target="_top"><?php endif ?>
+</head><body<?= je_okno() ? ' class="okno"' : '' ?>>
+<?php if ($u && !je_okno()): ?>
 <header class="top">
   <a class="logo" href="/?r=dnes">Thai Most <span>kartotéka</span></a>
   <nav><?php foreach ($menu as $k => $t): ?><a href="/?r=<?= $k ?>"<?= $aktivni === $k ? ' class="on"' : '' ?>><?= $t ?></a><?php endforeach ?></nav>
@@ -37,7 +41,7 @@ function hlavicka(string $titul, string $aktivni = ''): void
 </header>
 <?php endif ?>
 <main>
-<?php if ($u && function_exists('demo_pocet') && demo_pocet()): ?><div class="flash vzor">🧪 <b>VZOR</b> – v systému jsou vzorová data na zkoušení (<?= demo_pocet() ?> zákazníků se štítkem VZOR). Před ostrým provozem je smažte v <a href="/?r=nastaveni">Nastavení</a>.</div><?php endif ?>
+<?php if ($u && !je_okno() && function_exists('demo_pocet') && demo_pocet()): ?><div class="flash vzor">🧪 <b>VZOR</b> – v systému jsou vzorová data na zkoušení (<?= demo_pocet() ?> zákazníků se štítkem VZOR). Před ostrým provozem je smažte v <a href="/?r=nastaveni">Nastavení</a>.</div><?php endif ?>
 <?php foreach (flash() as [$typ, $msg]): ?><div class="flash <?= h($typ) ?>"><?= h($msg) ?></div><?php endforeach ?>
 <?php
 }
@@ -45,6 +49,7 @@ function hlavicka(string $titul, string $aktivni = ''): void
 function paticka(): void
 {
     ?></main>
+<?php if (uzivatel() && !je_okno() && ($GLOBALS['__stranka_aktivni'] ?? '') !== 'ai') asistent_ikona(); ?>
 <script>
 // rychlé hledání zákazníků a poukazů (příjmení bez diakritiky, telefon, kód karty / poukazu)
 (function(){var i=document.getElementById('gs'),b=document.getElementById('gsr');if(!i)return;var t,seq=0,res=[];
@@ -101,4 +106,41 @@ function moznosti(array $pole, $vybrana): string
     $o = '';
     foreach ($pole as $k => $t) $o .= '<option value="' . h($k) . '"' . ((string)$vybrana === (string)$k ? ' selected' : '') . '>' . h($t) . '</option>';
     return $o;
+}
+
+/** Plovoucí ikona asistenta vpravo dole na každé stránce + okno s chatem (/?r=ai&okno=1 v iframe).
+ *  Konverzace je v session na serveru, takže po přechodu na jinou stránku zůstane. Otevřené okno se po přechodu
+ *  otevře znovu (jen na počítači; na mobilu je okno přes celou obrazovku). */
+function asistent_ikona(): void
+{
+    $n = 0;
+    try { $n = (int)qv("SELECT COUNT(*) FROM ai_navrhy WHERE stav IN ('ceka','otevreno') AND zacatek > ?", [nyni()]); } catch (Throwable $e) {}
+    ?>
+<button type="button" class="aipom-btn" id="aipom-btn" aria-label="Asistent – zeptat se" title="Asistent – zeptat se (Alt+A)">🤖<?= $n ? '<b class="aipom-n" title="Návrhy čekající na recepci">' . $n . '</b>' : '' ?></button>
+<div class="aipom-okno" id="aipom-okno" role="dialog" aria-label="Asistent">
+  <div class="aipom-hl"><span>🤖 Asistent</span><a href="/?r=ai" title="Otevřít na celou stránku" aria-label="Otevřít na celou stránku">⤢</a><button type="button" id="aipom-zavrit" title="Zavřít (Esc)" aria-label="Zavřít">✕</button></div>
+</div>
+<script>
+(function () {
+  var b = document.getElementById('aipom-btn'), o = document.getElementById('aipom-okno'), f = null;
+  var maly = function () { return window.innerWidth <= 600; };
+  function otevri() {
+    if (!f) { f = document.createElement('iframe'); f.src = '/?r=ai&okno=1'; f.title = 'Asistent'; f.setAttribute('allow', 'microphone'); o.appendChild(f); }
+    o.classList.add('on'); if (maly()) b.style.display = 'none';
+    try { sessionStorage.setItem('aipom-otevreno', '1'); } catch (e) {}
+  }
+  function zavri() {
+    o.classList.remove('on'); b.style.display = '';
+    try { sessionStorage.removeItem('aipom-otevreno'); window.speechSynthesis && speechSynthesis.cancel(); } catch (e) {}
+  }
+  b.addEventListener('click', function () { o.classList.contains('on') ? zavri() : otevri(); });
+  document.getElementById('aipom-zavrit').addEventListener('click', zavri);
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape' && o.classList.contains('on')) zavri();
+    if (e.altKey && (e.key === 'a' || e.key === 'A' || e.code === 'KeyA')) { e.preventDefault(); o.classList.contains('on') ? zavri() : otevri(); }
+  });
+  try { if (sessionStorage.getItem('aipom-otevreno') === '1' && !maly()) otevri(); } catch (e) {}
+})();
+</script>
+<?php
 }
