@@ -102,6 +102,7 @@ input[type=color]{height:38px;padding:2px 4px;cursor:pointer}
 .obs-bar{position:relative;height:28px;border-radius:6px;background:repeating-linear-gradient(90deg,#eef6f0 0,#eef6f0 calc(100%/11 - 1px),#e2ebe4 calc(100%/11 - 1px),#e2ebe4 calc(100%/11));cursor:pointer}
 .obs-bar i{position:absolute;top:3px;bottom:3px;border-radius:4px}
 .obs-bar i.b{background:#9b8b7a;opacity:.75}
+.obs-bar i.p{top:0;bottom:0;border-radius:0;background:rgba(110,100,90,.28);pointer-events:none}
 .obs-bar i.v{background:rgba(198,156,93,.55);outline:2px solid #b07a3a;z-index:1}
 .obs-osa{position:relative;height:16px;margin-left:126px;font-size:.7rem;color:#7a6a5c}
 .obs-osa span{position:absolute;transform:translateX(-50%)}

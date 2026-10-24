@@ -536,6 +536,7 @@ function rez_formular(array $v, bool $novy, string $tlacitko, int $rezId = 0): v
           const s = m2(cas), e = s + dl, vSmene = m => !m.mimo.some(b => m2(b.od) < e && m2(b.do) > s);
           const plno = data.plno.includes(cas);
           const volniTed = plno ? [] : data.maserky.filter(m => vSmene(m) && !m.bloky.some(b => m2(b.od) < e && m2(b.do) > s));
+          if (data.ted >= 0 && s < data.ted) h += '<div class="obs-st bad">⏱ ' + cas + ' už uplynulo – zadáváte masáž zpětně.</div>';
           if (plno) h += '<div class="obs-st bad">⚠ V ' + cas + ' se masáž nevejde do masérn – lůžka jsou obsazená.</div>';
           const alt = volniTed.filter(m => !vybrane.includes(m.id)).map(m => '<button type="button" class="chip" data-m="' + m.id + '">' + esc(m.jmeno) + '</button>').join(' ');
           if (n === 0) {
@@ -563,7 +564,7 @@ function rez_formular(array $v, bool $novy, string $tlacitko, int $rezId = 0): v
         // přehled dne: řádek na masérku, šedé = obsazeno, zlatá = vybraný termín; klepnutím do řádku se vybere čas a masérka
         h += '<div class="obs-den"><div class="obs-hl"><span>Obsazenost ' + esc(data.datum) + (data.svatek ? ' · 🎌 ' + esc(data.svatek) : '') + '</span><span class="muted small">klepněte do volného místa</span></div>';
         data.maserky.forEach(m => {
-          let bar = (m.mimo || []).map(b => '<i class="x" style="left:' + ((m2(b.od) - od) / sir * 100) + '%;width:' + ((m2(b.do) - m2(b.od)) / sir * 100) + '%" title="nepracuje"></i>').join('') + m.bloky.map(b => '<i class="b" style="left:' + ((m2(b.od) - od) / sir * 100) + '%;width:' + ((m2(b.do) - m2(b.od)) / sir * 100) + '%" title="' + esc(b.od + '–' + b.do + ' ' + b.kdo) + '"></i>').join('');
+          let bar = (data.ted > od ? '<i class="p" style="left:0;width:' + (Math.min(data.ted, do_) - od) / sir * 100 + '%" title="už uplynulo"></i>' : '') + (m.mimo || []).map(b => '<i class="x" style="left:' + ((m2(b.od) - od) / sir * 100) + '%;width:' + ((m2(b.do) - m2(b.od)) / sir * 100) + '%" title="nepracuje"></i>').join('') + m.bloky.map(b => '<i class="b" style="left:' + ((m2(b.od) - od) / sir * 100) + '%;width:' + ((m2(b.do) - m2(b.od)) / sir * 100) + '%" title="' + esc(b.od + '–' + b.do + ' ' + b.kdo) + '"></i>').join('');
           if (cas && vybrane.includes(m.id)) { const s = m2(cas); bar += '<i class="v" style="left:' + ((s - od) / sir * 100) + '%;width:' + (dl / sir * 100) + '%"></i>'; }
           h += '<div class="obs-r' + (vybrane.includes(m.id) ? ' on' : '') + '"><button type="button" class="obs-n" data-m="' + m.id + '" style="border-color:' + esc(m.barva) + '">' + esc(m.jmeno) + '<small>' + (m.popis ? esc(m.popis) : 'volno ' + m.volne.length + '×') + '</small></button>'
             + '<div class="obs-bar" data-m="' + m.id + '">' + bar + '</div></div>';
@@ -580,8 +581,9 @@ function rez_formular(array $v, bool $novy, string $tlacitko, int $rezId = 0): v
         let min = od + Math.round(((e.clientX - r.left) / r.width * sir) / 15) * 15;
         const m = data.maserky.find(x => x.id === parseInt(bar.dataset.m));
         // posunout na nejbližší volný začátek u té masérky
-        const vol = (m.volne || []).map(m2); if (!vol.length) return;
-        min = vol.reduce((a, c) => Math.abs(c - min) < Math.abs(a - min) ? c : a, vol[0]);
+        const vol = (m.volne || []).map(m2);
+        if (vol.length) min = vol.reduce((a, c) => Math.abs(c - min) < Math.abs(a - min) ? c : a, vol[0]);
+        else min = Math.max(od, Math.min(min, m2(data.do) - mdelka()));   // žádný volný začátek (např. už po směně): vyber klepnutý čas a hláška dole řekne proč to nejde
         nastav(hm(min), m.id);
       });
       ['datum', 'delka', 'varianta_id'].forEach(n => f(n).addEventListener('change', () => { prepniMas(); clearTimeout(t); t = setTimeout(nacti, 150); }));
@@ -916,6 +918,6 @@ function stranka_den_obs(array $u): void
                   'popis' => implode(', ', array_column(maserka_den_popis((int)$m['id'], $d), 1))];
     }
     echo json_encode(['ok' => true, 'datum' => date('j. n. Y', strtotime($d)), 'od' => $od, 'do' => $do, 'maserky' => $out,
-        'plno' => array_keys($plno), 'svatek' => svatek($d), 'zavreno' => hhmm($zavreno)], JSON_UNESCAPED_UNICODE);
+        'plno' => array_keys($plno), 'svatek' => svatek($d), 'zavreno' => hhmm($zavreno), 'ted' => $ted], JSON_UNESCAPED_UNICODE);
     exit;
 }
