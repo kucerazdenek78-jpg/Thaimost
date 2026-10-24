@@ -513,6 +513,8 @@ function ai_dotaz(string $dotaz, array $historie, array $u): array
             $text = trim(implode("\n", array_map(fn($b) => $b['text'], array_filter($obsah, fn($b) => ($b['type'] ?? '') === 'text'))));
             return ['text' => $text !== '' ? $text : '(bez odpovědi)', 'navrhy' => $navrhy, 'nastroje' => $pouzite];
         }
+        // PHP z prázdného JSON objektu {} udělá [] → API hlásí „tool_use.input: Input should be an object“; vrátit jako objekt
+        foreach ($obsah as $i => $b) if (($b['type'] ?? '') === 'tool_use') $obsah[$i]['input'] = (object)(is_array($b['input'] ?? null) ? $b['input'] : []);
         $zpravy[] = ['role' => 'assistant', 'content' => $obsah];
         $vysledky = [];
         foreach ($volani as $v) {
