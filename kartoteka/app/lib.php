@@ -51,6 +51,7 @@ function session_start_safe(): void
 function uzivatel(): ?array
 {
     session_start_safe();
+    if (empty($_SESSION['uid'])) prihlaseni_z_cookie();
     if (empty($_SESSION['uid'])) return null;
     static $u = false;
     if ($u === false) $u = q1('SELECT * FROM uzivatele WHERE id=? AND aktivni=1', [$_SESSION['uid']]);
@@ -59,8 +60,61 @@ function uzivatel(): ?array
 function vyzaduj_prihlaseni(): array
 {
     $u = uzivatel();
-    if (!$u) { header('Location: /?r=login'); exit; }
+    if (!$u) {
+        // po přihlášení zpět na stránku, kam člověk šel (např. aplikace asistenta)
+        $kam = $_SERVER['REQUEST_URI'] ?? '';
+        if ($_SERVER['REQUEST_METHOD'] === 'GET' && preg_match('~^/\?r=[a-z_]+[^\s]*$~', $kam)) $_SESSION['po_prihlaseni'] = $kam;
+        header('Location: /?r=login'); exit;
+    }
     return $u;
+}
+
+// ---------- Trvalé přihlášení („Zůstat přihlášen“, hlavně pro aplikaci v telefonu) ----------
+const TRVALE_COOKIE = 'tmk_trvale';
+const TRVALE_DNI = 60;
+
+function trvale_cookie(string $hodnota, int $expirace): void
+{
+    if (headers_sent()) return;
+    $https = ($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? '') === 'https' || !empty($_SERVER['HTTPS']);
+    setcookie(TRVALE_COOKIE, $hodnota, ['expires' => $expirace, 'path' => '/', 'httponly' => true, 'samesite' => 'Lax', 'secure' => $https]);
+}
+
+/** Po úspěšném přihlášení se zaškrtnutým „Zůstat přihlášen“: náhodný token v cookie, v databázi jen jeho hash. */
+function trvale_prihlaseni_vytvor(int $uid): void
+{
+    $token = bin2hex(random_bytes(32));
+    $exp = time() + TRVALE_DNI * 86400;
+    q('INSERT INTO prihlaseni_trvale(uzivatel_id,token_hash,zarizeni,expirace) VALUES(?,?,?,?)',
+        [$uid, hash('sha256', $token), mb_substr((string)($_SERVER['HTTP_USER_AGENT'] ?? ''), 0, 200), date('Y-m-d H:i:s', $exp)]);
+    trvale_cookie(db()->lastInsertId() . ':' . $token, $exp);
+}
+
+function prihlaseni_z_cookie(): void
+{
+    $c = (string)($_COOKIE[TRVALE_COOKIE] ?? '');
+    if (!preg_match('~^(\d+):([0-9a-f]{64})$~', $c, $m)) return;
+    try {
+        $t = q1('SELECT t.*, u.aktivni FROM prihlaseni_trvale t JOIN uzivatele u ON u.id=t.uzivatel_id WHERE t.id=?', [(int)$m[1]]);
+    } catch (Throwable $e) { return; }   // tabulka ještě neexistuje (před migrací)
+    if (!$t || !hash_equals($t['token_hash'], hash('sha256', $m[2])) || $t['expirace'] < nyni() || !(int)$t['aktivni']) {
+        if ($t && $t['expirace'] < nyni()) q('DELETE FROM prihlaseni_trvale WHERE id=?', [$t['id']]);
+        trvale_cookie('', time() - 3600);
+        return;
+    }
+    if (!headers_sent()) session_regenerate_id(true);
+    $_SESSION['uid'] = (int)$t['uzivatel_id'];
+    // klouzavá platnost: při používání se prodlužuje
+    $exp = time() + TRVALE_DNI * 86400;
+    q('UPDATE prihlaseni_trvale SET posledni=?, expirace=? WHERE id=?', [nyni(), date('Y-m-d H:i:s', $exp), $t['id']]);
+    trvale_cookie($c, $exp);
+}
+
+function trvale_prihlaseni_zrus(): void
+{
+    $c = (string)($_COOKIE[TRVALE_COOKIE] ?? '');
+    if (preg_match('~^(\d+):~', $c, $m)) { try { q('DELETE FROM prihlaseni_trvale WHERE id=?', [(int)$m[1]]); } catch (Throwable $e) {} }
+    trvale_cookie('', time() - 3600);
 }
 /** Role: admin (vše) · hlavni (hlavní pracovník – upravuje masérky) · recepce. */
 function je_admin(?array $u = null): bool { return (($u ?? uzivatel())['role'] ?? '') === 'admin'; }

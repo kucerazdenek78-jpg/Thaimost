@@ -87,7 +87,9 @@ Jsi asistent recepce masážního salonu Thai Most (Most). Pomáháš recepci pl
 Teď je $ted. Otevírací doba v pracovní dny: $ot (o víkendu a svátcích jen přesčasy masérek a wellness). Píše ti: {$u['jmeno']} (role {$u['role']}).
 
 Zásady:
-- Jen navrhuješ. Rezervace sám nevytváříš, neměníš ani nerušíš. Rezervaci navrhni nástrojem navrhnout_rezervaci – recepce ji pak zkontroluje a uloží.
+- Změny v kartotéce připravuješ jako návrhy nástroji navrhnout_rezervaci (nová rezervace), navrhnout_potvrzeni_zadosti (žádost z webu → termín), navrhnout_presun (jiný čas / masérka / služba), navrhnout_zmenu_stavu (přišel, nepřišel, zrušeno, odmítnuto) a navrhnout_volno (volno nebo přesčas masérky). Provede se až po klepnutí uživatele na „Provést“ pod tvou odpovědí. Nikdy netvrď, že je něco hotové nebo zarezervované – napiš, že návrh čeká na potvrzení.
+- Když uživatel chce změnu (např. „potvrď“, „přesuň“, „zruš“, „dej jí volno“), rovnou připrav návrh; ptej se jen, když chybí něco podstatného (který zákazník, kdy, která masérka).
+- Rezervace, které chceš měnit, najdi nástrojem rozvrh (rezervace_id) nebo zakaznik_detail.
 - Fakta ber jen z nástrojů. Nic si nevymýšlej: když data chybí, řekni to a zeptej se.
 - Volné termíny vždy ověř nástrojem volne_terminy, nikdy je neodhaduj.
 - Zákazníky v odpovědi označuj přesně tvarem [Z:číslo] (např. [Z:42]); kartotéka tam doplní jméno. Telefony ani zdravotní údaje nevypisuj.
@@ -100,7 +102,7 @@ $pravidla
 TXT;
 }
 
-// ---------------- Nástroje (jen čtení + návrh) ----------------
+// ---------------- Nástroje (čtení + návrhy změn, které provede až člověk) ----------------
 function ai_nastroje(): array
 {
     $datum = ['type' => 'string', 'description' => 'Datum YYYY-MM-DD'];
@@ -134,7 +136,121 @@ function ai_nastroje(): array
              'cas' => ['type' => 'string', 'description' => 'HH:MM'], 'maserka_id' => ['type' => 'integer'], 'maserka2_id' => ['type' => 'integer'],
              'zduvodneni' => ['type' => 'string', 'description' => 'proč tento termín (1 věta)']],
              'required' => ['zakaznik_id', 'varianta_id', 'datum', 'cas', 'zduvodneni']]],
+        ['name' => 'navrhnout_potvrzeni_zadosti', 'description' => 'Návrh: žádost z webu (stav zadost) potvrdit na konkrétní termín a masérku. Po provedení dostane zákazník potvrzení e-mailem (má-li e-mail). Systém termín ověří.',
+         'input_schema' => ['type' => 'object', 'properties' => [
+             'rezervace_id' => ['type' => 'integer'], 'datum' => $datum, 'cas' => ['type' => 'string', 'description' => 'HH:MM'],
+             'maserka_id' => ['type' => 'integer'], 'maserka2_id' => ['type' => 'integer'], 'varianta_id' => ['type' => 'integer', 'description' => 'jen když se mění služba (nepovinné)'],
+             'zduvodneni' => ['type' => 'string']], 'required' => ['rezervace_id', 'datum', 'cas', 'zduvodneni']]],
+        ['name' => 'navrhnout_presun', 'description' => 'Návrh: potvrzenou rezervaci přesunout na jiný čas, k jiné masérce nebo změnit službu. Nezadané hodnoty zůstanou. Systém nový termín ověří.',
+         'input_schema' => ['type' => 'object', 'properties' => [
+             'rezervace_id' => ['type' => 'integer'], 'datum' => $datum, 'cas' => ['type' => 'string', 'description' => 'HH:MM'],
+             'maserka_id' => ['type' => 'integer'], 'maserka2_id' => ['type' => 'integer'], 'varianta_id' => ['type' => 'integer'],
+             'poslat_email' => ['type' => 'boolean', 'description' => 'poslat zákazníkovi potvrzení nového termínu e-mailem (výchozí ne)'],
+             'zduvodneni' => ['type' => 'string']], 'required' => ['rezervace_id', 'zduvodneni']]],
+        ['name' => 'navrhnout_zmenu_stavu', 'description' => 'Návrh změny stavu rezervace: probehlo (přišel) a neprisel jen u termínu, který už začal; zruseno_vcas / zruseno_pozde u potvrzeného termínu; odmitnuto u žádosti z webu (volitelně e-mail zákazníkovi).',
+         'input_schema' => ['type' => 'object', 'properties' => [
+             'rezervace_id' => ['type' => 'integer'], 'stav' => ['type' => 'string', 'enum' => ['probehlo', 'neprisel', 'zruseno_vcas', 'zruseno_pozde', 'odmitnuto']],
+             'poslat_email' => ['type' => 'boolean', 'description' => 'jen u odmitnuto: poslat zákazníkovi omluvu'], 'duvod' => ['type' => 'string', 'description' => 'krátký důvod (do e-mailu u odmítnutí)'],
+             'zduvodneni' => ['type' => 'string']], 'required' => ['rezervace_id', 'stav', 'zduvodneni']]],
+        ['name' => 'navrhnout_volno', 'description' => 'Návrh zápisu volna nebo přesčasu masérky (bez času = celý den). Vrátí, kolik naplánovaných masáží by tím přestalo sedět – ty pak vyřeš přesuny.',
+         'input_schema' => ['type' => 'object', 'properties' => [
+             'maserka_id' => ['type' => 'integer'], 'typ' => ['type' => 'string', 'enum' => ['volno', 'prescas']], 'datum_od' => $datum, 'datum_do' => $datum,
+             'cas_od' => ['type' => 'string', 'description' => 'HH:MM (nepovinné)'], 'cas_do' => ['type' => 'string', 'description' => 'HH:MM (nepovinné)'],
+             'poznamka' => ['type' => 'string'], 'zduvodneni' => ['type' => 'string']], 'required' => ['maserka_id', 'typ', 'datum_od', 'zduvodneni']]],
     ];
+}
+
+/** Ověří termín pro variantu (pracovní doba, kolize, kapacita, zákazník nemá jinou masáž). Vrací [zacatek, delka, m1, m2]. */
+function ai_over_termin(array $var, string $d, string $cas, int $m1, int $m2, int $mimoId = 0, int $zakaznikId = 0): array
+{
+    if (!preg_match('~^\d{2}:\d{2}$~', $cas)) throw new InvalidArgumentException('Čas čekám jako HH:MM.');
+    $zac = "$d $cas:00";
+    if (strtotime($zac) < time()) throw new InvalidArgumentException('Termín je v minulosti.');
+    $delka = (int)$var['minuty'];
+    if ($delka <= 0) throw new InvalidArgumentException('Varianta nemá délku.');
+    $kon = date('Y-m-d H:i:s', strtotime($zac) + $delka * 60);
+    $mk = $var['maserky_min'] && (int)$var['maserky_min'] < $delka ? date('Y-m-d H:i:s', strtotime($zac) + (int)$var['maserky_min'] * 60) : $kon;
+    $potreba = (int)$var['maserky'];
+    $m1 = $m1 ?: null; $m2 = $m2 ?: null;
+    if ($potreba === 0) { $m1 = $m2 = null; }
+    if ($potreba >= 1 && !$m1) throw new InvalidArgumentException('Chybí masérka.');
+    if ($potreba >= 2 && (!$m2 || $m2 === $m1)) throw new InvalidArgumentException('Párová služba potřebuje dvě různé masérky.');
+    if ($potreba < 2) $m2 = null;
+    foreach (array_filter([$m1, $m2]) as $mid) {
+        $jm = qv('SELECT jmeno FROM maserky WHERE id=? AND aktivni=1', [$mid]);
+        if (!$jm) throw new InvalidArgumentException("Masérka $mid neexistuje.");
+        if (!maserka_pracuje($mid, $zac, $mk)) throw new InvalidArgumentException("$jm v tu dobu nepracuje.");
+        if (kolize($mid, $zac, $mk, $mimoId)) throw new InvalidArgumentException("$jm má v tu dobu jinou rezervaci.");
+    }
+    if ($k = kapacita_problem($zac, $kon, (int)$var['wellness_mistnost'] === 1, $mimoId)) throw new InvalidArgumentException($k);
+    if ($zakaznikId && qv("SELECT 1 FROM rezervace WHERE zakaznik_id=? AND id<>? AND stav IN ('potvrzeno','probehlo') AND zacatek < ? AND konec > ?", [$zakaznikId, $mimoId, $kon, $zac]))
+        throw new InvalidArgumentException('Zákazník už má ve stejnou dobu jinou masáž.');
+    return [$zac, $delka, $m1, $m2];
+}
+
+/** Je změna stavu u rezervace dovolená? Vrací null, nebo text problému. */
+function ai_stav_problem(array $r, string $stav): ?string
+{
+    if (!isset(STAVY[$stav]) || in_array($stav, ['zadost', 'potvrzeno'], true)) return 'Neznámý cílový stav.';
+    $zacal = $r['zacatek'] && strtotime($r['zacatek']) <= time();
+    if (in_array($stav, ['probehlo', 'neprisel'], true)) {
+        if ($r['stav'] !== 'potvrzeno') return 'Přišel/nepřišel jde jen u potvrzené rezervace (teď ' . $r['stav'] . ').';
+        if (!$zacal) return 'Termín ještě nezačal.';
+    } elseif (in_array($stav, ['zruseno_vcas', 'zruseno_pozde'], true)) {
+        if ($r['stav'] !== 'potvrzeno') return 'Zrušit jde jen potvrzenou rezervaci (teď ' . $r['stav'] . ').';
+    } elseif ($stav === 'odmitnuto' && $r['stav'] !== 'zadost') return 'Odmítnout jde jen žádost z webu.';
+    return null;
+}
+
+function ai_navrh_uloz(string $typ, array &$navrhy, array $in, array $sloupce, array $data = []): array
+{
+    $sloupce += ['zakaznik_id' => null, 'varianta_id' => null, 'maserka_id' => null, 'maserka2_id' => null, 'zacatek' => null, 'delka' => null, 'cil_rez_id' => null];
+    q('INSERT INTO ai_navrhy(typ,zakaznik_id,varianta_id,maserka_id,maserka2_id,zacatek,delka,cil_rez_id,data,zduvodneni,pro_uzivatele) VALUES(?,?,?,?,?,?,?,?,?,?,?)',
+        [$typ, $sloupce['zakaznik_id'], $sloupce['varianta_id'], $sloupce['maserka_id'], $sloupce['maserka2_id'], $sloupce['zacatek'], $sloupce['delka'], $sloupce['cil_rez_id'],
+         json_encode($data, JSON_UNESCAPED_UNICODE), mb_substr(trim((string)($in['zduvodneni'] ?? '')), 0, 300), kdo()]);
+    $id = (int)db()->lastInsertId();
+    $navrhy[] = $id;
+    return ['ok' => true, 'navrh_id' => $id, 'pozn' => 'Návrh čeká na potvrzení (karta „Provést“ pod odpovědí). Zatím se nic nezměnilo.'];
+}
+
+/** Provede schválený návrh – vždy přes stejné funkce jako ruční práce v kartotéce a s novou kontrolou. */
+function ai_provest(array $n): array
+{
+    $d = json_decode($n['data'] ?: '{}', true) ?: [];
+    $termin = fn() => ['varianta_id' => $n['varianta_id'], 'datum' => substr((string)$n['zacatek'], 0, 10), 'cas' => substr((string)$n['zacatek'], 11, 5),
+        'maserka_id' => $n['maserka_id'], 'maserka2_id' => $n['maserka2_id']];
+    $vysledek = function (array $res) {
+        [$chyba, $kol] = $res;
+        if ($chyba) return ['ok' => false, 'zprava' => $chyba];
+        if ($kol) return ['ok' => false, 'zprava' => 'Mezitím vznikla kolize: ' . implode(', ', array_map(fn($k) => jmeno_z($k) . ' ' . date('j. n. H:i', strtotime($k['zacatek'])), $kol)) . '. Zeptejte se asistenta znovu.'];
+        return ['ok' => true, 'rez_id' => $res[2]];
+    };
+    switch ($n['typ']) {
+    case 'rezervace':
+        $z = q1('SELECT * FROM zakaznici WHERE id=?', [$n['zakaznik_id']]);
+        if (!$z) return ['ok' => false, 'zprava' => 'Zákazník už neexistuje.'];
+        $r = $vysledek(rez_uloz($termin() + ['telefon' => $z['telefon'], 'jmeno' => $z['jmeno'], 'prijmeni' => $z['prijmeni'], 'poslat_email' => 1, 'zdroj' => 'recepce'], null, true));
+        return $r['ok'] ? $r + ['zprava' => 'Rezervace vytvořena' . ($z['email'] ? ', potvrzení odešlo e-mailem.' : '.')] : $r;
+    case 'potvrdit':
+    case 'presun':
+        $rz = rezervace_detail((int)$n['cil_rez_id']);
+        if (!$rz) return ['ok' => false, 'zprava' => 'Rezervace už neexistuje.'];
+        if ($rz['stav'] !== ($n['typ'] === 'potvrdit' ? 'zadost' : 'potvrzeno')) return ['ok' => false, 'zprava' => 'Rezervace mezitím změnila stav (' . (STAVY[$rz['stav']] ?? $rz['stav']) . ').'];
+        $email = $n['typ'] === 'potvrdit' || !empty($d['poslat_email']);
+        $r = $vysledek(rez_uloz($termin() + ['platba' => $rz['platba'], 'cena' => (int)$n['varianta_id'] === (int)$rz['varianta_id'] ? (string)$rz['cena'] : '', 'poslat_email' => $email ? 1 : 0], $rz, $n['typ'] === 'potvrdit'));
+        return $r['ok'] ? $r + ['zprava' => ($n['typ'] === 'potvrdit' ? 'Žádost potvrzena' : 'Rezervace přesunuta') . ($email && $rz['email'] ? ', zákazníkovi odešel e-mail.' : '.')] : $r;
+    case 'stav':
+        $rz = rezervace_detail((int)$n['cil_rez_id']);
+        if (!$rz) return ['ok' => false, 'zprava' => 'Rezervace už neexistuje.'];
+        if ($err = ai_stav_problem($rz, (string)($d['stav'] ?? ''))) return ['ok' => false, 'zprava' => $err];
+        rez_zmen_stav($rz, $d['stav'], !empty($d['poslat_email']), (string)($d['duvod'] ?? ''));
+        return ['ok' => true, 'rez_id' => (int)$rz['id'], 'zprava' => jmeno_z($rz) . ': ' . STAVY[$d['stav']] . '.'];
+    case 'volno':
+        $res = volno_pridej((int)$n['maserka_id'], (string)($d['typ'] ?? 'volno'), (string)($d['datum_od'] ?? ''), (string)($d['datum_do'] ?? ''), (string)($d['cas_od'] ?? ''), (string)($d['cas_do'] ?? ''), (string)($d['poznamka'] ?? ''));
+        if ($res['chyba']) return ['ok' => false, 'zprava' => $res['chyba']];
+        return ['ok' => true, 'zprava' => DOST_TYPY[$d['typ'] ?? 'volno'] . ' zapsáno.' . ($res['konflikty'] ? ' ⚠ V tu dobu má masérka ' . $res['konflikty'] . ' masáží – požádejte asistenta o přesuny.' : '')];
+    }
+    return ['ok' => false, 'zprava' => 'Neznámý typ návrhu.'];
 }
 
 function ai_datum($v, ?string $def = null): string
@@ -288,33 +404,55 @@ function ai_nastroj(string $jmeno, array $in, array &$navrhy): array
         if (!$z) throw new InvalidArgumentException('Zákazník neexistuje.');
         $var = q1('SELECT * FROM varianty WHERE id=? AND aktivni=1', [(int)($in['varianta_id'] ?? 0)]);
         if (!$var) throw new InvalidArgumentException('Varianta neexistuje.');
-        $d = ai_datum($in['datum'] ?? null);
-        $cas = (string)($in['cas'] ?? '');
-        if (!preg_match('~^\d{2}:\d{2}$~', $cas)) throw new InvalidArgumentException('Čas čekám jako HH:MM.');
-        $zac = "$d $cas:00";
-        if (strtotime($zac) < time()) throw new InvalidArgumentException('Termín je v minulosti.');
-        $delka = (int)$var['minuty'];
-        if ($delka <= 0) throw new InvalidArgumentException('Varianta nemá délku.');
-        $kon = date('Y-m-d H:i:s', strtotime($zac) + $delka * 60);
-        $mk = $var['maserky_min'] && (int)$var['maserky_min'] < $delka ? date('Y-m-d H:i:s', strtotime($zac) + (int)$var['maserky_min'] * 60) : $kon;
-        $potreba = (int)$var['maserky'];
-        $m1 = (int)($in['maserka_id'] ?? 0) ?: null; $m2 = (int)($in['maserka2_id'] ?? 0) ?: null;
-        if ($potreba === 0) { $m1 = $m2 = null; }
-        if ($potreba >= 1 && !$m1) throw new InvalidArgumentException('Chybí masérka.');
-        if ($potreba >= 2 && (!$m2 || $m2 === $m1)) throw new InvalidArgumentException('Párová služba potřebuje dvě různé masérky.');
-        if ($potreba < 2) $m2 = null;
-        foreach (array_filter([$m1, $m2]) as $mid) {
-            $jm = qv('SELECT jmeno FROM maserky WHERE id=? AND aktivni=1', [$mid]);
-            if (!$jm) throw new InvalidArgumentException("Masérka $mid neexistuje.");
-            if (!maserka_pracuje($mid, $zac, $mk)) throw new InvalidArgumentException("$jm v tu dobu nepracuje.");
-            if (kolize($mid, $zac, $mk)) throw new InvalidArgumentException("$jm má v tu dobu jinou rezervaci.");
+        [$zac, $delka, $m1, $m2] = ai_over_termin($var, ai_datum($in['datum'] ?? null), (string)($in['cas'] ?? ''), (int)($in['maserka_id'] ?? 0), (int)($in['maserka2_id'] ?? 0), 0, (int)$z['id']);
+        return ai_navrh_uloz('rezervace', $navrhy, $in, ['zakaznik_id' => $z['id'], 'varianta_id' => $var['id'], 'maserka_id' => $m1, 'maserka2_id' => $m2, 'zacatek' => $zac, 'delka' => $delka]);
+
+    case 'navrhnout_potvrzeni_zadosti':
+    case 'navrhnout_presun':
+        $zadost = $jmeno === 'navrhnout_potvrzeni_zadosti';
+        $r = rezervace_detail((int)($in['rezervace_id'] ?? 0));
+        if (!$r) throw new InvalidArgumentException('Rezervace neexistuje.');
+        if ($zadost && $r['stav'] !== 'zadost') throw new InvalidArgumentException('Tahle rezervace není žádost čekající na potvrzení (stav ' . $r['stav'] . ').');
+        if (!$zadost && $r['stav'] !== 'potvrzeno') throw new InvalidArgumentException('Přesunout jde jen potvrzenou rezervaci (stav ' . $r['stav'] . '). Žádost potvrď nástrojem navrhnout_potvrzeni_zadosti.');
+        $var = q1('SELECT * FROM varianty WHERE id=? AND aktivni=1', [(int)($in['varianta_id'] ?? 0) ?: (int)$r['varianta_id']]);
+        if (!$var) throw new InvalidArgumentException('Varianta neexistuje.');
+        $d = ai_datum($in['datum'] ?? null, $r['zacatek'] ? substr($r['zacatek'], 0, 10) : null);
+        $cas = (string)($in['cas'] ?? '') ?: ($r['zacatek'] ? substr($r['zacatek'], 11, 5) : '');
+        $m1 = (int)($in['maserka_id'] ?? 0) ?: (int)$r['maserka_id']; $m2 = (int)($in['maserka2_id'] ?? 0) ?: (int)$r['maserka2_id'];
+        [$zac, $delka, $m1, $m2] = ai_over_termin($var, $d, $cas, $m1, $m2, (int)$r['id'], (int)$r['zakaznik_id']);
+        if (!$zadost && $zac === $r['zacatek'] && $m1 == $r['maserka_id'] && $m2 == $r['maserka2_id'] && (int)$var['id'] === (int)$r['varianta_id'])
+            throw new InvalidArgumentException('Nic se nemění – zadej nový čas, masérku nebo službu.');
+        return ai_navrh_uloz($zadost ? 'potvrdit' : 'presun', $navrhy, $in, ['zakaznik_id' => $r['zakaznik_id'], 'varianta_id' => $var['id'], 'maserka_id' => $m1, 'maserka2_id' => $m2,
+            'zacatek' => $zac, 'delka' => $delka, 'cil_rez_id' => $r['id']], $zadost ? [] : ['poslat_email' => !empty($in['poslat_email'])]);
+
+    case 'navrhnout_zmenu_stavu':
+        $r = rezervace_detail((int)($in['rezervace_id'] ?? 0));
+        if (!$r) throw new InvalidArgumentException('Rezervace neexistuje.');
+        $stav = (string)($in['stav'] ?? '');
+        if ($err = ai_stav_problem($r, $stav)) throw new InvalidArgumentException($err);
+        return ai_navrh_uloz('stav', $navrhy, $in, ['zakaznik_id' => $r['zakaznik_id'], 'varianta_id' => $r['varianta_id'], 'maserka_id' => $r['maserka_id'], 'maserka2_id' => $r['maserka2_id'],
+            'zacatek' => $r['zacatek'], 'cil_rez_id' => $r['id']], ['stav' => $stav, 'poslat_email' => $stav === 'odmitnuto' && !empty($in['poslat_email']), 'duvod' => mb_substr(trim((string)($in['duvod'] ?? '')), 0, 300)]);
+
+    case 'navrhnout_volno':
+        $mid = (int)($in['maserka_id'] ?? 0);
+        if (!qv('SELECT 1 FROM maserky WHERE id=? AND aktivni=1', [$mid])) throw new InvalidArgumentException('Masérka neexistuje.');
+        $typ = ($in['typ'] ?? '') === 'prescas' ? 'prescas' : 'volno';
+        $dOd = ai_datum($in['datum_od'] ?? null); $dDo = ai_datum($in['datum_do'] ?? null, $dOd);
+        $cOd = (string)($in['cas_od'] ?? ''); $cDo = (string)($in['cas_do'] ?? '');
+        if ($dDo < $dOd) throw new InvalidArgumentException('Datum do je před datem od.');
+        if (($cOd === '') !== ($cDo === '') || ($cOd !== '' && (!preg_match('~^\d{2}:\d{2}$~', $cOd) || !preg_match('~^\d{2}:\d{2}$~', $cDo) || $cDo <= $cOd)))
+            throw new InvalidArgumentException('Čas zadej oba (HH:MM, do > od), nebo žádný = celý den.');
+        if ($dDo < date('Y-m-d')) throw new InvalidArgumentException('Volno je celé v minulosti.');
+        // kolik potvrzených masáží by volno zasáhlo (u přesčasu 0)
+        $zasah = 0;
+        if ($typ === 'volno') foreach (q("SELECT * FROM rezervace WHERE stav='potvrzeno' AND (maserka_id=? OR maserka2_id=?) AND zacatek >= ? AND zacatek < ? AND zacatek > ?",
+                [$mid, $mid, "$dOd 00:00:00", date('Y-m-d', strtotime("$dDo +1 day")), nyni()])->fetchAll() as $x) {
+            $t1 = substr($x['zacatek'], 11, 5); $t2 = substr(rez_masaz_konec($x), 11, 5);
+            if ($cOd === '' || ($t1 < $cDo && $t2 > $cOd)) $zasah++;
         }
-        if ($k = kapacita_problem($zac, $kon, (int)$var['wellness_mistnost'] === 1)) throw new InvalidArgumentException($k);
-        q('INSERT INTO ai_navrhy(zakaznik_id,varianta_id,maserka_id,maserka2_id,zacatek,delka,zduvodneni,pro_uzivatele) VALUES(?,?,?,?,?,?,?,?)',
-            [$z['id'], $var['id'], $m1, $m2, $zac, $delka, mb_substr(trim((string)($in['zduvodneni'] ?? '')), 0, 300), kdo()]);
-        $id = (int)db()->lastInsertId();
-        $navrhy[] = $id;
-        return ['ok' => true, 'navrh_id' => $id, 'pozn' => 'Návrh čeká na recepci (karta pod odpovědí). Nic není zarezervováno.'];
+        $res = ai_navrh_uloz('volno', $navrhy, $in, ['maserka_id' => $mid, 'zacatek' => "$dOd 00:00:00"],
+            ['typ' => $typ, 'datum_od' => $dOd, 'datum_do' => $dDo, 'cas_od' => $cOd, 'cas_do' => $cDo, 'poznamka' => mb_substr(trim((string)($in['poznamka'] ?? '')), 0, 200)]);
+        return $res + ['zasazene_masaze' => $zasah, 'pozn2' => $zasah ? "Volno zasáhne $zasah potvrzených masáží – navrhni jejich přesun (rozvrh → navrhnout_presun)." : null];
     }
     throw new InvalidArgumentException("Neznámý nástroj $jmeno.");
 }

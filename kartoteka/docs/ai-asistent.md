@@ -1,24 +1,34 @@
 # AI asistent recepce (zkušební verze)
 
-Asistent je plovoucí ikona **🤖** vpravo dole na každé stránce kartotéky (není v menu; zkratka Alt+A). Otevře okno s chatem, na mobilu přes celou obrazovku; tlačítkem ⤢ jde otevřít na celou stránku (`/?r=ai`). Recepce se ho ptá běžnou češtinou, on si sám dohledá data v kartotéce a odpoví. Rezervace **jen navrhuje** – nic neukládá, nemění ani neruší.
+Asistent je plovoucí ikona **🤖** vpravo dole na každé stránce kartotéky (není v menu; zkratka Alt+A). Otevře okno s chatem, na mobilu přes celou obrazovku; tlačítkem ⤢ jde otevřít na celou stránku (`/?r=ai`). Recepce se ho ptá běžnou češtinou, on si sám dohledá data v kartotéce a odpoví. Změny (nová rezervace, potvrzení žádosti, přesun, zrušení, přišel/nepřišel, volno a přesčas masérky) **připraví jako kartu** a provedou se až po klepnutí na **✓ Provést**.
 
 - Číslo na ikoně = návrhy čekající na recepci.
 - Konverzace zůstává při přechodu mezi stránkami; otevřené okno se na počítači po přechodu otevře znovu.
 - **🎤 Říct nahlas** – diktování (Chrome, Edge, Android, Safari). Rozpoznaný dotaz se odešle sám a odpověď se přečte nahlas. Napoprvé prohlížeč požádá o povolení mikrofonu.
 - **🔊 Přečíst** u každé odpovědi.
-- Přijmout návrh otevře předvyplněnou rezervaci v hlavním okně.
+- **✓ Provést** zapíše změnu hned (kartotéka ji před tím znovu ověří). U nové rezervace jde i **Upravit ve formuláři**.
+
+## Aplikace do telefonu (Android)
+
+Asistent jde nainstalovat jako samostatná aplikace s ikonou na ploše (webová aplikace z Chromu, žádné APK):
+
+1. **Nastavení → 📲 Aplikace Asistent do telefonu**: odkaz a QR kód (`/?r=ai&app=1`), na telefonu tlačítko **Nainstalovat aplikaci**.
+2. V telefonu otevřít odkaz v Chromu, přihlásit se se zaškrtnutým **Zůstat přihlášen** (60 dní, prodlužuje se při používání).
+3. Chrome → **⋮ → Nainstalovat aplikaci**. Aplikace běží na celou obrazovku, menu ☰ vede do kartotéky, pravidel, nastavení a k odhlášení.
+
+Odhlášení zruší i trvalé přihlášení na tom zařízení. Na sdíleném počítači „Zůstat přihlášen“ nezaškrtávat.
 
 ## Jak to funguje
 
 1. Recepce napíše dotaz (nebo klikne na rychlé tlačítko, např. „Ranní přehled“).
 2. Kartotéka pošle dotaz + schválená pravidla salonu + popis nástrojů do Claude API (Anthropic).
 3. Model si říká o data přes nástroje. Kartotéka je vyřizuje sama nad svou databází a vrací jen to nutné.
-4. Návrh rezervace kartotéka před uložením ověří (pracovní doba masérky, kolize, kapacita masérn). Když nesedí, vrátí modelu chybu.
-5. Pod odpovědí je karta návrhu: **Přijmout** otevře předvyplněnou rezervaci, recepce ji zkontroluje a uloží. **Zamítnout** chce důvod.
+4. Návrh změny kartotéka ověří už při přípravě (pracovní doba masérky, kolize, kapacita masérn, stav rezervace). Když nesedí, vrátí modelu chybu.
+5. Pod odpovědí je karta: **✓ Provést** změnu zapíše stejnými funkcemi jako ruční práce (a znovu ji ověří), **Zamítnout** chce důvod.
 
 Asistent běží přímo v kontejneru `masaze` (PHP), žádný další kontejner na DS223 není potřeba.
 
-## Nástroje asistenta (jen čtení + návrh)
+## Nástroje asistenta (čtení + návrhy změn)
 
 | Nástroj | Co vrací |
 | --- | --- |
@@ -31,7 +41,11 @@ Asistent běží přímo v kontejneru `masaze` (PHP), žádný další kontejner
 | `kontroly` | žádosti z webu, rezervace u masérky s volnem, neoznačené proběhlé termíny |
 | `zakaznici_last_minute` | zákazníci se štítkem „vezme i volný termín“ |
 | `hodnoceni` | hodnocení masérek z tabletů a počet masáží |
-| `navrhnout_rezervaci` | uloží návrh pro recepci (po ověření) |
+| `navrhnout_rezervaci` | nová rezervace pro existujícího zákazníka |
+| `navrhnout_potvrzeni_zadosti` | žádost z webu → konkrétní termín a masérka (zákazník dostane potvrzení e-mailem) |
+| `navrhnout_presun` | potvrzená rezervace na jiný čas / masérku / službu |
+| `navrhnout_zmenu_stavu` | proběhlo, nepřišel (jen začaté termíny), zrušeno včas/pozdě, odmítnuto (žádost) |
+| `navrhnout_volno` | volno nebo přesčas masérky; vrátí, kolik masáží zasáhne |
 
 ## Co jde ven do Claude API
 
@@ -52,7 +66,7 @@ Při prvním spuštění se založí pravidla R-01 až R-08 (z provozu salonu).
 
 ## Zapnutí na NAS
 
-1. Nahrát nové a změněné soubory z repa do složky kartotéky na NAS. Restart kontejneru není potřeba – PHP si soubory načte samo; databáze se doplní sama (verze 9).
+1. Nahrát nové a změněné soubory z repa do složky kartotéky na NAS. Restart kontejneru není potřeba – PHP si soubory načte samo; databáze se doplní sama (verze 10).
 2. V Claude Console (console.anthropic.com → API keys) vytvořit klíč a nastavit měsíční limit útraty.
 3. V kartotéce jako admin: ikona **🤖** → odkaz **Nastavení a spotřeba** dole v okně (`/?r=ai_log`) → vložit klíč, vybrat model (výchozí Haiku) → Uložit. Klíč se před uložením ověří krátkým voláním.
 4. Hotovo – asistent je zapnutý.
@@ -68,5 +82,5 @@ Klíč se uloží do `data/ai-nastaveni.json` (mimo web, mimo git, práva 0600).
 ## Co zkušební verze zatím neumí
 
 - Neběží sama v plánovači (ranní přehled je zatím tlačítko).
-- Návrhy jsou jen nové rezervace; přesuny existujících rezervací a texty SMS napíše do odpovědi, ale kartu k nim nevytvoří.
+- Neumí zakládat nové zákazníky, poukazy ani posílat SMS (text SMS napíše do odpovědi).
 - Konverzace se pamatuje jen v rámci přihlášení (posledních 30 zpráv) a jen jako text.

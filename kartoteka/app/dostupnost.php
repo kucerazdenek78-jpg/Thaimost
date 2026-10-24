@@ -180,27 +180,32 @@ function konflikty_dostupnosti(?string $od = null, ?string $do = null): array
     return $out;
 }
 
+/** Zapíše volno / přesčas masérky (ručně i z asistenta). Vrací ['chyba' => ?string, 'konflikty' => počet masáží, které tím přestanou sedět]. */
+function volno_pridej(int $mid, string $typ, string $dOd, string $dDo, string $cOd, string $cDo, string $poznamka = ''): array
+{
+    $typ = array_key_exists($typ, DOST_TYPY) ? $typ : 'volno';
+    $dDo = $dDo ?: $dOd;
+    $ok = $mid && qv('SELECT 1 FROM maserky WHERE id=?', [$mid]) && preg_match('~^\d{4}-\d{2}-\d{2}$~', $dOd) && preg_match('~^\d{4}-\d{2}-\d{2}$~', $dDo) && $dDo >= $dOd
+        && (($cOd === '' && $cDo === '') || (preg_match('~^\d{2}:\d{2}$~', $cOd) && preg_match('~^\d{2}:\d{2}$~', $cDo) && $cDo > $cOd));
+    if (!$ok) return ['chyba' => 'Zkontrolujte masérku, datum a čas (čas buď obojí, nebo nic = celý den).', 'konflikty' => 0];
+    q('INSERT INTO maserky_volno(maserka_id,typ,datum_od,datum_do,cas_od,cas_do,poznamka,kdo) VALUES(?,?,?,?,?,?,?,?)',
+        [$mid, $typ, $dOd, $dDo, $cOd ?: null, $cDo ?: null, $poznamka, kdo()]);
+    zapis_log('dostupnost', "$typ masérka $mid $dOd–$dDo $cOd–$cDo");
+    $kon = konflikty_dostupnosti(max(nyni(), "$dOd 00:00:00"), date('Y-m-d', strtotime("$dDo +1 day")));
+    return ['chyba' => null, 'konflikty' => count(array_filter($kon, fn($r) => (int)$r['konf_mid'] === $mid))];
+}
+
 // ---------- Stránka Volna a přesčasy ----------
 function stranka_dostupnost(array $u): void
 {
     if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $akce = $_POST['akce'] ?? '';
         if ($akce === 'pridat') {
-            $mid = (int)($_POST['maserka_id'] ?? 0);
             $typ = array_key_exists($_POST['typ'] ?? '', DOST_TYPY) ? $_POST['typ'] : 'volno';
-            $dOd = $_POST['datum_od'] ?? ''; $dDo = ($_POST['datum_do'] ?? '') ?: $dOd;
-            $cOd = trim($_POST['cas_od'] ?? ''); $cDo = trim($_POST['cas_do'] ?? '');
-            $ok = $mid && preg_match('~^\d{4}-\d{2}-\d{2}$~', $dOd) && preg_match('~^\d{4}-\d{2}-\d{2}$~', $dDo) && $dDo >= $dOd
-                && (($cOd === '' && $cDo === '') || (preg_match('~^\d{2}:\d{2}$~', $cOd) && preg_match('~^\d{2}:\d{2}$~', $cDo) && $cDo > $cOd));
-            if (!$ok) flash('Zkontrolujte masérku, datum a čas (čas buď obojí, nebo nic = celý den).', 'err');
-            else {
-                q('INSERT INTO maserky_volno(maserka_id,typ,datum_od,datum_do,cas_od,cas_do,poznamka,kdo) VALUES(?,?,?,?,?,?,?,?)',
-                    [$mid, $typ, $dOd, $dDo, $cOd ?: null, $cDo ?: null, trim($_POST['poznamka'] ?? ''), kdo()]);
-                zapis_log('dostupnost', "$typ masérka $mid $dOd–$dDo $cOd–$cDo");
-                $kon = konflikty_dostupnosti(max(nyni(), "$dOd 00:00:00"), date('Y-m-d', strtotime("$dDo +1 day")));
-                $kon = array_filter($kon, fn($r) => (int)$r['maserka_id'] === $mid);
-                flash(DOST_TYPY[$typ] . ' uloženo.' . ($kon ? ' ⚠ V tu dobu má masérka ' . count($kon) . ' naplánovaných masáží – vyřešte je níže se zákazníky.' : ''), $kon ? 'warn' : 'ok');
-            }
+            $res = volno_pridej((int)($_POST['maserka_id'] ?? 0), $typ, $_POST['datum_od'] ?? '', $_POST['datum_do'] ?? '',
+                trim($_POST['cas_od'] ?? ''), trim($_POST['cas_do'] ?? ''), trim($_POST['poznamka'] ?? ''));
+            if ($res['chyba']) flash($res['chyba'], 'err');
+            else flash(DOST_TYPY[$typ] . ' uloženo.' . ($res['konflikty'] ? ' ⚠ V tu dobu má masérka ' . $res['konflikty'] . ' naplánovaných masáží – vyřešte je níže se zákazníky.' : ''), $res['konflikty'] ? 'warn' : 'ok');
         } elseif ($akce === 'smazat') {
             q('DELETE FROM maserky_volno WHERE id=?', [(int)($_POST['id'] ?? 0)]);
             flash('Smazáno.');

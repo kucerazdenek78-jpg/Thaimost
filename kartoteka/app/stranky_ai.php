@@ -43,17 +43,57 @@ function ai_navrh_url(array $n): string
         'v' => $n['varianta_id'], 'z' => $n['zakaznik_id'], 'ai' => $n['id']], fn($x) => $x !== null && $x !== ''));
 }
 
+/** Návrhy, které čekají na rozhodnutí (u přišel/nepřišel a volna i když termín už začal, max. 3 dny staré). */
+function ai_cekajici(): array
+{
+    return q("SELECT * FROM ai_navrhy WHERE stav IN ('ceka','otevreno') AND (zacatek > ? OR typ IN ('stav','volno')) AND vytvoreno >= ? ORDER BY COALESCE(zacatek, vytvoreno)",
+        [nyni(), date('Y-m-d H:i:s', strtotime('-3 days'))])->fetchAll();
+}
+
+const AI_TYPY = ['rezervace' => 'Nová rezervace', 'potvrdit' => 'Potvrdit žádost', 'presun' => 'Přesunout', 'stav' => 'Změna stavu', 'volno' => 'Volno / přesčas'];
+
+/** Popis návrhu do karty (HTML). */
+function ai_navrh_popis(array $n): string
+{
+    $d = json_decode($n['data'] ?? '{}', true) ?: [];
+    $z = $n['zakaznik_id'] ? q1('SELECT * FROM zakaznici WHERE id=?', [$n['zakaznik_id']]) : null;
+    $zh = $z ? '<a href="/?r=zakaznik&id=' . $z['id'] . '">' . h(jmeno_z($z)) . '</a>' : '';
+    $sl = function ($vid) { $v = $vid ? q1('SELECT v.popis, s.nazev FROM varianty v JOIN sluzby s ON s.id=v.sluzba_id WHERE v.id=?', [$vid]) : null; return $v ? h(trim($v['nazev'] . ' ' . $v['popis'])) : ''; };
+    $ms = fn($a, $b) => h(implode(' + ', array_filter([qv('SELECT jmeno FROM maserky WHERE id=?', [$a]), qv('SELECT jmeno FROM maserky WHERE id=?', [$b])])) ?: 'bez masérky');
+    switch ($n['typ']) {
+    case 'presun':
+        $r = rezervace_detail((int)$n['cil_rez_id']);
+        $puv = $r ? h(datum_cz($r['zacatek'])) . ' · ' . $ms($r['maserka_id'], $r['maserka2_id']) . ((int)$r['varianta_id'] !== (int)$n['varianta_id'] ? ' · ' . $sl($r['varianta_id']) : '') : '?';
+        return "<b>Přesunout:</b> $zh<br><s class=\"muted\">$puv</s> → <b>" . h(datum_cz($n['zacatek'])) . '</b> · ' . $sl($n['varianta_id']) . ' · ' . $ms($n['maserka_id'], $n['maserka2_id'])
+            . (!empty($d['poslat_email']) ? '<br><span class="small">✉ zákazníkovi odejde e-mail s novým termínem</span>' : '');
+    case 'stav':
+        $r = rezervace_detail((int)$n['cil_rez_id']);
+        return "<b>" . h(STAVY[$d['stav'] ?? ''] ?? '?') . ":</b> $zh · " . h(datum_cz($r['zacatek'] ?? null)) . ' · ' . $sl($n['varianta_id'])
+            . (!empty($d['poslat_email']) ? '<br><span class="small">✉ zákazníkovi odejde omluva e-mailem' . (!empty($d['duvod']) ? ' („' . h($d['duvod']) . '“)' : '') . '</span>' : '');
+    case 'volno':
+        $cas = !empty($d['cas_od']) ? h($d['cas_od'] . '–' . $d['cas_do']) : 'celý den';
+        $dny = ($d['datum_od'] ?? '') === ($d['datum_do'] ?? '') ? h(datum_cz($d['datum_od'] ?? null, false)) : h(datum_cz($d['datum_od'] ?? null, false) . ' – ' . datum_cz($d['datum_do'] ?? null, false));
+        return '<b>' . (($d['typ'] ?? '') === 'prescas' ? '⏱ Přesčas' : '🌴 Volno') . ':</b> ' . h(qv('SELECT jmeno FROM maserky WHERE id=?', [$n['maserka_id']])) . " · $dny · $cas" . (!empty($d['poznamka']) ? ' · ' . h($d['poznamka']) : '');
+    default:   // rezervace, potvrdit
+        return '<b>' . ($n['typ'] === 'potvrdit' ? 'Potvrdit žádost' : 'Nová rezervace') . ":</b> $zh<br>" . h(datum_cz($n['zacatek'])) . ' · ' . $sl($n['varianta_id']) . ' · ' . $ms($n['maserka_id'], $n['maserka2_id'])
+            . ($z && $z['email'] ? '<br><span class="small">✉ zákazníkovi odejde potvrzení e-mailem</span>' : '');
+    }
+}
+
 function ai_navrh_karta(array $n): void
 {
-    $z = q1('SELECT * FROM zakaznici WHERE id=?', [$n['zakaznik_id']]);
-    $var = q1('SELECT v.popis, s.nazev FROM varianty v JOIN sluzby s ON s.id=v.sluzba_id WHERE v.id=?', [$n['varianta_id']]);
-    $mas = implode(' + ', array_filter([qv('SELECT jmeno FROM maserky WHERE id=?', [$n['maserka_id']]), qv('SELECT jmeno FROM maserky WHERE id=?', [$n['maserka2_id']])])) ?: 'bez masérky';
-    $platny = strtotime($n['zacatek']) > time(); ?>
+    $d = json_decode($n['data'] ?? '{}', true) ?: [];
+    $platny = match ($n['typ']) {
+        'stav' => true,
+        'volno' => ($d['datum_do'] ?? '') >= date('Y-m-d'),
+        default => $n['zacatek'] && strtotime($n['zacatek']) > time(),
+    };
+    $rid = $n['rezervace_id'] ?: $n['cil_rez_id']; ?>
     <div class="ainavrh s-<?= h($n['stav']) ?>">
-      <div><b>🤖 Návrh: <?= $z ? '<a href="/?r=zakaznik&id=' . $z['id'] . '">' . h(jmeno_z($z)) . '</a>' : '?' ?></b> · <?= h(datum_cz($n['zacatek'])) ?> · <?= h(trim(($var['nazev'] ?? '') . ' ' . ($var['popis'] ?? ''))) ?> · <?= h($mas) ?></div>
+      <div>🤖 <?= ai_navrh_popis($n) ?></div>
       <?php if ($n['zduvodneni']): ?><div class="small muted">Proč: <?= h($n['zduvodneni']) ?></div><?php endif ?>
-      <?php if ($n['stav'] === 'prijato'): ?>
-        <div class="small">✅ Přijato (<?= h($n['rozhodl']) ?>)<?= $n['rezervace_id'] ? ' → <a href="/?r=rezervace&id=' . (int)$n['rezervace_id'] . '">rezervace</a>' : '' ?></div>
+      <?php if (in_array($n['stav'], ['prijato', 'provedeno'], true)): ?>
+        <div class="small">✅ Provedeno (<?= h($n['rozhodl']) ?>, <?= h(date('j. n. H:i', strtotime((string)$n['rozhodnuto']))) ?>)<?= $rid ? ' → <a href="/?r=rezervace&id=' . (int)$rid . '">rezervace</a>' : '' ?></div>
       <?php elseif ($n['stav'] === 'zamitnuto'): ?>
         <div class="small">✖ Zamítnuto (<?= h($n['rozhodl']) ?>): <?= h($n['duvod']) ?></div>
       <?php elseif (!$platny): ?>
@@ -61,8 +101,9 @@ function ai_navrh_karta(array $n): void
       <?php else: ?>
         <form method="post" class="ainavrh-akce">
           <?= csrf_pole() ?><input type="hidden" name="navrh_id" value="<?= (int)$n['id'] ?>">
-          <button class="btn small primary" name="akce" value="prijmout" title="Otevře předvyplněnou rezervaci – zkontrolujte a uložte">Přijmout → otevřít rezervaci</button>
-          <?php if ($n['stav'] === 'otevreno'): ?><span class="small muted">otevřeno, rezervace zatím neuložena</span><?php endif ?>
+          <button class="btn small primary" name="akce" value="provest" formtarget="_self">✓ Provést</button>
+          <?php if ($n['typ'] === 'rezervace'): ?><button class="btn small" name="akce" value="prijmout" title="Otevře předvyplněnou rezervaci – upravíte a uložíte sami">Upravit ve formuláři</button><?php endif ?>
+          <?php if ($n['stav'] === 'otevreno'): ?><span class="small muted">otevřeno ve formuláři, zatím neuloženo</span><?php endif ?>
           <details><summary class="btn small">Zamítnout…</summary>
             <select name="duvod_typ" class="small-in"><?= moznosti(AI_DUVODY, 'cas') ?></select>
             <input name="duvod" class="small-in" placeholder="Upřesnění (pomůže asistentovi příště)">
@@ -101,10 +142,21 @@ function stranka_ai(array $u): void
             }
         } elseif ($akce === 'vymazat') {
             $_SESSION['ai_hist'] = [];
-        } elseif (in_array($akce, ['prijmout', 'zamitnout'], true)) {
+        } elseif (in_array($akce, ['provest', 'prijmout', 'zamitnout'], true)) {
             $n = q1("SELECT * FROM ai_navrhy WHERE id=? AND stav IN ('ceka','otevreno')", [(int)($_POST['navrh_id'] ?? 0)]);
-            if (!$n) { flash('Návrh už je vyřízený.', 'warn'); if ($akce === 'prijmout') presmeruj('/?r=ai'); }   // Přijmout jde z okna na celou stránku
-            elseif ($akce === 'prijmout') {
+            if (!$n) { flash('Návrh už je vyřízený.', 'warn'); if ($akce === 'prijmout' && !je_app()) presmeruj('/?r=ai'); }   // formulář jde z okna na celou stránku
+            elseif ($akce === 'provest') {
+                // zámek proti dvojímu klepnutí: návrh si nejdřív „zabere“, až pak provádí
+                q("UPDATE ai_navrhy SET stav='provadi' WHERE id=? AND stav IN ('ceka','otevreno')", [$n['id']]);
+                if (db()->query('SELECT changes()')->fetchColumn() < 1) flash('Návrh už někdo vyřizuje.', 'warn');
+                else {
+                    try { $res = ai_provest($n); } catch (Throwable $e) { error_log((string)$e); $res = ['ok' => false, 'zprava' => 'Chyba při provádění: ' . $e->getMessage()]; }
+                    if ($res['ok']) q("UPDATE ai_navrhy SET stav='provedeno', rezervace_id=COALESCE(?, rezervace_id), rozhodl=?, rozhodnuto=? WHERE id=?", [$res['rez_id'] ?? null, kdo(), nyni(), $n['id']]);
+                    else q("UPDATE ai_navrhy SET stav=? WHERE id=?", [$n['stav'], $n['id']]);
+                    ai_log($res['ok'] ? 'navrh_proveden' : 'navrh_chyba', "#{$n['id']} {$n['typ']}: " . $res['zprava']);
+                    flash(($res['ok'] ? '✅ ' : 'Neprovedeno: ') . $res['zprava'], $res['ok'] ? 'ok' : 'err');
+                }
+            } elseif ($akce === 'prijmout') {
                 q("UPDATE ai_navrhy SET stav='otevreno', rozhodl=?, rozhodnuto=? WHERE id=?", [kdo(), nyni(), $n['id']]);
                 presmeruj(ai_navrh_url($n));
             } else {
@@ -114,15 +166,29 @@ function stranka_ai(array $u): void
                 flash('Návrh zamítnut, důvod je uložený.');
             }
         }
-        presmeruj('/?r=ai' . (je_okno() ? '&okno=1' : '') . '#konec');
+        presmeruj('/?r=ai' . (je_app() ? '&app=1' : (je_okno() ? '&okno=1' : '')) . '#konec');
     }
 
     $hist = $_SESSION['ai_hist'];
-    $cekaji = q("SELECT * FROM ai_navrhy WHERE stav IN ('ceka','otevreno') AND zacatek > ? ORDER BY zacatek", [nyni()])->fetchAll();
+    $cekaji = ai_cekajici();
     $okno = je_okno();
     hlavicka('Asistent', 'ai'); ?>
+    <?php if (je_app()): ?>
+    <header class="aiapp-hl">
+      <span>🤖 Asistent <small>Thai Most</small></span>
+      <details class="aiapp-menu"><summary aria-label="Menu">☰</summary>
+        <nav>
+          <a href="/?r=dnes">📋 Otevřít kartotéku</a>
+          <a href="/?r=volno">🕐 Volné termíny</a>
+          <a href="/?r=ai_pravidla">📜 Pravidla salonu</a>
+          <?php if (je_admin($u)): ?><a href="/?r=ai_log">⚙ Nastavení a spotřeba</a><?php endif ?>
+          <a href="/?r=logout">↩ Odhlásit (<?= h($u['jmeno']) ?>)</a>
+        </nav>
+      </details>
+    </header>
+    <?php endif ?>
     <?php if (!$okno): ?>
-    <div class="cal-nav"><h1>🤖 Asistent <small>zkušební verze · jen navrhuje, rezervace ukládá recepce</small></h1>
+    <div class="cal-nav"><h1>🤖 Asistent <small>zkušební verze · změny provede až po vašem „Provést“</small></h1>
       <span class="grow"></span>
       <a class="btn small" href="/?r=ai_pravidla">Pravidla salonu</a>
       <?php if (je_admin($u)): ?><a class="btn small" href="/?r=ai_log">Nastavení a spotřeba</a><?php endif ?>
@@ -165,10 +231,10 @@ function stranka_ai(array $u): void
         <h2>Návrhy čekající na recepci</h2>
         <?php if (!$cekaji): ?><p class="muted small">Žádné.</p><?php endif ?>
         <?php foreach ($cekaji as $n) ai_navrh_karta($n); ?>
-        <p class="small muted">Přijmout = otevře se předvyplněná rezervace; uložením ji potvrdíte vy. Zamítnutí s důvodem slouží k vylepšení pravidel.</p>
+        <p class="small muted">Provést = změna se hned zapíše (kartotéka ji před tím znovu ověří). Zamítnutí s důvodem slouží k vylepšení pravidel.</p>
       </aside>
       <?php else: ?>
-        <p class="small muted aipata"><a href="/?r=ai_pravidla">Pravidla salonu</a><?= je_admin($u) ? ' · <a href="/?r=ai_log">Nastavení a spotřeba</a>' : '' ?> · Asistent jen navrhuje, rezervaci ukládá recepce.</p>
+        <p class="small muted aipata"><?php if (!je_app()): ?><a href="/?r=ai_pravidla">Pravidla salonu</a><?= je_admin($u) ? ' · <a href="/?r=ai_log">Nastavení a spotřeba</a>' : '' ?> · <?php endif ?>Asistent změny jen připraví – provedou se až po klepnutí na „Provést“.</p>
       <?php endif ?>
     </div>
     <script>
@@ -177,6 +243,7 @@ function stranka_ai(array $u): void
     t.addEventListener('keydown',function(e){if(e.key==='Enter'&&(e.ctrlKey||e.metaKey)){e.preventDefault();f.requestSubmit(b)}});
     document.querySelectorAll('.airychle .chip').forEach(function(c){c.addEventListener('click',function(){t.value=c.dataset.q;f.requestSubmit(b)})});
     var k=document.getElementById('konec');if(k&&location.hash==='#konec')k.scrollIntoView();
+    if(document.body.classList.contains('app')&&'serviceWorker' in navigator)navigator.serviceWorker.register('/sw-asistent.js').catch(function(){});
     // 🔊 přečíst odpověď nahlas (čeština, pokud ji prohlížeč má)
     function precti(el){try{speechSynthesis.cancel();var u=new SpeechSynthesisUtterance(el.innerText);u.lang='cs-CZ';u.rate=.95;speechSynthesis.speak(u)}catch(e){}}
     var odp=document.querySelectorAll('.aimsg.on .aitext');

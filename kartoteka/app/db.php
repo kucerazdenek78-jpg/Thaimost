@@ -26,7 +26,7 @@ function q(string $sql, array $p = []): PDOStatement
 function q1(string $sql, array $p = []): ?array { $r = q($sql, $p)->fetch(); return $r ?: null; }
 function qv(string $sql, array $p = []) { $r = q($sql, $p)->fetchColumn(); return $r === false ? null : $r; }
 
-const DB_VERZE = 9;
+const DB_VERZE = 10;
 
 /** Migrace běží v jedné transakci a po získání zámku se verze ověří znovu (souběžné první požadavky). */
 function migrate(PDO $pdo): void
@@ -44,6 +44,7 @@ function migrate(PDO $pdo): void
         if ($ver < 7) migrate_v7($pdo);
         if ($ver < 8) migrate_v8($pdo);
         if ($ver < 9) migrate_v9($pdo);
+        if ($ver < 10) migrate_v10($pdo);
         $pdo->exec('PRAGMA user_version = ' . DB_VERZE);
         $pdo->exec('COMMIT');
     } catch (Throwable $e) {
@@ -157,6 +158,21 @@ function migrate_v1(PDO $pdo): void
     $sm = $pdo->prepare('INSERT INTO maserky(jmeno,poradi,barva) VALUES(?,?,?)');
     $barvy = ['#b07a3a', '#5b8a72', '#7a5ea8', '#c0605a', '#3f7fae'];
     for ($i = 1; $i <= 5; $i++) $sm->execute(["Masérka $i", $i, $barvy[$i - 1]]);
+}
+
+/** v10: akce asistenta (potvrzení žádosti, přesun, změna stavu, volno) a trvalé přihlášení v aplikaci. */
+function migrate_v10(PDO $pdo): void
+{
+    $pdo->exec(<<<SQL
+    ALTER TABLE ai_navrhy ADD COLUMN data TEXT NOT NULL DEFAULT '{}';         -- parametry akce (JSON)
+    ALTER TABLE ai_navrhy ADD COLUMN cil_rez_id INTEGER REFERENCES rezervace(id);  -- rezervace, které se akce týká
+    CREATE TABLE prihlaseni_trvale (
+        id INTEGER PRIMARY KEY, uzivatel_id INTEGER NOT NULL REFERENCES uzivatele(id), token_hash TEXT NOT NULL,
+        zarizeni TEXT NOT NULL DEFAULT '', vytvoreno TEXT NOT NULL DEFAULT (datetime('now','localtime')),
+        posledni TEXT, expirace TEXT NOT NULL
+    );
+    CREATE INDEX prihl_trvale_uziv ON prihlaseni_trvale(uzivatel_id);
+    SQL);
 }
 
 /** v9: AI asistent – pravidla salonu (jediný „trénink“ agenta), návrhy ke schválení recepcí, log volání. */

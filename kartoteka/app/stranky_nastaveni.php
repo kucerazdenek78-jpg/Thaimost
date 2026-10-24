@@ -47,6 +47,7 @@ function stranka_nastaveni(array $u): void
 
     hlavicka('Nastavení', 'nastaveni'); ?>
     <h1>Nastavení</h1>
+    <?php aplikace_karta(); ?>
     <div class="cols">
       <div>
         <form method="post" class="card">
@@ -132,4 +133,43 @@ function stranka_emaily(array $u): void
       <?php endforeach ?>
     </table>
     <?php paticka();
+}
+
+/** Sekce „Aplikace Asistent“: instalace do telefonu (Android/Chrome), QR kód pro otevření v telefonu. */
+function aplikace_karta(): void
+{
+    $url = rtrim(cfg()['url'] ?? '', '/') . '/?r=ai&app=1'; ?>
+    <section class="card aplikace">
+      <h2>📲 Aplikace Asistent do telefonu</h2>
+      <div class="aplikace-in">
+        <img src="/asistent-192.png" alt="" width="72" height="72">
+        <div class="grow">
+          <p style="margin-top:0">Asistent jako samostatná aplikace s ikonou na ploše: ptáte se hlasem nebo psaním, asistent připraví rezervace, přesuny, potvrzení žádostí i volna masérek a vy je jen odklepnete „Provést“.</p>
+          <p><button type="button" class="btn primary" id="appInstal" hidden>⬇ Nainstalovat aplikaci</button>
+             <span id="appHotovo" class="tag zdarma" hidden>✅ Aplikace je nainstalovaná</span>
+             <a class="btn" href="/?r=ai&amp;app=1">Otevřít aplikaci</a></p>
+          <ol class="small" id="appNavod">
+            <li>V telefonu s Androidem otevřete v <b>Chromu</b> odkaz níže (nebo naskenujte QR kód fotoaparátem).</li>
+            <li>Přihlaste se a zaškrtněte <b>Zůstat přihlášen</b>.</li>
+            <li>V Chromu klepněte na <b>⋮ → Nainstalovat aplikaci</b> (případně „Přidat na plochu“). Ikona 🤖 Asistent se objeví na ploše.</li>
+            <li>Napoprvé u 🎤 povolte mikrofon.</li>
+          </ol>
+          <p class="small">Odkaz: <code><?= h($url) ?></code></p>
+        </div>
+        <div class="aplikace-qr" id="appQr" data-qr="<?= h($url) ?>" title="Naskenujte telefonem"></div>
+      </div>
+    </section>
+    <script src="/qrcode.js"></script>
+    <script>
+    (function(){
+      var e=document.getElementById('appQr');try{var q=qrcode(0,'M');q.addData(e.dataset.qr);q.make();e.innerHTML=q.createSvgTag({cellSize:4,margin:2,scalable:true})}catch(x){e.textContent=e.dataset.qr}
+      if('serviceWorker' in navigator)navigator.serviceWorker.register('/sw-asistent.js').catch(function(){});
+      var b=document.getElementById('appInstal'),ok=document.getElementById('appHotovo'),ev=null;
+      if(matchMedia('(display-mode: standalone)').matches){ok.hidden=false}
+      window.addEventListener('beforeinstallprompt',function(x){x.preventDefault();ev=x;b.hidden=false});
+      window.addEventListener('appinstalled',function(){b.hidden=true;ok.hidden=false});
+      b.addEventListener('click',function(){if(!ev)return;ev.prompt();ev.userChoice.then(function(){ev=null;b.hidden=true})});
+    })();
+    </script>
+<?php
 }

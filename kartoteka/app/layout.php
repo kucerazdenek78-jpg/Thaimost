@@ -2,7 +2,9 @@
 // Společná kostra stránek kartotéky.
 
 /** Stránka otevřená uvnitř plovoucího okna asistenta (iframe, ?okno=1): bez horní lišty a bez další plovoucí ikony. */
-function je_okno(): bool { return isset($_GET['okno']); }
+function je_okno(): bool { return isset($_GET['okno']) || je_app(); }
+/** Asistent spuštěný jako nainstalovaná aplikace (?app=1): celá obrazovka, vlastní horní lišta. */
+function je_app(): bool { return isset($_GET['app']); }
 
 function hlavicka(string $titul, string $aktivni = ''): void
 {
@@ -28,9 +30,12 @@ function hlavicka(string $titul, string $aktivni = ''): void
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex, nofollow">
 <title><?= h($titul) ?> · Kartotéka Thai Most</title>
-<link rel="stylesheet" href="/style.css?v=9">
-<?php if (je_okno()): ?><base target="_top"><?php endif ?>
-</head><body<?= je_okno() ? ' class="okno"' : '' ?>>
+<link rel="stylesheet" href="/style.css?v=11">
+<?php if (je_okno() && !je_app()): ?><base target="_top"><?php endif ?>
+<link rel="manifest" href="/?r=manifest">
+<meta name="theme-color" content="#6b4a2b">
+<link rel="apple-touch-icon" href="/asistent-192.png">
+</head><body<?= je_okno() ? ' class="okno' . (je_app() ? ' app' : '') . '"' : '' ?>>
 <?php if ($u && !je_okno()): ?>
 <header class="top">
   <a class="logo" href="/?r=dnes">Thai Most <span>kartotéka</span></a>
@@ -114,7 +119,7 @@ function moznosti(array $pole, $vybrana): string
 function asistent_ikona(): void
 {
     $n = 0;
-    try { $n = (int)qv("SELECT COUNT(*) FROM ai_navrhy WHERE stav IN ('ceka','otevreno') AND zacatek > ?", [nyni()]); } catch (Throwable $e) {}
+    try { $n = count(ai_cekajici()); } catch (Throwable $e) {}
     ?>
 <button type="button" class="aipom-btn" id="aipom-btn" aria-label="Asistent – zeptat se" title="Asistent – zeptat se (Alt+A)">🤖<?= $n ? '<b class="aipom-n" title="Návrhy čekající na recepci">' . $n . '</b>' : '' ?></button>
 <div class="aipom-okno" id="aipom-okno" role="dialog" aria-label="Asistent">

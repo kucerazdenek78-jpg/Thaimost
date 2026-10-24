@@ -20,10 +20,13 @@ function stranka_login(): void
         else {
             $u = q1('SELECT * FROM uzivatele WHERE login=? AND aktivni=1', [trim($_POST['login'] ?? '')]);
             if ($u && password_verify($_POST['heslo'] ?? '', $u['heslo_hash'])) {
+                $kam = $_SESSION['po_prihlaseni'] ?? '';
                 session_regenerate_id(true);
                 $_SESSION['uid'] = $u['id'];
-                q('INSERT INTO log(kdo,akce) VALUES(?,?)', [$u['jmeno'], 'prihlaseni']);
-                presmeruj('/?r=dnes');
+                unset($_SESSION['po_prihlaseni']);
+                if (!empty($_POST['trvale'])) trvale_prihlaseni_vytvor((int)$u['id']);
+                q('INSERT INTO log(kdo,akce) VALUES(?,?)', [$u['jmeno'], 'prihlaseni' . (!empty($_POST['trvale']) ? ' (trvale)' : '')]);
+                presmeruj(preg_match('~^/\?r=[a-z_]+[^\s]*$~', $kam) ? $kam : '/?r=dnes');
             }
             $chyba = 'Špatné jméno nebo heslo.';
         }
@@ -37,6 +40,7 @@ function stranka_login(): void
       <?php if ($zadnyUzivatel): ?><div class="flash warn">Zatím není založený žádný uživatel. Založte ho v terminálu kontejneru: <code>php bin/uzivatel.php</code> (návod v README).</div><?php endif ?>
       <label>Uživatel<input name="login" autocomplete="username" required autofocus></label>
       <label>Heslo<input name="heslo" type="password" autocomplete="current-password" required></label>
+      <label class="check"><input type="checkbox" name="trvale" value="1"<?= str_contains((string)($_SESSION['po_prihlaseni'] ?? ''), 'app=1') ? ' checked' : '' ?>> Zůstat přihlášen na tomto zařízení (<?= TRVALE_DNI ?> dní) – jen na vlastním telefonu, ne na sdíleném počítači</label>
       <button class="btn primary">Přihlásit</button>
     </form>
     <?php paticka();
@@ -413,6 +417,22 @@ function rez_uloz(array $p, ?array $puvodni, bool $potvrdit): array
     return [null, [], $rid];
 }
 
+/** Změna stavu rezervace (proběhlo, nepřišel, zrušeno, odmítnuto…) – ruční i z asistenta. */
+function rez_zmen_stav(array $r, string $novy, bool $poslatEmail = false, string $duvod = ''): void
+{
+    $id = (int)$r['id'];
+    q('UPDATE rezervace SET stav=?, zmeneno=?, zmenil=? WHERE id=?', [$novy, nyni(), kdo(), $id]);
+    zapis_log('rezervace_stav', "#$id $novy");
+    // klient nepřišel / zrušil: stáhnout masáž z tabletu, pokud tam čeká
+    if (in_array($novy, ['neprisel', 'zruseno_vcas', 'zruseno_pozde', 'odmitnuto'], true))
+        q("UPDATE sezeni SET stav='zruseno', zavreno=? WHERE rezervace_id=? AND stav='cekani'", [nyni(), $id]);
+    if ($novy === 'odmitnuto' && ($r['email'] ?? '') && $poslatEmail)
+        posli_email($r['email'], 'Thai Most – k vaší žádosti o termín',
+            "Dobrý den,\n\nomlouváme se, ale požadovaný termín ($r[preferovano]) už nemáme volný."
+            . ($duvod !== '' ? "\n" . $duvod : '')
+            . "\n\nZavolejte nám prosím na +420 778 429 329, rádi najdeme jiný čas.\n\nThajské masáže Most\n");
+}
+
 function posli_potvrzeni(int $rid): void
 {
     $r = rezervace_detail($rid);
@@ -667,16 +687,7 @@ function stranka_rezervace(array $u): void
             if (!$chyba && !$kol) { flash($akce === 'naplanovat' ? 'Termín potvrzen.' : 'Uloženo.'); presmeruj("/?r=rezervace&id=$id"); }
         } elseif ($akce === 'stav' && isset(STAVY[$_POST['stav'] ?? ''])) {
             $novy = $_POST['stav'];
-            q('UPDATE rezervace SET stav=?, zmeneno=?, zmenil=? WHERE id=?', [$novy, nyni(), kdo(), $id]);
-            zapis_log('rezervace_stav', "#$id $novy");
-            // klient nepřišel / zrušil: stáhnout masáž z tabletu, pokud tam čeká
-            if (in_array($novy, ['neprisel', 'zruseno_vcas', 'zruseno_pozde', 'odmitnuto'], true))
-                q("UPDATE sezeni SET stav='zruseno', zavreno=? WHERE rezervace_id=? AND stav='cekani'", [nyni(), $id]);
-            if ($novy === 'odmitnuto' && $r['email'] && !empty($_POST['poslat_email']))
-                posli_email($r['email'], 'Thai Most – k vaší žádosti o termín',
-                    "Dobrý den,\n\nomlouváme se, ale požadovaný termín ($r[preferovano]) už nemáme volný."
-                    . (trim($_POST['duvod'] ?? '') !== '' ? "\n" . trim($_POST['duvod']) : '')
-                    . "\n\nZavolejte nám prosím na +420 778 429 329, rádi najdeme jiný čas.\n\nThajské masáže Most\n");
+            rez_zmen_stav($r, $novy, !empty($_POST['poslat_email']), trim($_POST['duvod'] ?? ''));
             flash(jmeno_z($r) . ': ' . STAVY[$novy]);
             if (($_POST['zpet'] ?? '') === 'dnes') presmeruj('/?r=dnes');
             presmeruj("/?r=rezervace&id=$id");

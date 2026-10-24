@@ -49,7 +49,23 @@ if ($r === 'tablet_api') {
     try { stranka_tablet_api(); }
     catch (Throwable $e) { error_log((string)$e); api_odpoved(['ok' => false, 'chyba' => 'Chyba serveru.'], 500); }
 }
-if ($r === 'logout') { session_start_safe(); session_destroy(); presmeruj('/?r=login'); }
+if ($r === 'logout') { session_start_safe(); trvale_prihlaseni_zrus(); session_destroy(); presmeruj('/?r=login'); }
+// manifest instalovatelné aplikace Asistent (Android: Chrome → Nainstalovat aplikaci)
+if ($r === 'manifest') {
+    header('Content-Type: application/manifest+json; charset=utf-8');
+    echo json_encode([
+        'name' => 'Asistent Thai Most', 'short_name' => 'Asistent', 'id' => '/?r=ai&app=1',
+        'description' => 'AI asistent kartotéky Thai Most – plánování rezervací hlasem i psaním',
+        'start_url' => '/?r=ai&app=1', 'scope' => '/', 'display' => 'standalone', 'orientation' => 'portrait',
+        'background_color' => '#f6f1ea', 'theme_color' => '#6b4a2b', 'lang' => 'cs',
+        'icons' => [
+            ['src' => '/asistent-192.png', 'sizes' => '192x192', 'type' => 'image/png'],
+            ['src' => '/asistent-512.png', 'sizes' => '512x512', 'type' => 'image/png'],
+            ['src' => '/asistent-maskable-512.png', 'sizes' => '512x512', 'type' => 'image/png', 'purpose' => 'maskable'],
+        ],
+    ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+    exit;
+}
 
 $u = vyzaduj_prihlaseni();
 uzavri_probehle();
