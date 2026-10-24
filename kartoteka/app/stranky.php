@@ -9,6 +9,7 @@ require __DIR__ . '/stranky_import.php';
 require __DIR__ . '/stranky_tablet.php';
 require __DIR__ . '/demo.php';
 require __DIR__ . '/dostupnost.php';
+require __DIR__ . '/prichody.php';
 require __DIR__ . '/stranky_ai.php';
 
 function stranka_login(): void
@@ -76,6 +77,14 @@ function stranka_dnes(array $u): void
                 $e2 = $e1 ? null : tablet_poslat($r, (int)$luzka[1]['id'], $mas[1], false);
                 flash(($e1 ?? $e2) ?? jmeno_z($r) . ' → ' . $luzka[0]['nazev'] . ' (' . $r['maserka'] . ') + ' . $luzka[1]['nazev'] . ' (' . $r['maserka2'] . ')', ($e1 ?? $e2) ? 'err' : 'ok');
             }
+        } elseif ($akce === 'prichody_poslat') {
+            [$ok, $err] = prichody_rozeslat($_POST);
+            if ($ok) flash('Odesláno na tablety: ' . implode(' · ', $ok), 'ok');
+            foreach ($err as $e) flash($e, 'err');
+            if (!$ok && !$err) flash('Nic nebylo vybráno.', 'warn');
+        } elseif ($akce === 'ukoncit') {
+            $e = masaz_ukoncit_recepce((int)($_POST['rez_id'] ?? 0), (string)($_POST['duvod'] ?? ''), !empty($_POST['pocitat']));
+            flash($e ?? 'Masáž ukončena, vedoucí dostane upozornění.', $e ? 'err' : 'ok');
         } elseif ($akce === 'hromadne_stav' && in_array($_POST['stav'] ?? '', ['probehlo', 'neprisel', 'zruseno_pozde'], true)) {
             // hromadně: všechny zaškrtnuté rezervace ke kontrole dostanou stejný stav
             $novy = $_POST['stav']; $n = 0;
@@ -158,6 +167,7 @@ function stranka_dnes(array $u): void
     </section>
     <?php endif ?>
 
+    <?php ukoncene_dnes_banner(); prichody_panel(); ?>
     <?php
     $mistnosti = q('SELECT * FROM mistnosti WHERE aktivni=1 ORDER BY poradi, nazev')->fetchAll();
     $stavMist = [];   // id masérny => sezení (s příjmením) nebo null
@@ -206,6 +216,7 @@ function stranka_dnes(array $u): void
             <?php endforeach; endif ?>
             <?php if ($sz && $sz['stav'] !== 'cekani'): ?>
               <span class="tab-st bezi">▶ <?= h($nazMist[$sz['mistnost']] ?? '') ?> · <?= h(SEZENI_STAVY[$sz['stav']] ?? '') ?></span>
+              <?php if ($sz['stav'] === 'bezi') ukoncit_formular($r) ?>
             <?php else: ?>
             <form method="post">
               <?= csrf_pole() ?><input type="hidden" name="akce" value="tablet_dnes"><input type="hidden" name="rez_id" value="<?= $r['id'] ?>">

@@ -26,7 +26,7 @@ function q(string $sql, array $p = []): PDOStatement
 function q1(string $sql, array $p = []): ?array { $r = q($sql, $p)->fetch(); return $r ?: null; }
 function qv(string $sql, array $p = []) { $r = q($sql, $p)->fetchColumn(); return $r === false ? null : $r; }
 
-const DB_VERZE = 10;
+const DB_VERZE = 11;
 
 /** Migrace běží v jedné transakci a po získání zámku se verze ověří znovu (souběžné první požadavky). */
 function migrate(PDO $pdo): void
@@ -45,6 +45,7 @@ function migrate(PDO $pdo): void
         if ($ver < 8) migrate_v8($pdo);
         if ($ver < 9) migrate_v9($pdo);
         if ($ver < 10) migrate_v10($pdo);
+        if ($ver < 11) migrate_v11($pdo);
         $pdo->exec('PRAGMA user_version = ' . DB_VERZE);
         $pdo->exec('COMMIT');
     } catch (Throwable $e) {
@@ -161,6 +162,16 @@ function migrate_v1(PDO $pdo): void
 }
 
 /** v10: akce asistenta (potvrzení žádosti, přesun, změna stavu, volno) a trvalé přihlášení v aplikaci. */
+/** v11: masáž ukončená z recepce (např. klientovi se udělalo špatně) – důvod a kdo ukončil. */
+function migrate_v11(PDO $pdo): void
+{
+    $pdo->exec(<<<SQL
+    ALTER TABLE sezeni ADD COLUMN ukonceno TEXT;
+    ALTER TABLE sezeni ADD COLUMN ukonceno_duvod TEXT NOT NULL DEFAULT '';
+    ALTER TABLE sezeni ADD COLUMN ukonceno_kdo TEXT NOT NULL DEFAULT '';
+    SQL);
+}
+
 function migrate_v10(PDO $pdo): void
 {
     $pdo->exec(<<<SQL

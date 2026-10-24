@@ -294,7 +294,8 @@ function stranka_volno(array $u): void
     $kandidati = array_values(array_filter($maserky, fn($m) => !$mas || (int)$m['id'] === $mas));
     usort($kandidati, fn($a, $b) => ((int)$b['id'] === $oblib) <=> ((int)$a['id'] === $oblib));
 
-    $volno = $var ? volne_sloty($var, $delka, $kandidati, $od, $dny, $krok, $oknoOd, $oknoDo) : [];   // [datum => [čas => [masérka_id, ...]]]
+    $podleMasterny = ($_GET['rezim'] ?? '') === 'maserna';
+    $volno = $var ? volne_sloty($var, $delka, $kandidati, $od, $dny, $krok, $oknoOd, $oknoDo, $podleMasterny) : [];   // [datum => [čas => [masérka_id, ...]]]
     $nazvy = array_column($maserky, 'jmeno', 'id');
     $barvy = array_column($maserky, 'barva', 'id');
     $dnyCz = ['Neděle', 'Pondělí', 'Úterý', 'Středa', 'Čtvrtek', 'Pátek', 'Sobota'];
@@ -311,7 +312,10 @@ function stranka_volno(array $u): void
     <form class="card" method="get"><input type="hidden" name="r" value="volno"><?php if ($z): ?><input type="hidden" name="z" value="<?= $z['id'] ?>"><?php endif ?>
       <div class="grid3">
         <label>Služba / délka *<select name="v" required><?= varianty_select($varId ?: null) ?></select></label>
+        <label>Hledat podle<select name="rezim"><?= moznosti(['' => 'volné masérky (a k nim masérna)', 'maserna' => 'volné masérny (masérka až při příchodu)'], $podleMasterny ? 'maserna' : '') ?></select></label>
         <label>Masérka<select name="m"><?= maserky_select($mas ?: null, true, '— kterákoli volná —') ?></select></label>
+      </div>
+      <div class="grid3">
         <label>Od data<input type="date" name="od" value="<?= h($od) ?>"></label>
       </div>
       <div class="grid3">
@@ -334,9 +338,13 @@ function stranka_volno(array $u): void
       <p class="flash warn">V tomto rozsahu není nic volného (délka <?= $delka ?> min). Zkuste jinou masérku, víc dní nebo jiné časové okno.</p>
     <?php else: ?>
       <p class="muted small">Volné začátky pro <b><?= h($var['nazev'] . ' ' . $var['popis']) ?></b> (<?= $delka ?> min). Klepnutím vytvoříte rezervaci<?= $z ? ' pro ' . h(jmeno_z($z)) : '' ?>.</p>
+      <?php if ($podleMasterny): ?><p class="muted small">Režim „podle masérny“: časy, kdy je volná masérna (lůžko). Číslo v závorce je počet masérek, které by v tu dobu byly volné.</p><?php endif ?>
       <?php foreach ($volno as $d => $casy): ?>
         <section class="card"><h2><?= $dnyCz[(int)date('w', strtotime($d))] ?> <?= h(date('j. n. Y', strtotime($d))) ?></h2>
           <div class="slots"><?php foreach ($casy as $hh => $ids): foreach ($ids as $mid):
+              if (is_array($mid) && isset($mid['masérna'])) { $url = '/?r=rez_nova&d=' . $d . '&t=' . $hh . '&v=' . $varId . ($delka !== (int)$var['minuty'] ? '&delka=' . $delka : '') . ($z ? '&z=' . $z['id'] : ''); ?>
+            <a class="slotbtn" href="<?= h($url) ?>"><b><?= $hh ?></b> <span>volná masérna (<?= (int)$mid['masérna'] ?> masérek)</span></a>
+          <?php continue; }
               $par = is_array($mid);
               $url = '/?r=rez_nova&d=' . $d . '&t=' . $hh . ($par ? '&m=' . $mid[0] . '&m2=' . $mid[1] : ($mid ? '&m=' . $mid : '')) . '&v=' . $varId . ($delka !== (int)$var['minuty'] ? '&delka=' . $delka : '') . ($z ? '&z=' . $z['id'] : '');
               $popis = $par ? ($nazvy[$mid[0]] ?? '') . ' + ' . ($nazvy[$mid[1]] ?? '') : ($mid ? ($nazvy[$mid] ?? '') . ($oblib === $mid ? ' ★' : '') : 'wellness masérna'); ?>
@@ -350,7 +358,7 @@ function stranka_volno(array $u): void
 
 /** Volné začátky pro variantu: [datum => [čas => [masérka_id | [id1,id2] | 0 (bez masérky), ...]]].
  *  Kandidáti = masérky v pořadí, v jakém se mají nabízet (oblíbená první). Sdílí stránka Volné termíny a AI asistent. */
-function volne_sloty(array $var, int $delka, array $kandidati, string $od, int $dny, int $krok, string $oknoOd = '', string $oknoDo = ''): array
+function volne_sloty(array $var, int $delka, array $kandidati, string $od, int $dny, int $krok, string $oknoOd = '', string $oknoDo = '', bool $jenMasernu = false): array
 {
     $volno = [];
     if ($delka <= 0) return $volno;
@@ -376,6 +384,16 @@ function volne_sloty(array $var, int $delka, array $kandidati, string $od, int $
             if ($pocetMas === 0) { $volno[$d][$hh][] = 0; continue; }   // whirlpool/sauna: stačí volná masérna (i o víkendu – So–Ne pouze wellness)
             $me = $s + $mdelka * 60; $mKonS = date('Y-m-d H:i:s', $me);
             $volni = [];
+            if ($jenMasernu) {   // hledání podle masérny: stačí volné lůžko, masérka se přidělí až při příchodu; vrací počet volných masérek (−1 = nikdo)
+                $pocet = 0;
+                foreach ($kandidati as $m) {
+                    if (!maserka_pracuje((int)$m['id'], $zacS, $mKonS)) continue;
+                    foreach ($obs[(int)$m['id']] ?? [] as [$a, $b]) if ($a < $me && $b > $s) continue 2;
+                    $pocet++;
+                }
+                if ($pocet >= max(1, $pocetMas)) $volno[$d][$hh][] = ['masérna' => $pocet];
+                continue;
+            }
             foreach ($kandidati as $m) {
                 if (!maserka_pracuje((int)$m['id'], $zacS, $mKonS)) continue;
                 $kol = false;

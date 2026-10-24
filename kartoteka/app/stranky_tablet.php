@@ -147,6 +147,7 @@ function tablet_karta(array $r): void
           <?= $s['neni_ona'] ? ' <b class="warn">masérka hlásí, že to není ona!</b>' : '' ?></p>
       <?php endif ?>
       <?php if ($chybi): ?><p class="warn small">⚠ Pro masérku chybí anglický text: <?= h(implode(', ', $chybi)) ?>. Na tabletu se do doplnění ukáže česky. Doplňte ručně v <a href="/?r=zakaznik&id=<?= (int)$r['zakaznik_id'] ?>">kartě zákazníka</a> (zdraví, preference) a v poznámce k masáži níže.</p><?php endif ?>
+      <?php if ($s && in_array($s['stav'], ['cekani', 'bezi'], true)) ukoncit_formular($r) ?>
       <?php if (!$s || !in_array($s['stav'], ['bezi', 'konec'], true)): ?>
       <form method="post" class="inline"><?= csrf_pole() ?><input type="hidden" name="akce" value="tablet_poslat">
         <label>Masérna<select name="mistnost_id"><?php foreach ($mist as $m): ?><option value="<?= $m['id'] ?>" <?= $s && (int)$s['mistnost_id'] === (int)$m['id'] ? 'selected' : '' ?>><?= h($m['nazev']) ?></option><?php endforeach ?></select></label>
