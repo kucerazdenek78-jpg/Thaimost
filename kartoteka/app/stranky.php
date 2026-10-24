@@ -72,6 +72,17 @@ function stranka_dnes(array $u): void
                 $e2 = $e1 ? null : tablet_poslat($r, (int)$luzka[1]['id'], $mas[1], false);
                 flash(($e1 ?? $e2) ?? jmeno_z($r) . ' → ' . $luzka[0]['nazev'] . ' (' . $r['maserka'] . ') + ' . $luzka[1]['nazev'] . ' (' . $r['maserka2'] . ')', ($e1 ?? $e2) ? 'err' : 'ok');
             }
+        } elseif ($akce === 'hromadne_stav' && in_array($_POST['stav'] ?? '', ['probehlo', 'neprisel', 'zruseno_pozde'], true)) {
+            // hromadně: všechny zaškrtnuté rezervace ke kontrole dostanou stejný stav
+            $novy = $_POST['stav']; $n = 0;
+            foreach (array_unique(array_map('intval', (array)($_POST['ids'] ?? []))) as $rid) {
+                if (!q1("SELECT 1 FROM rezervace WHERE id=? AND stav='potvrzeno'", [$rid])) continue;
+                q('UPDATE rezervace SET stav=?, zmeneno=?, zmenil=? WHERE id=?', [$novy, nyni(), kdo(), $rid]);
+                zapis_log('rezervace_stav', "#$rid $novy (hromadně)");
+                if ($novy !== 'probehlo') q("UPDATE sezeni SET stav='zruseno', zavreno=? WHERE rezervace_id=? AND stav='cekani'", [nyni(), $rid]);
+                $n++;
+            }
+            flash($n ? "Označeno $n rezervací: " . STAVY[$novy] . '.' : 'Nic nebylo zaškrtnuté.', $n ? 'ok' : 'warn');
         } elseif ($r && $akce === 'tablet_stahnout') {
             q("UPDATE sezeni SET stav='zruseno', zavreno=? WHERE rezervace_id=? AND stav='cekani'", [nyni(), $r['id']]);
             zapis_log('tablet_zruseno', "rez #{$r['id']}");
@@ -122,9 +133,16 @@ function stranka_dnes(array $u): void
     <section class="card kontrola">
       <h2>Přišel klient? <span class="muted">(<?= count($kontrola) ?> ke kontrole)</span></h2>
       <p class="muted small">Termín už skončil a masáž nebyla spuštěná na tabletu. Označte, jak to dopadlo – „Nepřišel“ a „Zrušeno pozdě“ se počítají do štítku ⚠️ Nespolehlivý, do bonusu se počítá jen „Proběhlo“.</p>
+      <form id="hromadne" method="post" class="row-item" style="align-items:center;gap:8px;flex-wrap:wrap">
+        <?= csrf_pole() ?><input type="hidden" name="akce" value="hromadne_stav">
+        <label class="check"><input type="checkbox" id="vsechny" onchange="document.querySelectorAll('.kont-cb').forEach(c=>c.checked=this.checked)"> Vybrat všechny</label>
+        <button name="stav" value="probehlo" class="btn primary" data-confirm="Označit všechny zaškrtnuté jako Proběhlo (dorazili)?">✓ Zaškrtnutí dorazili</button>
+        <button name="stav" value="neprisel" class="btn danger" data-confirm="Označit všechny zaškrtnuté jako Nepřišel?">Zaškrtnutí nepřišli</button>
+      </form>
       <?php foreach ($kontrola as $r): ?>
         <form method="post" action="/?r=rezervace&id=<?= $r['id'] ?>" class="row-item">
           <?= csrf_pole() ?><input type="hidden" name="akce" value="stav"><input type="hidden" name="zpet" value="dnes">
+          <input type="checkbox" class="kont-cb" name="ids[]" value="<?= $r['id'] ?>" form="hromadne" aria-label="vybrat" style="width:22px;height:22px">
           <div class="time"><?= date('H:i', strtotime($r['zacatek'])) ?><br><span class="muted small"><?= date('j. n.', strtotime($r['zacatek'])) ?></span></div>
           <div class="grow"><a href="/?r=rezervace&id=<?= $r['id'] ?>"><b><?= h(jmeno_z($r)) ?></b></a> · <a href="tel:<?= h($r['telefon']) ?>"><?= h(telefon_cz($r['telefon'])) ?></a><br>
             <?= h($r['sluzba'] . ' – ' . $r['var_popis']) ?> · <?= h(($r['maserka'] ?? 'bez masérky') . (!empty($r['maserka2']) ? ' + ' . $r['maserka2'] : '')) ?></div>
