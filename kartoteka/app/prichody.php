@@ -236,7 +236,7 @@ function ukoncene_dnes_banner(): void
  */
 function masterny_den(string $d, array $skupiny): array
 {
-    $rez = q("SELECT r.*, z.jmeno, z.prijmeni, s.nazev AS sluzba, v.popis AS var_popis, COALESCE(v.maserky, 1) AS var_maserky, COALESCE(v.wellness_mistnost, 0) AS w,
+    $rez = q("SELECT r.*, z.jmeno, z.prijmeni, z.pref_maserka_id, s.nazev AS sluzba, v.popis AS var_popis, COALESCE(v.maserky, 1) AS var_maserky, COALESCE(v.wellness_mistnost, 0) AS w,
             m.jmeno AS maserka, m2.jmeno AS maserka2
         FROM rezervace r JOIN zakaznici z ON z.id=r.zakaznik_id LEFT JOIN varianty v ON v.id=r.varianta_id LEFT JOIN sluzby s ON s.id=v.sluzba_id
         LEFT JOIN maserky m ON m.id=r.maserka_id LEFT JOIN maserky m2 ON m2.id=r.maserka2_id
@@ -278,6 +278,12 @@ function kalendar_masterny(string $d): void
     $skupiny = prichody_skupiny();
     $minOd = min_z(nastaveni('oteviraci_od', '09:00')); $minDo = min_z(nastaveni('oteviraci_do', '20:00'));
     $plan = $skupiny ? masterny_den($d, $skupiny) : [];
+    // návrh masérek tam, kde ještě nejsou přidělené (stejné pravidlo jako panel Příchody)
+    $navrhMas = []; $jmMas = q('SELECT id, jmeno FROM maserky')->fetchAll(PDO::FETCH_KEY_PAIR);
+    $kNavrhu = [];
+    foreach ($plan as $bl) foreach ($bl as $r) if ($r['stav'] === 'potvrzeno' && (int)$r['var_maserky'] > 0) $kNavrhu[] = $r;
+    usort($kNavrhu, fn($a, $b) => strcmp($a['zacatek'], $b['zacatek']) ?: $a['id'] <=> $b['id']);
+    if ($kNavrhu) $navrhMas = prichody_navrh($kNavrhu);
     foreach ($plan as $bl) foreach ($bl as $r) $minDo = max($minDo, (int)date('G', strtotime($r['konec'])) * 60 + (int)date('i', strtotime($r['konec'])), $minOd);
     $minDo = (int)(ceil($minDo / 30) * 30);
     $px = 1.4;
@@ -317,12 +323,16 @@ function kalendar_masterny(string $d): void
           <?php endforeach; endif ?>
           <?php foreach ($bloky as $r):
               $top = ($minz($r['zacatek']) - $minOd) * $px; $hgt = max(26, (strtotime($r['konec']) - strtotime($r['zacatek'])) / 60 * $px - 2);
-              $mas = trim(($r['maserka'] ?? '') . ($r['maserka2'] ? ' + ' . $r['maserka2'] : '')); ?>
+              $mas = trim(($r['maserka'] ?? '') . ($r['maserka2'] ? ' + ' . $r['maserka2'] : '')); $masNavrh = false;
+              if ($mas === '' && (int)$r['var_maserky'] > 0 && !empty($navrhMas[(int)$r['id']])) {
+                  $nv = $navrhMas[(int)$r['id']];
+                  $mas = trim(($jmMas[$nv['maserka']] ?? '') . (!empty($nv['maserka2']) ? ' + ' . ($jmMas[$nv['maserka2']] ?? '') : '')); $masNavrh = $mas !== '';
+              } ?>
             <a class="blk s-<?= h($r['stav']) ?><?= $r['zdroj'] === 'nevesel' ? ' konfl' : '' ?>" href="/?r=rezervace&id=<?= $r['id'] ?>"
                style="top:<?= $top ?>px;height:<?= $hgt ?>px;left:3px;width:calc(100% - 6px);border-color:#7a5ea8;<?= $r['zdroj'] === 'navrh' ? 'opacity:.75;border-style:dashed' : '' ?>">
               <b><?= $r['zdroj'] === 'tablet' ? '📲 ' : '' ?><?= date('H:i', strtotime($r['zacatek'])) ?>–<?= date('H:i', strtotime($r['konec'])) ?></b> <?= h(jmeno_z($r)) ?><br>
               <span><?= h($r['sluzba'] . ' ' . $r['var_popis']) ?></span><br>
-              <span><?= $mas !== '' ? '👤 ' . h($mas) : '<i>masérka zatím nepřidělena</i>' ?></span>
+              <span><?= $mas !== '' ? '👤 <b>' . h($mas) . '</b>' . ($masNavrh ? ' <i>(návrh)</i>' : '') : ((int)$r['var_maserky'] === 0 ? '<i>bez masérky (wellness)</i>' : '<i>masérka zatím nepřidělena</i>') ?></span>
             </a>
           <?php endforeach ?>
         </div>
