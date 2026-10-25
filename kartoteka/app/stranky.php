@@ -569,7 +569,7 @@ function rez_formular(array $v, bool $novy, string $tlacitko, int $rezId = 0): v
               h += '<div class="obs-st bad">⚠ <b>' + esc(m.jmeno) + ' je obsazená</b>: ' + kol.map(b => b.od + '–' + b.do + ' ' + esc(b.kdo)).join(', ') + '.'
                 + (alt ? '<br>V ' + cas + ' jsou volné: ' + alt : '<br>V ' + cas + ' není volná žádná masérka.')
                 + (dalsi ? '<br>' + esc(m.jmeno) + ' má volno v: ' + dalsi : '') + '</div>';
-            } else if (s + dl <= do_) h += '<div class="obs-st ok">✓ ' + esc(m ? m.jmeno : '') + ' je v ' + cas + '–' + hm(e) + ' volná.' + (alt ? ' Volné jsou i: ' + alt : '') + '</div>';
+            } else if (!plno && s + dl <= do_) h += '<div class="obs-st ok">✓ ' + esc(m ? m.jmeno : '') + ' je v ' + cas + '–' + hm(e) + ' volná.' + (alt ? ' Volné jsou i: ' + alt : '') + '</div>';
           });
           if (!vybrane.length && n > 0) {
             h += '<div class="obs-st ' + (volniTed.length ? 'ok' : 'bad') + '">' + (volniTed.length ? 'V ' + cas + '–' + hm(e) + ' jsou volné: ' + alt : '⚠ V ' + cas + ' není volná žádná masérka.') + '</div>';
@@ -583,6 +583,9 @@ function rez_formular(array $v, bool $novy, string $tlacitko, int $rezId = 0): v
           h += '<div class="obs-r' + (vybrane.includes(m.id) ? ' on' : '') + '"><button type="button" class="obs-n" data-m="' + m.id + '" style="border-color:' + esc(m.barva) + '">' + esc(m.jmeno) + '<small>' + (m.popis ? esc(m.popis) : 'volno ' + m.volne.length + '×') + '</small></button>'
             + '<div class="obs-bar" data-m="' + m.id + '">' + bar + '</div></div>';
         });
+        { let pl = ''; (data.plno || []).forEach(t => { const a = m2(t); pl += '<i style="left:' + ((a - od) / sir * 100) + '%;width:' + (15 / sir * 100) + '%;background:#d9534f;opacity:.55" title="' + t + ' – masérny plné"></i>'; });
+          if (cas) { const s = m2(cas); pl += '<i class="v" style="left:' + ((s - od) / sir * 100) + '%;width:' + (cel / sir * 100) + '%"></i>'; }
+          h += '<div class="obs-r"><span class="obs-n" style="border-color:#d9534f">Masérny<small>' + ((data.plno || []).length ? 'červeně = nevejde se' : 'lůžka volná') + '</small></span><div class="obs-bar">' + pl + '</div></div>'; }
         let osa = ''; for (let x = Math.ceil(od / 60) * 60; x <= do_; x += 60) osa += '<span style="left:' + ((x - od) / sir * 100) + '%">' + (x / 60) + '</span>';
         h += '<div class="obs-osa">' + osa + '</div></div>';
         box.innerHTML = h;
@@ -905,7 +908,7 @@ function stranka_den_obs(array $u): void
     foreach ($rez as $r) {
         $a = max($minOd, (int)date('G', strtotime($r['zacatek'])) * 60 + (int)date('i', strtotime($r['zacatek'])));
         $b = (int)date('G', strtotime($r['m_konec'])) * 60 + (int)date('i', strtotime($r['m_konec']));
-        foreach (array_filter([$r['maserka_id'], $r['maserka2_id']]) as $mid) $bloky[(int)$mid][] = [$a, $b, trim($r['prijmeni'] ?: $r['jmeno'])];
+        foreach (array_filter([$r['maserka_id'], $r['maserka2_id']]) as $mid) $bloky[(int)$mid][] = [$a, $b + prestavka(), trim($r['prijmeni'] ?: $r['jmeno'])];
     }
     // wellness po zavírací době (zákazníci zůstávají s recepční): osa se prodlouží
     $poslKonec = (int)qv("SELECT MAX(CAST(strftime('%H', konec) AS INTEGER) * 60 + CAST(strftime('%M', konec) AS INTEGER)) FROM rezervace WHERE stav IN ('potvrzeno','probehlo') AND date(zacatek)=? AND date(konec)=?", [$d, $d]);
@@ -919,7 +922,8 @@ function stranka_den_obs(array $u): void
         WHERE r.stav IN ('potvrzeno','probehlo') AND r.id<>? AND r.zacatek < ? AND r.konec > ?", [$mimo, date('Y-m-d', strtotime("$d +1 day")), $d])->fetchAll();
     for ($t = $minOd; $t + $mdelka <= $minDo; $t += 15) {
         $zac = "$d " . $hm($t) . ':00'; $kon = date('Y-m-d H:i:s', strtotime($zac) + $delka * 60);
-        $tu = array_values(array_filter($soubDen, fn($r) => $r['zacatek'] < $kon && $r['konec'] > $zac));
+        $pmS = prestavka() * 60;
+        $tu = array_values(array_filter($soubDen, fn($r) => $r['zacatek'] < date('Y-m-d H:i:s', strtotime($kon) + $pmS) && date('Y-m-d H:i:s', strtotime($r['konec']) + $pmS) > $zac));
         if (kapacita_problem($zac, $kon, $wellness, $mimo, $tu)) $plno[$hm($t)] = true;
     }
     $out = [];

@@ -6,7 +6,7 @@ function stranka_nastaveni(array $u): void
     if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $akce = $_POST['akce'] ?? '';
         if ($akce === 'nastaveni') {
-            foreach (['rezim_webu', 'oteviraci_od', 'oteviraci_do', 'prah_staly_navstev', 'prah_spici_dni', 'prah_nespolehlivy', 'bonus_po', 'bonus_pocita_poukaz'] as $k)
+            foreach (['rezim_webu', 'oteviraci_od', 'oteviraci_do', 'prestavka_min', 'prah_staly_navstev', 'prah_spici_dni', 'prah_nespolehlivy', 'bonus_po', 'bonus_pocita_poukaz'] as $k)
                 if (isset($_POST[$k])) q('INSERT INTO nastaveni(klic,hodnota) VALUES(?,?) ON CONFLICT(klic) DO UPDATE SET hodnota=excluded.hodnota', [$k, trim($_POST[$k])]);
             flash('Nastavení uloženo.');
         } elseif ($akce === 'maserky') {
@@ -57,6 +57,7 @@ function stranka_nastaveni(array $u): void
           <div class="grid3">
             <label>Otevřeno od<input type="time" name="oteviraci_od" value="<?= h($n['oteviraci_od']) ?>"></label>
             <label>do<input type="time" name="oteviraci_do" value="<?= h($n['oteviraci_do']) ?>"></label>
+            <label>Přestávka mezi masážemi (min)<input type="number" name="prestavka_min" min="0" max="60" step="5" value="<?= h($n['prestavka_min'] ?? '0') ?>"></label>
           </div>
           <h2>Štítky zákazníků</h2>
           <div class="grid3">

@@ -140,8 +140,9 @@ function kapacita(): array
 /** Rezervace, které se v čase [zac, kon) překrývají (aktivní), s druhem služby. */
 function soubezne(string $zac, string $kon, int $mimoId = 0): array
 {
+    $pm = prestavka();   // masérna se po masáži uklízí/převléká: obsazená je ještě $pm minut
     return q("SELECT r.id, r.zacatek, r.konec, COALESCE(v.wellness_mistnost, 0) AS w FROM rezervace r LEFT JOIN varianty v ON v.id=r.varianta_id
-        WHERE r.stav IN ('potvrzeno','probehlo') AND r.id<>? AND r.zacatek < ? AND r.konec > ?", [$mimoId, $kon, $zac])->fetchAll();
+        WHERE r.stav IN ('potvrzeno','probehlo') AND r.id<>? AND r.zacatek < datetime(?, '+$pm minutes') AND datetime(r.konec, '+$pm minutes') > ?", [$mimoId, $kon, $zac])->fetchAll();
 }
 
 /** Vejde se masáž/wellness do masérn? Vrací null, nebo text problému. */
@@ -150,6 +151,10 @@ function kapacita_problem(string $zac, string $kon, bool $wellness, int $mimoId 
     $k = kapacita();
     if (!$k['nastaveno']) return null;
     $soub = $soub ?? soubezne($zac, $kon, $mimoId);
+    $pm = prestavka() * 60;
+    $kon = date('Y-m-d H:i:s', strtotime($kon) + $pm);
+    foreach ($soub as &$sr) $sr['konec'] = date('Y-m-d H:i:s', strtotime($sr['konec']) + $pm);
+    unset($sr);
     // kontrolní body: začátek nové rezervace a začátky překrývajících se
     $body = [strtotime($zac)];
     foreach ($soub as $r) { $t = strtotime($r['zacatek']); if ($t > strtotime($zac) && $t < strtotime($kon)) $body[] = $t; }

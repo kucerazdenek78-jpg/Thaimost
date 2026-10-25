@@ -288,10 +288,13 @@ function varianty_select(?int $vybrana = null): string
 }
 
 /** Kolize: jiná aktivní rezervace, kde je masérka (jako první nebo druhá) ve stejném čase. U párové masérky končí dřív (masaz_konec). */
+function prestavka(): int { return max(0, min(60, (int)nastaveni('prestavka_min', '0'))); }
+
 function kolize(int $maserka, string $od, string $do, int $mimoId = 0): array
 {
+    $pm = prestavka();   // čas na výměnu: masérka musí mít mezi dvěma masážemi aspoň tolik minut
     return q("SELECT r.*, z.jmeno, z.prijmeni, z.telefon, COALESCE(r.masaz_konec, r.konec) AS m_konec FROM rezervace r JOIN zakaznici z ON z.id=r.zakaznik_id
-        WHERE (r.maserka_id=? OR r.maserka2_id=?) AND r.stav IN ('potvrzeno','probehlo') AND r.id<>? AND r.zacatek < ? AND COALESCE(r.masaz_konec, r.konec) > ?",
+        WHERE (r.maserka_id=? OR r.maserka2_id=?) AND r.stav IN ('potvrzeno','probehlo') AND r.id<>? AND r.zacatek < datetime(?, '+$pm minutes') AND datetime(COALESCE(r.masaz_konec, r.konec), '+$pm minutes') > ?",
         [$maserka, $maserka, $mimoId, $do, $od])->fetchAll();
 }
 
