@@ -227,3 +227,108 @@ function ukoncene_dnes_banner(): void
       <div class="flash warn">⛔ <b><?= h(jmeno_z($r)) ?></b> – masáž ukončena v <?= h(substr($x['ukonceno'], 11, 5)) ?> (<?= h($x['ukonceno_kdo']) ?>): <?= h($x['ukonceno_duvod']) ?></div>
 <?php }
 }
+
+// ---------- Kalendář: obsazenost MASÉRN (vedle obsazenosti masérek) ----------
+/**
+ * Rozdělení dnešních rezervací do masérn: co už je odeslané na tabletu, má svou masérnu; zbytek se rozdělí stejným
+ * pravidlem jako návrh příchodů (pár do dvoulůžkové, wellness do wellness masérny, jednotlivec raději do jednolůžkové).
+ * Vrací [klíč masérny => [bloky], '' => [nevešlo se]]; blok = rezervace + 'zdroj' (tablet | navrh).
+ */
+function masterny_den(string $d, array $skupiny): array
+{
+    $rez = q("SELECT r.*, z.jmeno, z.prijmeni, s.nazev AS sluzba, v.popis AS var_popis, COALESCE(v.maserky, 1) AS var_maserky, COALESCE(v.wellness_mistnost, 0) AS w,
+            m.jmeno AS maserka, m2.jmeno AS maserka2
+        FROM rezervace r JOIN zakaznici z ON z.id=r.zakaznik_id LEFT JOIN varianty v ON v.id=r.varianta_id LEFT JOIN sluzby s ON s.id=v.sluzba_id
+        LEFT JOIN maserky m ON m.id=r.maserka_id LEFT JOIN maserky m2 ON m2.id=r.maserka2_id
+        WHERE r.zacatek >= ? AND r.zacatek < ? AND r.stav IN ('potvrzeno','probehlo') ORDER BY r.zacatek, r.id",
+        [$d, date('Y-m-d', strtotime("$d +1 day"))])->fetchAll();
+    $tabletSkup = [];   // id tabletu => klíč masérny
+    $wellSk = [];
+    foreach ($skupiny as $kl => $tablety) foreach ($tablety as $t) { $tabletSkup[(int)$t['id']] = $kl; if ($t['wellness']) $wellSk[$kl] = true; }
+    $fix = [];          // rezervace_id => klíč masérny (z tabletu)
+    foreach (q("SELECT rezervace_id, mistnost_id FROM sezeni WHERE stav<>'zruseno' AND rezervace_id IN (SELECT id FROM rezervace WHERE zacatek >= ? AND zacatek < ?) ORDER BY id", [$d, date('Y-m-d', strtotime("$d +1 day"))])->fetchAll() as $x)
+        if (isset($tabletSkup[(int)$x['mistnost_id']])) $fix[(int)$x['rezervace_id']] = $tabletSkup[(int)$x['mistnost_id']];
+    $out = array_fill_keys(array_keys($skupiny), []); $out[''] = [];
+    $obs = array_fill_keys(array_keys($skupiny), []);
+    $zaber = function (string $kl, array $r) use (&$obs, &$out, $fix) {
+        $obs[$kl][] = [strtotime($r['zacatek']), strtotime($r['konec'])];
+        $out[$kl][] = $r + ['zdroj' => isset($fix[(int)$r['id']]) ? 'tablet' : 'navrh'];
+    };
+    foreach ($rez as $r) if (isset($fix[(int)$r['id']])) $zaber($fix[(int)$r['id']], $r);
+    foreach ($rez as $r) {
+        if (isset($fix[(int)$r['id']])) continue;
+        $a = strtotime($r['zacatek']); $b = strtotime($r['konec']);
+        $par = (int)$r['var_maserky'] >= 2 || $r['maserka2_id'];
+        $kand = array_keys($skupiny);
+        if ($r['w']) { $w = array_values(array_filter($kand, fn($k) => isset($wellSk[$k]))); if ($w) $kand = $w; }
+        if ($par) $kand = array_values(array_filter($kand, fn($k) => count($skupiny[$k]) >= 2));
+        usort($kand, fn($x, $y) => ($par || $r['w']) ? 0 : count($skupiny[$x]) <=> count($skupiny[$y]));
+        $vybrana = null;
+        foreach ($kand as $kl) {
+            $zab = false; foreach ($obs[$kl] as [$x, $y]) if ($x < $b && $y > $a) { $zab = true; break; }
+            if (!$zab) { $vybrana = $kl; break; }
+        }
+        if ($vybrana === null) $out[''][] = $r + ['zdroj' => 'nevesel']; else $zaber($vybrana, $r);
+    }
+    return $out;
+}
+
+function kalendar_masterny(string $d): void
+{
+    $skupiny = prichody_skupiny();
+    $minOd = min_z(nastaveni('oteviraci_od', '09:00')); $minDo = min_z(nastaveni('oteviraci_do', '20:00'));
+    $plan = $skupiny ? masterny_den($d, $skupiny) : [];
+    foreach ($plan as $bl) foreach ($bl as $r) $minDo = max($minDo, (int)date('G', strtotime($r['konec'])) * 60 + (int)date('i', strtotime($r['konec'])), $minOd);
+    $minDo = (int)(ceil($minDo / 30) * 30);
+    $px = 1.4;
+    $minz = fn($dt) => (int)date('G', strtotime($dt)) * 60 + (int)date('i', strtotime($dt));
+    $prev = date('Y-m-d', strtotime("$d -1 day")); $next = date('Y-m-d', strtotime("$d +1 day"));
+    $sloupce = [];
+    foreach ($skupiny as $kl => $t) $sloupce[$kl] = (trim($t[0]['skupina']) !== '' ? $t[0]['skupina'] : $t[0]['nazev']) . (count($t) > 1 ? ' (duo)' : '') . (isset($t[0]['wellness']) && $t[0]['wellness'] ? ' ♨' : '');
+    if (!empty($plan['']) ) $sloupce[''] = '⚠ Nevešlo se';
+    hlavicka('Kalendář masérn', 'kalendar'); ?>
+    <div class="cal-nav">
+      <a class="btn" href="/?r=kalendar&pohled=masterny&d=<?= $prev ?>">‹</a>
+      <form><input type="hidden" name="r" value="kalendar"><input type="hidden" name="pohled" value="masterny"><input type="date" name="d" value="<?= h($d) ?>" onchange="this.form.submit()"></form>
+      <a class="btn" href="/?r=kalendar&pohled=masterny&d=<?= $next ?>">›</a>
+      <a class="btn" href="/?r=kalendar&pohled=masterny">Dnes</a>
+      <a class="btn" href="/?r=kalendar&d=<?= h($d) ?>">Obsazenost masérek</a>
+      <a class="btn primary" href="/?r=kalendar&pohled=masterny&d=<?= h($d) ?>">Obsazenost masérn</a>
+      <h1><?= h(datum_cz($d, false)) ?></h1>
+    </div>
+    <?php if (!$skupiny): ?><p class="flash warn">Nejsou nastavené masérny. Přidejte je v Tým → Masérny.</p><?php else: ?>
+    <p class="muted small">Která masérna kdy obsazená. Plná barva a 📲 = už odesláno na tablet do téhle masérny; ostatní jsou návrh rozdělení (stejným pravidlem jako panel Příchody). Masérna se blokuje celá. Klepnutím do volného místa přidáte rezervaci.</p>
+    <div class="cal" style="--h:<?= ($minDo - $minOd) * $px ?>px">
+      <div class="cal-hours"><?php for ($m = (int)ceil($minOd / 60) * 60; $m < $minDo; $m += 60): ?><div style="top:<?= ($m - $minOd) * $px ?>px"><?= hhmm($m) ?></div><?php endfor ?></div>
+      <?php foreach ($sloupce as $kl => $nazev):
+          $bloky = $plan[$kl] ?? [];
+          $aktivni = array_map(fn($r) => [$minz($r['zacatek']), $minz($r['konec'])], $bloky);
+          $volna = $kl === '' ? [] : intervaly_minus([[$minOd, $minDo]], $aktivni);
+          $volna = array_values(array_filter($volna, fn($x) => $x[1] - $x[0] >= 30 && ($d > date('Y-m-d') || ($d === date('Y-m-d') && $x[1] > (int)date('G') * 60 + (int)date('i')))));
+          $volnoMin = array_sum(array_map(fn($x) => $x[1] - $x[0], $volna)); ?>
+      <div class="cal-col">
+        <div class="cal-head" style="border-color:<?= $kl === '' ? '#c0605a' : '#7a5ea8' ?>"><?= h($nazev) ?>
+          <?php if ($kl !== ''): ?><small><?= $volnoMin ? 'volno ' . h(rtrim(rtrim(number_format($volnoMin / 60, 1, ',', ''), '0'), ',')) . ' h' : 'plno ✓' ?></small><?php endif ?></div>
+        <div class="cal-body">
+          <?php if ($kl !== ''): for ($m = $minOd; $m < $minDo; $m += 30): ?>
+            <a class="slot" style="top:<?= ($m - $minOd) * $px ?>px;height:<?= 30 * $px ?>px" href="/?r=rez_nova&d=<?= h($d) ?>&t=<?= hhmm($m) ?>"></a>
+          <?php endfor; foreach ($volna as [$x, $y]): ?>
+            <a class="gap" style="top:<?= ($x - $minOd) * $px + 1 ?>px;height:<?= max(18, ($y - $x) * $px - 2) ?>px" href="/?r=rez_nova&d=<?= h($d) ?>&t=<?= hhmm($x) ?>">+ <?= hhmm($x) ?> · <?= $y - $x ?> min</a>
+          <?php endforeach; endif ?>
+          <?php foreach ($bloky as $r):
+              $top = ($minz($r['zacatek']) - $minOd) * $px; $hgt = max(26, (strtotime($r['konec']) - strtotime($r['zacatek'])) / 60 * $px - 2);
+              $mas = trim(($r['maserka'] ?? '') . ($r['maserka2'] ? ' + ' . $r['maserka2'] : '')); ?>
+            <a class="blk s-<?= h($r['stav']) ?><?= $r['zdroj'] === 'nevesel' ? ' konfl' : '' ?>" href="/?r=rezervace&id=<?= $r['id'] ?>"
+               style="top:<?= $top ?>px;height:<?= $hgt ?>px;left:3px;width:calc(100% - 6px);border-color:#7a5ea8;<?= $r['zdroj'] === 'navrh' ? 'opacity:.75;border-style:dashed' : '' ?>">
+              <b><?= $r['zdroj'] === 'tablet' ? '📲 ' : '' ?><?= date('H:i', strtotime($r['zacatek'])) ?>–<?= date('H:i', strtotime($r['konec'])) ?></b> <?= h(jmeno_z($r)) ?><br>
+              <span><?= h($r['sluzba'] . ' ' . $r['var_popis']) ?></span><br>
+              <span><?= $mas !== '' ? '👤 ' . h($mas) : '<i>masérka zatím nepřidělena</i>' ?></span>
+            </a>
+          <?php endforeach ?>
+        </div>
+      </div>
+      <?php endforeach ?>
+    </div>
+    <?php endif;
+    paticka();
+}

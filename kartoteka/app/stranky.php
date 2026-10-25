@@ -242,6 +242,7 @@ function stranka_dnes(array $u): void
 function stranka_kalendar(array $u): void
 {
     $d = preg_match('~^\d{4}-\d{2}-\d{2}$~', $_GET['d'] ?? '') ? $_GET['d'] : date('Y-m-d');
+    if (($_GET['pohled'] ?? '') === 'masterny') { kalendar_masterny($d); return; }
     $minOd = min_z(nastaveni('oteviraci_od', '09:00')); $minDo = min_z(nastaveni('oteviraci_do', '20:00'));
     $maserky = q('SELECT * FROM maserky WHERE aktivni=1 ORDER BY poradi')->fetchAll();
     $okna = [];
@@ -276,6 +277,8 @@ function stranka_kalendar(array $u): void
       <form><input type="hidden" name="r" value="kalendar"><input type="date" name="d" value="<?= h($d) ?>" onchange="this.form.submit()"></form>
       <a class="btn" href="/?r=kalendar&d=<?= $next ?>" title="další den (→)">›</a>
       <a class="btn" href="/?r=kalendar">Dnes</a>
+      <a class="btn primary" href="/?r=kalendar&d=<?= h($d) ?>">Obsazenost masérek</a>
+      <a class="btn" href="/?r=kalendar&pohled=masterny&d=<?= h($d) ?>">Obsazenost masérn</a>
       <h1><?= h(datum_cz($d, false)) ?><?= $sv ? ' <small class="tag nesp">🎌 ' . h($sv) . '</small>' : '' ?></h1>
       <a class="btn small" href="/?r=dostupnost&d=<?= h($d) ?>">🌴 Volno / ⏱ přesčas</a>
     </div>
