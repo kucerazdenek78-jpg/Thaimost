@@ -30,7 +30,7 @@ function hlavicka(string $titul, string $aktivni = ''): void
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex, nofollow">
 <title><?= h($titul) ?> · Kartotéka Thai Most</title>
-<link rel="stylesheet" href="/style.css?v=11">
+<link rel="stylesheet" href="/style.css?v=12">
 <?php if (je_okno() && !je_app()): ?><base target="_top"><?php endif ?>
 <link rel="manifest" href="/?r=manifest">
 <meta name="theme-color" content="#6b4a2b">
@@ -55,6 +55,34 @@ function paticka(): void
 {
     ?></main>
 <?php if (uzivatel() && !je_okno() && ($GLOBALS['__stranka_aktivni'] ?? '') !== 'ai') asistent_ikona(); ?>
+<?php if (uzivatel() && !je_okno()): ?>
+<div id="poplach" hidden></div>
+<script>
+// HLASITÝ POPLACH: masérka na tabletu stiskla „To nejsem já“ → červená obrazovka + siréna na každé stránce, dokud to recepce nevyřeší
+(function(){
+var box=document.getElementById('poplach'),ctx=null,ticho={},zpet=null,tit=document.title,pip=null;
+function zvuk(){try{ctx=ctx||new (window.AudioContext||window.webkitAudioContext)();if(ctx.state==='suspended')ctx.resume()}catch(e){}}
+['click','touchstart','keydown'].forEach(function(e){document.addEventListener(e,zvuk,{passive:true})});
+function pisk(){if(!ctx||ctx.state!=='running')return;var t=ctx.currentTime;
+ for(var i=0;i<4;i++){var o=ctx.createOscillator(),g=ctx.createGain();o.type='square';o.frequency.value=i%2?1250:850;o.connect(g);g.connect(ctx.destination);
+  g.gain.setValueAtTime(0.0001,t+i*.22);g.gain.exponentialRampToValueAtTime(0.7,t+i*.22+.02);g.gain.exponentialRampToValueAtTime(0.0001,t+i*.22+.2);o.start(t+i*.22);o.stop(t+i*.22+.21)}
+ if(navigator.vibrate)navigator.vibrate([300,100,300,100,300])}
+function kresli(a){
+ var nove=a.filter(function(x){return !ticho[x.id]});
+ if(!a.length){box.hidden=true;box.innerHTML='';document.title=tit;if(pip){clearInterval(pip);pip=null}return}
+ var h='';a.forEach(function(x){h+='<div class="pl-r"><b>'+x.mistnost+'</b>: masérka'+(x.maserka?' '+x.maserka:'')+' hlásí, že to <u>NENÍ ONA</u> – zákazník <b>'+x.zakaznik+'</b> ('+x.cas+') <a class="btn primary" href="/?r=rezervace&id='+x.rez+'#tablet">Vyřešit – poslat znovu</a></div>'});
+ var velky=nove.length>0;
+ box.className=velky?'pl-velky':'pl-pruh';
+ box.innerHTML='<div class="pl-in"><div class="pl-h">⚠ POZOR – TABLET HLÁSÍ NESROVNALOST</div>'+h+(velky?'<button type="button" class="btn" id="pl-ticho">🔇 Ztlumit zvuk (poplach zůstane nahoře)</button><div class="pl-t">Klepněte kamkoli, aby se zapnul zvuk.</div>':'')+'</div>';
+ box.hidden=false;
+ var bt=box.querySelector('#pl-ticho');if(bt)bt.onclick=function(){a.forEach(function(x){ticho[x.id]=1});kresli(a)};
+ if(velky){pisk();if(!pip)pip=setInterval(function(){document.title=document.title===tit?'🚨 TABLET HLÁSÍ CHYBU':tit;if(Object.keys(ticho).length===0||a.some(function(x){return !ticho[x.id]}))pisk()},2500)}
+ else if(pip){clearInterval(pip);pip=null;document.title=tit}}
+async function tik(){try{var r=await fetch('/?r=poplach',{credentials:'same-origin'});if(r.ok)kresli(await r.json())}catch(e){}}
+tik();setInterval(tik,4000);
+})();
+</script>
+<?php endif ?>
 <script>
 // rychlé hledání zákazníků a poukazů (příjmení bez diakritiky, telefon, kód karty / poukazu)
 (function(){var i=document.getElementById('gs'),b=document.getElementById('gsr');if(!i)return;var t,seq=0,res=[];

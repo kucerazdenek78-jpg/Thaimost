@@ -183,3 +183,12 @@ body.app textarea{font-size:16px}
 
 /* atribut hidden má přednost před display u .btn / .tag */
 [hidden]{display:none!important}
+
+.mist{text-decoration:none;color:inherit;cursor:pointer}.mist:hover{filter:brightness(.97);box-shadow:0 1px 6px #0002}
+.mist.m-alarm{background:#d9262c;color:#fff;animation:plbl 1s infinite}.mist.m-alarm b{color:#fff}
+@keyframes plbl{50%{background:#7a0f13}}
+#poplach.pl-velky{position:fixed;inset:0;z-index:99999;background:#c4161c;color:#fff;display:flex;align-items:center;justify-content:center;text-align:center;animation:plbl 1s infinite;padding:20px}
+#poplach.pl-pruh{position:fixed;left:0;right:0;top:0;z-index:99999;background:#c4161c;color:#fff;padding:8px 14px;animation:plbl 1.4s infinite}
+#poplach .pl-h{font-size:clamp(1.4rem,5vw,2.8rem);font-weight:800;margin-bottom:14px}
+#poplach .pl-r{font-size:clamp(1.1rem,3.4vw,1.7rem);margin:10px 0}#poplach .pl-r .btn{margin-left:10px}
+#poplach .pl-t{margin-top:14px;opacity:.85}#poplach.pl-pruh .pl-h{font-size:1.05rem;margin:0}#poplach.pl-pruh .pl-r{font-size:1rem;margin:4px 0}

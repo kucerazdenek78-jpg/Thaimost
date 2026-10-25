@@ -186,8 +186,8 @@ function stranka_dnes(array $u): void
       <h2>Masérny teď</h2>
       <div class="mist-grid">
       <?php foreach ($mistnosti as $m): $sz = $stavMist[(int)$m['id']]; ?>
-        <div class="mist <?= $sz ? 'm-' . h($sz['stav']) : 'm-volno' ?>"><b><?= h($m['nazev']) ?></b>
-          <span><?php if (!$sz): ?>volná<?php else: ?><?= h(SEZENI_STAVY[$sz['stav']] ?? $sz['stav']) ?> · <?= h(trim($sz['prijmeni'] ?: $sz['jmeno'])) ?><?= $sz['maserka'] ? ' · ' . h($sz['maserka']) : '' ?><?= $sz['stav'] === 'bezi' && $sz['plan_konec'] ? ' · do ' . h(substr($sz['plan_konec'], 11, 5)) : '' ?><?php endif ?></span></div>
+        <a class="mist <?= $sz ? 'm-' . h($sz['stav']) : 'm-volno' ?><?= $sz && $sz['neni_ona'] ? ' m-alarm' : '' ?>" href="<?= $sz ? '/?r=rezervace&id=' . (int)$sz['rezervace_id'] . '#tablet' : '/?r=kalendar&pohled=masterny' ?>"><b><?= h($m['nazev']) ?><?= $sz && $sz['neni_ona'] ? ' ⚠ NENÍ ONA' : '' ?></b>
+          <span><?php if (!$sz): ?>volná<?php else: ?><?= h(SEZENI_STAVY[$sz['stav']] ?? $sz['stav']) ?> · <?= h(trim($sz['prijmeni'] ?: $sz['jmeno'])) ?><?= $sz['maserka'] ? ' · ' . h($sz['maserka']) : '' ?><?= $sz['stav'] === 'bezi' && $sz['plan_konec'] ? ' · do ' . h(substr($sz['plan_konec'], 11, 5)) : '' ?><?php endif ?></span></a>
       <?php endforeach ?>
       </div>
     </section>

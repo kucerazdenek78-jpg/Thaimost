@@ -139,7 +139,7 @@ function tablet_karta(array $r): void
     if (trim($z['pref_text'] ?? '') !== '' && trim($z['pref_text_en'] ?? '') === '') $chybi[] = 'preference';
     if ((trim($r['poznamka_zakaznik']) . trim($r['poznamka_masaz']) . trim($z['poznamka_interni'] ?? '')) !== '' && trim($r['poznamka_en']) === '') $chybi[] = 'poznámky';
     if (!$mist && !$s) return; ?>
-    <section class="card">
+    <section class="card" id="tablet">
       <h2>Tablet v masérně</h2>
       <?php if ($s && $s['stav'] !== 'zruseno'): ?>
         <p>Masérna <b><?= h($s['nazev']) ?></b>: <b><?= h(SEZENI_STAVY[$s['stav']] ?? $s['stav']) ?></b>
@@ -646,4 +646,17 @@ function stranka_odmena(array $u): void
     <?php endforeach ?></table>
     <?php endif;
     paticka();
+}
+
+
+/** JSON: tablety, kde masérka hlásí „to nejsem já“ a recepce to ještě nevyřešila (hlasitý poplach na všech stránkách). */
+function stranka_poplach(array $u): void
+{
+    header('Content-Type: application/json; charset=utf-8');
+    $rows = q("SELECT s.id, s.rezervace_id, s.neni_ona, m.nazev AS mistnost, z.prijmeni, z.jmeno, ma.jmeno AS maserka
+        FROM sezeni s JOIN mistnosti m ON m.id=s.mistnost_id JOIN rezervace r ON r.id=s.rezervace_id JOIN zakaznici z ON z.id=r.zakaznik_id
+        LEFT JOIN maserky ma ON ma.id=s.maserka_id WHERE s.stav='cekani' AND s.neni_ona IS NOT NULL ORDER BY s.neni_ona")->fetchAll();
+    echo json_encode(array_map(fn($r) => ['id' => (int)$r['id'], 'rez' => (int)$r['rezervace_id'], 'mistnost' => $r['mistnost'],
+        'zakaznik' => trim($r['prijmeni'] ?: $r['jmeno']), 'maserka' => $r['maserka'] ?: '', 'cas' => substr($r['neni_ona'], 11, 5)], $rows), JSON_UNESCAPED_UNICODE);
+    exit;
 }
