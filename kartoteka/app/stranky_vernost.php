@@ -294,6 +294,7 @@ function stranka_volno(array $u): void
     $kandidati = array_values(array_filter($maserky, fn($m) => !$mas || (int)$m['id'] === $mas));
     usort($kandidati, fn($a, $b) => ((int)$b['id'] === $oblib) <=> ((int)$a['id'] === $oblib));
 
+    $presun = (int)($_GET['presun'] ?? 0);   // přesouvaná rezervace: výběr času ji PŘESUNE, nezaloží novou
     $podleMasterny = ($_GET['rezim'] ?? '') === 'maserna';
     $volno = $var ? volne_sloty($var, $delka, $kandidati, $od, $dny, $krok, $oknoOd, $oknoDo, $podleMasterny) : [];   // [datum => [čas => [masérka_id, ...]]]
     $nazvy = array_column($maserky, 'jmeno', 'id');
@@ -309,7 +310,7 @@ function stranka_volno(array $u): void
     <?php else: ?>
       <p class="muted small">Zákazníka vyberete až při rezervaci (telefon). Nebo začněte hledáním nahoře a na jeho kartě zvolte „Najít volný termín“.</p>
     <?php endif ?>
-    <form class="card" method="get"><input type="hidden" name="r" value="volno"><?php if ($z): ?><input type="hidden" name="z" value="<?= $z['id'] ?>"><?php endif ?>
+    <form class="card" method="get"><input type="hidden" name="r" value="volno"><?php if ($presun): ?><input type="hidden" name="presun" value="<?= $presun ?>"><?php endif ?><?php if ($z): ?><input type="hidden" name="z" value="<?= $z['id'] ?>"><?php endif ?>
       <div class="grid3">
         <label>Služba / délka *<select name="v" required><?= varianty_select($varId ?: null) ?></select></label>
         <label>Hledat podle<select name="rezim"><?= moznosti(['' => 'volné masérky (a k nim masérna)', 'maserna' => 'volné masérny (masérka až při příchodu)'], $podleMasterny ? 'maserna' : '') ?></select></label>
@@ -337,16 +338,19 @@ function stranka_volno(array $u): void
     <?php elseif (!$volno): ?>
       <p class="flash warn">V tomto rozsahu není nic volného (délka <?= $delka ?> min). Zkuste jinou masérku, víc dní nebo jiné časové okno.</p>
     <?php else: ?>
+      <?php if ($presun): ?><p class="flash warn">↪ Přesouváte existující rezervaci – klepnutím na čas se otevře její úprava s novým termínem (uložíte tlačítkem), původní termín tím zmizí z kalendáře.</p><?php endif ?>
       <p class="muted small">Volné začátky pro <b><?= h($var['nazev'] . ' ' . $var['popis']) ?></b> (<?= $delka ?> min). Klepnutím vytvoříte rezervaci<?= $z ? ' pro ' . h(jmeno_z($z)) : '' ?>.</p>
       <?php if ($podleMasterny): ?><p class="muted small">Režim „podle masérny“: časy, kdy je volná masérna (lůžko). Číslo v závorce je počet masérek, které by v tu dobu byly volné.</p><?php endif ?>
       <?php foreach ($volno as $d => $casy): ?>
         <section class="card"><h2><?= $dnyCz[(int)date('w', strtotime($d))] ?> <?= h(date('j. n. Y', strtotime($d))) ?></h2>
           <div class="slots"><?php foreach ($casy as $hh => $ids): foreach ($ids as $mid):
               if (is_array($mid) && isset($mid['masérna'])) { $url = '/?r=rez_nova&d=' . $d . '&t=' . $hh . '&v=' . $varId . ($delka !== (int)$var['minuty'] ? '&delka=' . $delka : '') . ($z ? '&z=' . $z['id'] : ''); ?>
+            <?php if ($presun) $url = preg_replace('~^/\?r=rez_nova~', '/?r=rezervace&id=' . $presun, $url) ?>
             <a class="slotbtn" href="<?= h($url) ?>"><b><?= $hh ?></b> <span>volná masérna (<?= (int)$mid['masérna'] ?> masérek)</span></a>
           <?php continue; }
               $par = is_array($mid);
               $url = '/?r=rez_nova&d=' . $d . '&t=' . $hh . ($par ? '&m=' . $mid[0] . '&m2=' . $mid[1] : ($mid ? '&m=' . $mid : '')) . '&v=' . $varId . ($delka !== (int)$var['minuty'] ? '&delka=' . $delka : '') . ($z ? '&z=' . $z['id'] : '');
+              if ($presun) $url = preg_replace('~^/\?r=rez_nova~', '/?r=rezervace&id=' . $presun, $url);
               $popis = $par ? ($nazvy[$mid[0]] ?? '') . ' + ' . ($nazvy[$mid[1]] ?? '') : ($mid ? ($nazvy[$mid] ?? '') . ($oblib === $mid ? ' ★' : '') : 'wellness masérna'); ?>
             <a class="slotbtn" style="border-color:<?= h(!$par && $mid ? ($barvy[$mid] ?? '#b07a3a') : '#888') ?>" href="<?= h($url) ?>"><b><?= $hh ?></b> <span><?= h($popis) ?></span></a>
           <?php endforeach; endforeach ?></div></section>

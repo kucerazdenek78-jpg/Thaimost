@@ -741,7 +741,18 @@ function stranka_rezervace(array $u): void
         'platba' => $r['platba'], 'cena' => $r['cena'], 'poslat_email' => $zadost ? 1 : 0,
     ];
 
+    // návrh nového termínu z „Volné termíny“ (přesun existující rezervace): předvyplní formulář, uloží se až tlačítkem
+    $navrhPresun = $_SERVER['REQUEST_METHOD'] !== 'POST' && preg_match('~^\d{4}-\d{2}-\d{2}$~', $_GET['d'] ?? '') && preg_match('~^\d{2}:\d{2}$~', $_GET['t'] ?? '');
+    if ($navrhPresun) {
+        $formData['datum'] = $_GET['d']; $formData['cas'] = $_GET['t'];
+        if (($_GET['delka'] ?? '') !== '') $formData['delka'] = (int)$_GET['delka'];
+        if (!empty($_GET['v'])) $formData['varianta_id'] = (int)$_GET['v'];
+        if (($_GET['m'] ?? '') !== '') $formData['maserka_id'] = (int)$_GET['m'];
+        if (($_GET['m2'] ?? '') !== '') $formData['maserka2_id'] = (int)$_GET['m2'];
+    }
+
     hlavicka('Rezervace', ''); ?>
+    <?php if (!empty($navrhPresun)): ?><div class="flash warn">↪ <b>Návrh nového termínu:</b> <?= h(datum_cz($formData['datum'] . ' ' . $formData['cas'] . ':00')) ?>. Zatím je uložený původní termín (<?= h(datum_cz($r['zacatek'])) ?>) – změnu potvrďte tlačítkem „Uložit změny“ ve formuláři níže.</div><?php endif ?>
     <h1><?= h(jmeno_z($r)) ?> <?= stav_html($r['stav']) ?></h1>
     <div class="cols">
       <div>
@@ -761,7 +772,7 @@ function stranka_rezervace(array $u): void
         <form method="post" class="card">
           <?= csrf_pole() ?>
           <input type="hidden" name="akce" value="<?= $zadost ? 'naplanovat' : 'upravit' ?>">
-          <h2><?= $zadost ? 'Naplánovat a potvrdit' : 'Upravit termín' ?></h2>
+          <h2><?= $zadost ? 'Naplánovat a potvrdit' : 'Upravit termín' ?> <?php if (!$zadost): ?><a class="btn small" href="/?r=volno&z=<?= (int)$r['zakaznik_id'] ?>&v=<?= (int)$r['varianta_id'] ?>&od=<?= h(substr((string)$r['zacatek'], 0, 10)) ?>&presun=<?= (int)$r['id'] ?>">Najít jiný termín…</a><?php endif ?></h2>
           <?php if ($zadost): ?><p class="muted">Domluvte termín se zákazníkem (zavolejte na <a href="tel:<?= h($r['telefon']) ?>"><?= h(telefon_cz($r['telefon'])) ?></a>) a uložte ho. Tím se žádost potvrdí.</p><?php endif ?>
           <?= chyba_html($chyba) ?>
           <?php if ($kol) echo kolize_html($kol) ?>

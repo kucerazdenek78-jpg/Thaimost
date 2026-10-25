@@ -257,7 +257,7 @@ function stranka_dostupnost(array $u): void
               <?= !$prac ? 'disabled title="nepracuje"' : ($kol ? 'title="obsazená: ' . h(jmeno_z($kol[0])) . ' ' . date('H:i', strtotime($kol[0]['zacatek'])) . ' – přeplnit" data-confirm="' . h($m['jmeno']) . ' má v tu dobu ' . h(jmeno_z($kol[0])) . '. Opravdu přeplnit?"' : 'title="volná"') ?>>
               <?= !$prac ? '' : ($kol ? '⚠ ' : '✓ ') ?><?= h($m['jmeno']) ?></button>
           <?php endforeach ?>
-            <a class="btn small" href="/?r=volno&z=<?= (int)$r['zakaznik_id'] ?>&v=<?= (int)$r['varianta_id'] ?>&od=<?= h(substr($r['zacatek'], 0, 10)) ?>">Jiný termín…</a>
+            <a class="btn small" href="/?r=volno&z=<?= (int)$r['zakaznik_id'] ?>&v=<?= (int)$r['varianta_id'] ?>&od=<?= h(substr($r['zacatek'], 0, 10)) ?>&presun=<?= (int)$r['id'] ?>">Jiný termín…</a>
           </div>
         </form>
       <?php endforeach ?>
