@@ -193,7 +193,7 @@ function stranka_dnes(array $u): void
     </section>
     <?php endif ?>
 
-    <section class="card">
+    <section class="card" id="plan-dnes">
       <h2>Dnešní plán <span class="muted">(<?= count($plan) ?>)</span></h2>
       <?php if (!$plan): ?><p class="muted">Na dnešek nic naplánováno. <a href="/?r=rez_nova">Přidat rezervaci</a></p><?php endif ?>
       <?php foreach ($plan as $r): ?>
@@ -235,6 +235,23 @@ function stranka_dnes(array $u): void
         </div>
       <?php endforeach ?>
     </section>
+    <script>
+    // Dnes se obnovuje samo: stav masérn každých 5 s, plán a příchody jen když recepce zrovna nic nevyplňuje
+    (function () {
+      let bezi = false;
+      const volne = () => { const a = document.activeElement; return !(a && /INPUT|TEXTAREA|SELECT/.test(a.tagName)) && !document.querySelector('main input:checked, main details[open]'); };
+      async function obnov() {
+        if (bezi || document.hidden) return; bezi = true;
+        try {
+          const r = await fetch(location.href, { credentials: 'same-origin', cache: 'no-store' }); if (!r.ok) return;
+          const d = new DOMParser().parseFromString(await r.text(), 'text/html');
+          const sel = ['section.mistnosti-ted'].concat(volne() ? ['#plan-dnes', 'section.prichody'] : []);
+          sel.forEach(q => { const n = d.querySelector(q), o = document.querySelector(q); if (!n !== !o) { if (volne()) location.reload(); } else if (n && n.innerHTML !== o.innerHTML) o.innerHTML = n.innerHTML; });
+        } catch (e) {} finally { bezi = false; }
+      }
+      setInterval(obnov, 5000); document.addEventListener('visibilitychange', obnov);
+    })();
+    </script>
     <?php paticka();
 }
 
