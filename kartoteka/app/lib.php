@@ -288,7 +288,7 @@ function varianty_select(?int $vybrana = null): string
 }
 
 /** Kolize: jiná aktivní rezervace, kde je masérka (jako první nebo druhá) ve stejném čase. U párové masérky končí dřív (masaz_konec). */
-function prestavka(): int { return max(0, min(60, (int)nastaveni('prestavka_min', '0'))); }
+function prestavka(): int { return max(0, min(60, (int)nastaveni('prestavka_min', '10'))); }
 
 function kolize(int $maserka, string $od, string $do, int $mimoId = 0): array
 {

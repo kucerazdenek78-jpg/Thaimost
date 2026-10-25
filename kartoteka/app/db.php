@@ -136,7 +136,7 @@ function migrate_v1(PDO $pdo): void
         'rezim_webu' => 'zajem',          // zajem | terminy (terminy zatím nepoužito)
         'oteviraci_od' => '09:00',
         'oteviraci_do' => '20:00',
-        'prestavka_min' => '0',           // minut na výměnu mezi dvěma masážemi (masérka i masérna); 0 = bez přestávky
+        'prestavka_min' => '10',          // minut na výměnu mezi dvěma masážemi (masérka i masérna); 0 = bez přestávky
         'prah_staly_navstev' => '6',      // Stálý: tolik návštěv za posledních 6 měsíců
         'prah_spici_dni' => '90',         // Spící: stálý zákazník, nepřišel tolik dní
         'prah_nespolehlivy' => '2',       // Nespolehlivý: tolik „nepřišel“ / pozdních storen za 12 měsíců

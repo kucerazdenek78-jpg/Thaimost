@@ -57,7 +57,7 @@ function stranka_nastaveni(array $u): void
           <div class="grid3">
             <label>Otevřeno od<input type="time" name="oteviraci_od" value="<?= h($n['oteviraci_od']) ?>"></label>
             <label>do<input type="time" name="oteviraci_do" value="<?= h($n['oteviraci_do']) ?>"></label>
-            <label>Přestávka mezi masážemi (min)<input type="number" name="prestavka_min" min="0" max="60" step="5" value="<?= h($n['prestavka_min'] ?? '0') ?>"></label>
+            <label>Přestávka mezi masážemi (min)<input type="number" name="prestavka_min" min="0" max="60" step="5" value="<?= h($n['prestavka_min'] ?? '10') ?>"></label>
           </div>
           <h2>Štítky zákazníků</h2>
           <div class="grid3">
