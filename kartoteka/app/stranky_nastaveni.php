@@ -73,7 +73,11 @@ function stranka_nastaveni(array $u): void
           <button class="btn primary">Uložit</button>
         </form>
 
-        <section class="card"><h2>Masérky a recepční</h2><p>Správa masérek (zaměření, výkonnost, spokojenost), recepčních a směn je v menu <a href="/?r=maserky">Tým</a> a <a href="/?r=smeny">Směny</a>.</p></section>
+        <section class="card" id="tym"><h2>Tým</h2>
+          <p class="muted small">Správa lidí a provozu na jednom místě.</p>
+          <p><a class="btn primary" href="/?r=tym">👥 Tým – masérky</a> <a class="btn" href="/?r=recepcni">🧾 Recepční</a> <a class="btn" href="/?r=smeny">🗓 Směny</a>
+             <a class="btn" href="/?r=masterny">🚪 Masérny a tablety</a> <a class="btn" href="/?r=dostupnost">🌴 Volna a přesčasy</a><?php if (($u['role'] ?? '') === 'admin'): ?> <a class="btn" href="/?r=uzivatele">🔑 Uživatelé</a><?php endif ?></p>
+        </section>
 
         <form method="post" class="card">
           <?= csrf_pole() ?><input type="hidden" name="akce" value="cenik">
