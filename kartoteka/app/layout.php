@@ -36,7 +36,7 @@ function hlavicka(string $titul, string $aktivni = ''): void
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex, nofollow">
 <title><?= h($titul) ?> · Kartotéka Thai Most</title>
-<link rel="stylesheet" href="/style.css?v=12">
+<link rel="stylesheet" href="/style.css?v=13">
 <?php if (je_okno() && !je_app()): ?><base target="_top"><?php endif ?>
 <link rel="manifest" href="/?r=manifest">
 <meta name="theme-color" content="#6b4a2b">

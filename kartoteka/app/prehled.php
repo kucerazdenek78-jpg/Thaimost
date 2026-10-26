@@ -104,20 +104,23 @@ function stranka_prehled(array $u): void
       .pb-pills{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 12px}
       .pb-pills a{display:inline-block;text-decoration:none;padding:5px 11px;border-radius:999px;background:#e3efe8;border:1px solid #5b8a72;color:#2f5446;font-size:.9rem}
       .pb-pills a:hover{background:#d3e7da}
-      section.prichody select{display:inline-block;width:auto;min-width:150px;margin:2px 6px 2px 0}
+      @media (pointer:coarse),(max-width:1100px){
+        .pb-blk{padding:12px 14px}.pg{padding:14px;min-height:52px}.pb-pills a{padding:12px 17px;font-size:1rem}
+        .pb-head{padding:12px 14px}.pb-head a.ln{padding:11px 0 8px}.pb-minulo summary{padding:12px 0;font-size:.95rem}.vyrizeni summary{padding:10px 0;font-size:1.05rem}
+      }
       .pb-minulo summary{cursor:pointer;color:var(--mut);font-size:.85rem;margin:2px 0 6px}
       .vyrizeni summary{cursor:pointer;font-weight:600;color:var(--hn)}.vyrizeni summary .cnt{margin-left:4px}
     </style>
     <h1>Masérny <small><?= h(datum_cz($dnes, false)) ?></small></h1>
 
     <?php foreach ($poplach as [$mn, $sz]): ?>
-      <div class="flash err">⚠ <b><?= h($mn) ?></b>: masérka hlásí, že to není ona (<?= h(trim($sz['prijmeni'] ?: $sz['jmeno'])) ?>). <a href="/?r=rezervace&id=<?= (int)$sz['rezervace_id'] ?>#tablet">Vyřešit</a></div>
+      <div class="flash err">⚠ <b><?= h($mn) ?></b>: masérka hlásí, že to není ona (<?= h(trim($sz['prijmeni'] ?: $sz['jmeno'])) ?>). <a class="btn small" href="/?r=rezervace&id=<?= (int)$sz['rezervace_id'] ?>#tablet">Vyřešit</a></div>
     <?php endforeach ?>
     <?php if ($konf): ?>
-      <div class="flash warn">⚠ <b><?= count($konf) ?> masáž<?= count($konf) === 1 ? '' : (count($konf) < 5 ? 'e' : 'í') ?> u masérky, která v tu dobu nepracuje</b> – nejbližší <?= h(datum_cz($konf[0]['zacatek'])) ?> <?= h(jmeno_z($konf[0])) ?>. <a href="/?r=dostupnost">Vyřešit</a></div>
+      <div class="flash warn">⚠ <b><?= count($konf) ?> masáž<?= count($konf) === 1 ? '' : (count($konf) < 5 ? 'e' : 'í') ?> u masérky, která v tu dobu nepracuje</b> – nejbližší <?= h(datum_cz($konf[0]['zacatek'])) ?> <?= h(jmeno_z($konf[0])) ?>. <a class="btn small" href="/?r=dostupnost">Vyřešit</a></div>
     <?php endif ?>
     <?php if ($nevesel): ?>
-      <div class="flash warn">⚠ <b><?= count($nevesel) ?> dnešní rezervace se nevejde do žádné masérny</b> (např. <?= h(date('H:i', strtotime($nevesel[0]['zacatek']))) ?> <?= h(jmeno_z($nevesel[0])) ?>). <a href="/?r=kalendar&pohled=masterny">Otevřít kalendář masérn</a></div>
+      <div class="flash warn">⚠ <b><?= count($nevesel) ?> dnešní rezervace se nevejde do žádné masérny</b> (např. <?= h(date('H:i', strtotime($nevesel[0]['zacatek']))) ?> <?= h(jmeno_z($nevesel[0])) ?>). <a class="btn small" href="/?r=kalendar&pohled=masterny">Otevřít kalendář masérn</a></div>
     <?php endif ?>
     <?php ukoncene_dnes_banner(); ?>
 
@@ -243,7 +246,7 @@ function stranka_prehled(array $u): void
       <?php foreach ($kontrola as $r): ?>
         <form method="post" action="/?r=rezervace&id=<?= $r['id'] ?>" class="row-item">
           <?= csrf_pole() ?><input type="hidden" name="akce" value="stav"><input type="hidden" name="zpet" value="dnes">
-          <input type="checkbox" class="kont-cb" name="ids[]" value="<?= $r['id'] ?>" form="hromadne" aria-label="vybrat" style="width:22px;height:22px">
+          <input type="checkbox" class="kont-cb big-cb" name="ids[]" value="<?= $r['id'] ?>" form="hromadne" aria-label="vybrat">
           <div class="time"><?= date('H:i', strtotime($r['zacatek'])) ?><br><span class="muted small"><?= date('j. n.', strtotime($r['zacatek'])) ?></span></div>
           <div class="grow"><a href="/?r=rezervace&id=<?= $r['id'] ?>"><b><?= h(jmeno_z($r)) ?></b></a> · <a href="tel:<?= h($r['telefon']) ?>"><?= h(telefon_cz($r['telefon'])) ?></a><br>
             <?= h($r['sluzba'] . ' – ' . $r['var_popis']) ?> · <?= h(($r['maserka'] ?? 'bez masérky') . (!empty($r['maserka2']) ? ' + ' . $r['maserka2'] : '')) ?></div>
@@ -256,7 +259,7 @@ function stranka_prehled(array $u): void
     </details>
     <?php endif ?>
 
-    <p class="muted small"><a href="/?r=dnes_stary">Podrobný plán dne se všemi tlačítky (starý přehled)</a></p>
+    <p><a class="btn small" href="/?r=dnes_stary">Podrobný plán dne (starý přehled)</a></p>
 
     <script>
     // Obrazovka se obnovuje sama: stav masérn a volná okna každých 5 s; příchody a žádosti jen když recepce zrovna nic nevyplňuje

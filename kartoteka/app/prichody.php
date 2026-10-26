@@ -134,6 +134,8 @@ function prichody_panel(): void
     $nazMas = [];
     foreach ($skupiny as $kl => $t) $nazMas[$kl] = trim($t[0]['skupina']) !== '' ? $t[0]['skupina'] : $t[0]['nazev'];
     $kSend = array_filter($navrh, fn($n) => $n['stav'] === 'navrh');
+    $zabr = [];   // masérny, kde právě běží masáž nebo se hodnotí
+    foreach ($skupiny as $kl => $tb) foreach ($tb as $t1) { $sz1 = sezeni_aktivni((int)$t1['id']); if ($sz1 && in_array($sz1['stav'], ['bezi', 'konec'], true)) $zabr[$kl] = true; }
     ?>
     <section class="card prichody">
       <h2>Příchody <span class="muted">(<?= count($rez) ?> v nejbližší době)</span></h2>
@@ -143,7 +145,7 @@ function prichody_panel(): void
         <?php foreach ($rez as $r): $n = $navrh[(int)$r['id']]; $rid = (int)$r['id'];
               $par = (int)$r['var_maserky'] >= 2 || $r['maserka2_id']; ?>
           <div class="row-item prichod<?= $n['stav'] === 'odeslano' ? ' hotovo' : '' ?>">
-            <?php if ($n['stav'] === 'navrh'): ?><input type="checkbox" name="ids[]" value="<?= $rid ?>" checked style="width:22px;height:22px" aria-label="poslat"><?php else: ?><span style="width:22px"></span><?php endif ?>
+            <?php if ($n['stav'] === 'navrh'): ?><input type="checkbox" class="big-cb" name="ids[]" value="<?= $rid ?>" checked aria-label="poslat"><?php else: ?><span class="big-cb"></span><?php endif ?>
             <div class="time"><?= date('H:i', strtotime($r['zacatek'])) ?></div>
             <div class="grow">
               <a href="/?r=rezervace&id=<?= $rid ?>"><b><?= h(jmeno_z($r)) ?></b></a> · <?= h($r['sluzba'] . ' ' . $r['var_popis']) ?>
@@ -153,12 +155,12 @@ function prichody_panel(): void
                 <br><span class="muted small"><?= h($n['pozn']) ?></span>
               <?php else: ?>
                 <br>
-                <select name="mist[<?= $rid ?>]" title="Masérna"><option value="">— masérna —</option>
-                  <?php foreach ($skupiny as $kl => $t): ?><option value="<?= h($kl) ?>" <?= $n['skupina'] === $kl ? 'selected' : '' ?>><?= h($nazMas[$kl]) ?><?= count($t) > 1 ? ' (duo)' : '' ?></option><?php endforeach ?></select>
-                <select name="mas1[<?= $rid ?>]" title="Masérka"><option value="">— masérka —</option>
-                  <?php foreach ($maserky as $mid => $mj): ?><option value="<?= $mid ?>" <?= (int)$n['maserka'] === (int)$mid ? 'selected' : '' ?>><?= h($mj) ?></option><?php endforeach ?></select>
-                <?php if ($par): ?><select name="mas2[<?= $rid ?>]" title="2. masérka"><option value="">— 2. masérka —</option>
-                  <?php foreach ($maserky as $mid => $mj): ?><option value="<?= $mid ?>" <?= (int)$n['maserka2'] === (int)$mid ? 'selected' : '' ?>><?= h($mj) ?></option><?php endforeach ?></select><?php endif ?>
+                <div class="volby"><small>Masérna</small>
+                  <?php foreach ($skupiny as $kl => $t): ?><label class="volba"><input type="radio" name="mist[<?= $rid ?>]" value="<?= h($kl) ?>" <?= $n['skupina'] === $kl ? 'checked' : '' ?>><span<?= isset($zabr[$kl]) ? ' class="zabr"' : '' ?>><?= h($nazMas[$kl]) ?><?= count($t) > 1 ? ' (duo)' : '' ?><?= isset($zabr[$kl]) ? ' · obsazená' : '' ?></span></label><?php endforeach ?></div>
+                <div class="volby"><small><?= $par ? '1. masérka' : 'Masérka' ?></small>
+                  <?php foreach ($maserky as $mid => $mj): ?><label class="volba"><input type="radio" name="mas1[<?= $rid ?>]" value="<?= $mid ?>" <?= (int)$n['maserka'] === (int)$mid ? 'checked' : '' ?>><span><?= h($mj) ?></span></label><?php endforeach ?></div>
+                <?php if ($par): ?><div class="volby"><small>2. masérka</small>
+                  <?php foreach ($maserky as $mid => $mj): ?><label class="volba"><input type="radio" name="mas2[<?= $rid ?>]" value="<?= $mid ?>" <?= (int)$n['maserka2'] === (int)$mid ? 'checked' : '' ?>><span><?= h($mj) ?></span></label><?php endforeach ?></div><?php endif ?>
                 <?php if ($n['pozn']): ?><span class="warn small">⚠ <?= h($n['pozn']) ?></span><?php endif ?>
               <?php endif ?>
             </div>
