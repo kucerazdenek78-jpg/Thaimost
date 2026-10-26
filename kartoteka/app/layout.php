@@ -20,11 +20,10 @@ function hlavicka(string $titul, string $aktivni = ''): void
         'dostupnost' => 'Volna a přesčasy' . (($kn = $u ? count(konflikty_dostupnosti()) : 0) ? " <b class=\"cnt\">$kn</b>" : ''),
         'poukazy' => 'Poukazy' . ($poukazyCekaji ? " <b class=\"cnt\">$poukazyCekaji</b>" : ''),
         'karty' => 'Karty',
-        'tym' => 'Tým',
-        'smeny' => 'Směny',
         'nastaveni' => 'Nastavení',
     ];
-    if ($u && ($u['role'] ?? '') === 'admin') $menu['uzivatele'] = 'Uživatelé';
+    // Tým, Směny a Uživatelé jsou v Nastavení → Tým; v menu se tam zvýrazní Nastavení
+    if (in_array($aktivni, ['tym', 'smeny', 'uzivatele'], true)) $aktivni = 'nastaveni';
     ?><!doctype html>
 <html lang="cs"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
