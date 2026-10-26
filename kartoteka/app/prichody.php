@@ -1,22 +1,7 @@
 <?php
-// Příchody: zákazníci chodí ~10 min před masáží, často po vlnách pro všechny masérny najednou.
-// Panel na stránce Dnes navrhne rozdělení do masérn a masérek (recepce jen přečte, kam kdo jde),
-// jedním klepnutím se všechno pošle na tablety; jednotlivé řádky jdou před odesláním přehodit.
-// Také: ukončení masáže z recepce s důvodem a upozornění vedoucí.
-
-/** Dnešní potvrzené rezervace kolem teď: začínají nejpozději za 45 min, začaly maximálně před 30 min a ještě neskončily. */
-function prichody_okno(): array
-{
-    $od = date('Y-m-d H:i:s', time() - 30 * 60);
-    $do = date('Y-m-d H:i:s', time() + 45 * 60);
-    return q("SELECT r.*, z.jmeno, z.prijmeni, z.telefon, z.pref_maserka_id, z.pref_tlak, z.pref_text,
-            s.nazev AS sluzba, v.popis AS var_popis, COALESCE(v.maserky, 1) AS var_maserky, COALESCE(v.wellness_mistnost, 0) AS wellness_mistnost,
-            m.jmeno AS maserka, m2.jmeno AS maserka2
-        FROM rezervace r JOIN zakaznici z ON z.id=r.zakaznik_id LEFT JOIN varianty v ON v.id=r.varianta_id
-        LEFT JOIN sluzby s ON s.id=v.sluzba_id LEFT JOIN maserky m ON m.id=r.maserka_id LEFT JOIN maserky m2 ON m2.id=r.maserka2_id
-        WHERE r.stav='potvrzeno' AND r.zacatek >= ? AND r.zacatek <= ? AND r.konec > ? ORDER BY r.zacatek, r.id",
-        [$od, $do, nyni()])->fetchAll();
-}
+// Masérny a tablety: návrh masérek a rozdělení rezervací do masérn, ukončení masáže z recepce, kalendář masérn.
+// Na tablety se rezervace posílají samy (viz plan.php → tablet_auto); recepce rezervace jen přetahuje mezi masérnami
+// a v případě potřeby mění masérku přímo na obrazovce Masérny (prehled.php).
 
 /** Skupiny lůžek (tabletů) podle masérny: [klíč => [tablety…]] */
 function prichody_skupiny(): array
@@ -97,80 +82,14 @@ function prichody_navrh(array $rez): array
     return $out;
 }
 
-/** Odešle vybrané rezervace na tablety podle voleb z formuláře. Vrací [ok-řádky, chyby]. */
+/** Ruční posílání na tablety je zrušené (rezervace se posílají samy, viz plan.php). Funkce zůstává jen kvůli staré POST větvi ve starém přehledu. */
 function prichody_rozeslat(array $post): array
 {
-    $ok = []; $err = [];
-    $skupiny = prichody_skupiny();
-    foreach (array_unique(array_map('intval', (array)($post['ids'] ?? []))) as $rid) {
-        $r = rezervace_detail($rid);
-        if (!$r || $r['stav'] !== 'potvrzeno') continue;
-        $jm = trim($r['prijmeni'] ?: $r['jmeno']);
-        $kl = (string)($post['mist'][$rid] ?? '');
-        $m1 = (int)($post['mas1'][$rid] ?? 0); $m2 = (int)($post['mas2'][$rid] ?? 0);
-        $par = (int)($r['var_maserky'] ?? 1) >= 2 || $m2 > 0 || $r['maserka2_id'];
-        $tablety = $skupiny[$kl] ?? [];
-        if (!$tablety) { $err[] = "$jm: vyberte masérnu."; continue; }
-        if (!$m1) { $err[] = "$jm: vyberte masérku."; continue; }
-        if ($par && (!$m2 || $m2 === $m1 || count($tablety) < 2)) { $err[] = "$jm: párová potřebuje dvoulůžkovou masérnu a dvě různé masérky."; continue; }
-        q('UPDATE rezervace SET maserka_id=?, maserka2_id=?, zmeneno=?, zmenil=? WHERE id=?', [$m1, $par ? $m2 : null, nyni(), kdo(), $rid]);
-        $r = rezervace_detail($rid);
-        $e1 = tablet_poslat($r, (int)$tablety[0]['id'], $m1, true);
-        $e2 = (!$e1 && $par) ? tablet_poslat($r, (int)$tablety[1]['id'], $m2, false) : null;
-        if ($e1 || $e2) { $err[] = "$jm: " . ($e1 ?? $e2); continue; }
-        $ok[] = $jm . ' → ' . ($skupiny[$kl][0]['skupina'] ?: $tablety[0]['nazev']) . ' · ' . $r['maserka'] . ($r['maserka2'] ? ' + ' . $r['maserka2'] : '');
-    }
-    return [$ok, $err];
+    return [[], ['Ruční posílání na tablety je zrušené – rezervace se posílají samy. Masérnu a masérku změníte na obrazovce Masérny.']];
 }
 
-/** Panel „Příchody“ na stránce Dnes. */
-function prichody_panel(): void
-{
-    $rez = prichody_okno();
-    $skupiny = prichody_skupiny();
-    if (!$rez || !$skupiny) return;
-    $navrh = prichody_navrh($rez);
-    $maserky = q('SELECT id, jmeno FROM maserky WHERE aktivni=1 ORDER BY poradi, id')->fetchAll(PDO::FETCH_KEY_PAIR);
-    $nazMas = [];
-    foreach ($skupiny as $kl => $t) $nazMas[$kl] = trim($t[0]['skupina']) !== '' ? $t[0]['skupina'] : $t[0]['nazev'];
-    $kSend = array_filter($navrh, fn($n) => $n['stav'] === 'navrh');
-    $zabr = [];   // masérny, kde právě běží masáž nebo se hodnotí
-    foreach ($skupiny as $kl => $tb) foreach ($tb as $t1) { $sz1 = sezeni_aktivni((int)$t1['id']); if ($sz1 && in_array($sz1['stav'], ['bezi', 'konec'], true)) $zabr[$kl] = true; }
-    ?>
-    <section class="card prichody">
-      <h2>Příchody <span class="muted">(<?= count($rez) ?> v nejbližší době)</span></h2>
-      <p class="muted small">Řekněte zákazníkům, kam mají jít (v řádku jde masérna i masérka přehodit), a pošlete je jedním klepnutím na tablety.</p>
-      <form method="post">
-        <?= csrf_pole() ?><input type="hidden" name="akce" value="prichody_poslat">
-        <?php foreach ($rez as $r): $n = $navrh[(int)$r['id']]; $rid = (int)$r['id'];
-              $par = (int)$r['var_maserky'] >= 2 || $r['maserka2_id']; ?>
-          <div class="row-item prichod<?= $n['stav'] === 'odeslano' ? ' hotovo' : '' ?>">
-            <?php if ($n['stav'] === 'navrh'): ?><input type="checkbox" class="big-cb" name="ids[]" value="<?= $rid ?>" checked aria-label="poslat"><?php else: ?><span class="big-cb"></span><?php endif ?>
-            <div class="time"><?= date('H:i', strtotime($r['zacatek'])) ?></div>
-            <div class="grow">
-              <a href="/?r=rezervace&id=<?= $rid ?>"><b><?= h(jmeno_z($r)) ?></b></a> · <?= h($r['sluzba'] . ' ' . $r['var_popis']) ?>
-              <?php if ($n['stav'] === 'odeslano'): ?>
-                <br><span class="tab-st cek">📲 na tabletu: <?= h($nazMas[$n['skupina']] ?? '') ?> · <?= h(($r['maserka'] ?? '') . ($r['maserka2'] ? ' + ' . $r['maserka2'] : '')) ?></span>
-              <?php elseif ($n['stav'] === 'bez_tabletu'): ?>
-                <br><span class="muted small"><?= h($n['pozn']) ?></span>
-              <?php else: ?>
-                <br>
-                <div class="volby"><small>Masérna</small>
-                  <?php foreach ($skupiny as $kl => $t): ?><label class="volba"><input type="radio" name="mist[<?= $rid ?>]" value="<?= h($kl) ?>" <?= $n['skupina'] === $kl ? 'checked' : '' ?>><span<?= isset($zabr[$kl]) ? ' class="zabr"' : '' ?>><?= h($nazMas[$kl]) ?><?= count($t) > 1 ? ' (duo)' : '' ?><?= isset($zabr[$kl]) ? ' · obsazená' : '' ?></span></label><?php endforeach ?></div>
-                <div class="volby"><small><?= $par ? '1. masérka' : 'Masérka' ?></small>
-                  <?php foreach ($maserky as $mid => $mj): ?><label class="volba"><input type="radio" name="mas1[<?= $rid ?>]" value="<?= $mid ?>" <?= (int)$n['maserka'] === (int)$mid ? 'checked' : '' ?>><span><?= h($mj) ?></span></label><?php endforeach ?></div>
-                <?php if ($par): ?><div class="volby"><small>2. masérka</small>
-                  <?php foreach ($maserky as $mid => $mj): ?><label class="volba"><input type="radio" name="mas2[<?= $rid ?>]" value="<?= $mid ?>" <?= (int)$n['maserka2'] === (int)$mid ? 'checked' : '' ?>><span><?= h($mj) ?></span></label><?php endforeach ?></div><?php endif ?>
-                <?php if ($n['pozn']): ?><span class="warn small">⚠ <?= h($n['pozn']) ?></span><?php endif ?>
-              <?php endif ?>
-            </div>
-          </div>
-        <?php endforeach ?>
-        <?php if ($kSend): ?><button class="btn primary">📲 Poslat vybrané na tablety</button><?php endif ?>
-      </form>
-    </section>
-    <?php
-}
+/** Panel „Příchody“ už neexistuje (nahradilo ho automatické posílání). Prázdná funkce zůstává kvůli starému přehledu /?r=dnes_stary. */
+function prichody_panel(): void {}
 
 // ---------- Ukončení masáže z recepce ----------
 /** Komu jde upozornění o předčasně ukončené masáži: aktivní „hlavní pracovníci“ s e-mailem + e-mail salonu. */
@@ -232,33 +151,57 @@ function ukoncene_dnes_banner(): void
 
 // ---------- Kalendář: obsazenost MASÉRN (vedle obsazenosti masérek) ----------
 /**
- * Rozdělení dnešních rezervací do masérn: co už je odeslané na tabletu, má svou masérnu; zbytek se rozdělí stejným
- * pravidlem jako návrh příchodů (pár do dvoulůžkové, wellness do wellness masérny, jednotlivec raději do jednolůžkové).
- * Vrací [klíč masérny => [bloky], '' => [nevešlo se]]; blok = rezervace + 'zdroj' (tablet | navrh).
+ * Rozdělení rezervací dne do masérn. Pořadí rozhodování:
+ *  1. co už je na tabletu (nebo proběhlo) – masérna podle tabletu ('zdroj' = tablet),
+ *  2. pevně zvolená masérna u rezervace (sloupec maserna; mění se přetažením na obrazovce Masérny; 'zdroj' = pevna),
+ *  3. zbytek podle pravidla: pár do dvoulůžkové, wellness do wellness masérny, jednotlivec raději do jednolůžkové ('zdroj' = navrh).
+ * S $fixuj = true se návrh rovnou uloží k rezervaci (a uložená volba, která zanikla nebo se srazila, se vyčistí),
+ * takže bloky během dne neskáčou, když přibude nová rezervace.
+ * Vrací [klíč masérny => [bloky], '' => [nevešlo se]]; blok = rezervace + 'zdroj'.
  */
-function masterny_den(string $d, array $skupiny): array
+function masterny_den(string $d, array $skupiny, bool $fixuj = false): array
 {
+    $dalsi = date('Y-m-d', strtotime("$d +1 day"));
     $rez = q("SELECT r.*, z.jmeno, z.prijmeni, z.pref_maserka_id, s.nazev AS sluzba, v.popis AS var_popis, COALESCE(v.maserky, 1) AS var_maserky, COALESCE(v.wellness_mistnost, 0) AS w,
             m.jmeno AS maserka, m2.jmeno AS maserka2
         FROM rezervace r JOIN zakaznici z ON z.id=r.zakaznik_id LEFT JOIN varianty v ON v.id=r.varianta_id LEFT JOIN sluzby s ON s.id=v.sluzba_id
         LEFT JOIN maserky m ON m.id=r.maserka_id LEFT JOIN maserky m2 ON m2.id=r.maserka2_id
         WHERE r.zacatek >= ? AND r.zacatek < ? AND r.stav IN ('potvrzeno','probehlo') ORDER BY r.zacatek, r.id",
-        [$d, date('Y-m-d', strtotime("$d +1 day"))])->fetchAll();
+        [$d, $dalsi])->fetchAll();
     $tabletSkup = [];   // id tabletu => klíč masérny
     $wellSk = [];
     foreach ($skupiny as $kl => $tablety) foreach ($tablety as $t) { $tabletSkup[(int)$t['id']] = $kl; if ($t['wellness']) $wellSk[$kl] = true; }
     $fix = [];          // rezervace_id => klíč masérny (z tabletu)
-    foreach (q("SELECT rezervace_id, mistnost_id FROM sezeni WHERE stav<>'zruseno' AND rezervace_id IN (SELECT id FROM rezervace WHERE zacatek >= ? AND zacatek < ?) ORDER BY id", [$d, date('Y-m-d', strtotime("$d +1 day"))])->fetchAll() as $x)
+    foreach (q("SELECT rezervace_id, mistnost_id FROM sezeni WHERE stav<>'zruseno' AND rezervace_id IN (SELECT id FROM rezervace WHERE zacatek >= ? AND zacatek < ?) ORDER BY id", [$d, $dalsi])->fetchAll() as $x)
         if (isset($tabletSkup[(int)$x['mistnost_id']])) $fix[(int)$x['rezervace_id']] = $tabletSkup[(int)$x['mistnost_id']];
     $out = array_fill_keys(array_keys($skupiny), []); $out[''] = [];
     $obs = array_fill_keys(array_keys($skupiny), []);
-    $zaber = function (string $kl, array $r) use (&$obs, &$out, $fix) {
+    $zaber = function (string $kl, array $r, string $zdroj) use (&$obs, &$out) {
         $obs[$kl][] = [strtotime($r['zacatek']), strtotime($r['konec'])];
-        $out[$kl][] = $r + ['zdroj' => isset($fix[(int)$r['id']]) ? 'tablet' : 'navrh'];
+        $out[$kl][] = $r + ['zdroj' => $zdroj];
     };
-    foreach ($rez as $r) if (isset($fix[(int)$r['id']])) $zaber($fix[(int)$r['id']], $r);
+    $volno = function (string $kl, int $a, int $b) use (&$obs): bool {
+        foreach ($obs[$kl] as [$x, $y]) if ($x < $b && $y > $a) return false;
+        return true;
+    };
+    $hotovo = [];       // rezervace_id => už umístěná
+
+    // 1) tablet je skutečnost: masérna podle něj (a uložená volba se s ním srovná)
     foreach ($rez as $r) {
-        if (isset($fix[(int)$r['id']])) continue;
+        $id = (int)$r['id']; if (!isset($fix[$id])) continue;
+        $zaber($fix[$id], $r, 'tablet'); $hotovo[$id] = true;
+        if ($fixuj && (string)$r['maserna'] !== $fix[$id]) q('UPDATE rezervace SET maserna=? WHERE id=?', [$fix[$id], $id]);
+    }
+    // 2) pevně zvolená masérna (pokud pořád existuje a nic se tam nesráží)
+    foreach ($rez as $r) {
+        $id = (int)$r['id']; $kl = (string)$r['maserna'];
+        if (isset($hotovo[$id]) || $kl === '') continue;
+        if (isset($skupiny[$kl]) && $volno($kl, strtotime($r['zacatek']), strtotime($r['konec']))) { $zaber($kl, $r, 'pevna'); $hotovo[$id] = true; }
+        elseif ($fixuj) q("UPDATE rezervace SET maserna='' WHERE id=?", [$id]);
+    }
+    // 3) zbytek: návrh
+    foreach ($rez as $r) {
+        $id = (int)$r['id']; if (isset($hotovo[$id])) continue;
         $a = strtotime($r['zacatek']); $b = strtotime($r['konec']);
         $par = (int)$r['var_maserky'] >= 2 || $r['maserka2_id'];
         $kand = array_keys($skupiny);
@@ -266,11 +209,10 @@ function masterny_den(string $d, array $skupiny): array
         if ($par) $kand = array_values(array_filter($kand, fn($k) => count($skupiny[$k]) >= 2));
         usort($kand, fn($x, $y) => ($par || $r['w']) ? 0 : count($skupiny[$x]) <=> count($skupiny[$y]));
         $vybrana = null;
-        foreach ($kand as $kl) {
-            $zab = false; foreach ($obs[$kl] as [$x, $y]) if ($x < $b && $y > $a) { $zab = true; break; }
-            if (!$zab) { $vybrana = $kl; break; }
-        }
-        if ($vybrana === null) $out[''][] = $r + ['zdroj' => 'nevesel']; else $zaber($vybrana, $r);
+        foreach ($kand as $kl) if ($volno($kl, $a, $b)) { $vybrana = $kl; break; }
+        if ($vybrana === null) { $out[''][] = $r + ['zdroj' => 'nevesel']; continue; }
+        $zaber($vybrana, $r, 'navrh');
+        if ($fixuj) q('UPDATE rezervace SET maserna=? WHERE id=?', [$vybrana, $id]);
     }
     return $out;
 }
@@ -306,7 +248,7 @@ function kalendar_masterny(string $d): void
       <h1><?= h(datum_cz($d, false)) ?></h1>
     </div>
     <?php if (!$skupiny): ?><p class="flash warn">Nejsou nastavené masérny. Přidejte je v Tým → Masérny.</p><?php else: ?>
-    <p class="muted small">Která masérna kdy obsazená. Plná barva a 📲 = už odesláno na tablet do téhle masérny; ostatní jsou návrh rozdělení (stejným pravidlem jako panel Příchody). Masérna se blokuje celá. Klepnutím do volného místa přidáte rezervaci.</p>
+    <p class="muted small">Která masérna kdy obsazená. 📲 = už je na tabletu v téhle masérně; plná čára = masérna je přiřazená (přetažením na obrazovce Masérny ji změníte); čárkovaně = zatím jen návrh (dny dopředu). Masérna se blokuje celá. Klepnutím do volného místa přidáte rezervaci.</p>
     <div class="cal" style="--h:<?= ($minDo - $minOd) * $px ?>px">
       <div class="cal-hours"><?php for ($m = (int)ceil($minOd / 60) * 60; $m < $minDo; $m += 60): ?><div style="top:<?= ($m - $minOd) * $px ?>px"><?= hhmm($m) ?></div><?php endfor ?></div>
       <?php foreach ($sloupce as $kl => $nazev):

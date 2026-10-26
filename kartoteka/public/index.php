@@ -22,6 +22,7 @@ if ($cesta !== '/') { http_response_code(404); exit('Nenalezeno'); }
 
 require $root . '/app/layout.php';
 require $root . '/app/stranky.php';
+require $root . '/app/plan.php';
 require $root . '/app/prehled.php';
 
 // Spouštěč vzorových dat přes soubor (když nejde terminál kontejneru): nahrát do data/ prázdný soubor
@@ -47,6 +48,9 @@ if ($r === 'karta') { stranka_karta(); }
 if ($r === 'tablet_api') {
     if ($_SERVER['REQUEST_METHOD'] !== 'POST') { http_response_code(405); exit('Metoda není povolena'); }
     require $root . '/app/api.php';
+    // automatické posílání rezervací na tablety: spouští ho i dotaz tabletu (jen s platným tokenem), takže funguje i bez otevřené recepce
+    $vstup = json_decode((string)file_get_contents('php://input'), true);
+    if (is_array($vstup) && mistnost_podle_tokenu((string)($vstup['t'] ?? ''))) tablet_auto();
     try { stranka_tablet_api(); }
     catch (Throwable $e) { error_log((string)$e); api_odpoved(['ok' => false, 'chyba' => 'Chyba serveru.'], 500); }
 }

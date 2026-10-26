@@ -26,7 +26,7 @@ function q(string $sql, array $p = []): PDOStatement
 function q1(string $sql, array $p = []): ?array { $r = q($sql, $p)->fetch(); return $r ?: null; }
 function qv(string $sql, array $p = []) { $r = q($sql, $p)->fetchColumn(); return $r === false ? null : $r; }
 
-const DB_VERZE = 11;
+const DB_VERZE = 12;
 
 /** Migrace běží v jedné transakci a po získání zámku se verze ověří znovu (souběžné první požadavky). */
 function migrate(PDO $pdo): void
@@ -46,6 +46,7 @@ function migrate(PDO $pdo): void
         if ($ver < 9) migrate_v9($pdo);
         if ($ver < 10) migrate_v10($pdo);
         if ($ver < 11) migrate_v11($pdo);
+        if ($ver < 12) migrate_v12($pdo);
         $pdo->exec('PRAGMA user_version = ' . DB_VERZE);
         $pdo->exec('COMMIT');
     } catch (Throwable $e) {
@@ -160,6 +161,12 @@ function migrate_v1(PDO $pdo): void
     $sm = $pdo->prepare('INSERT INTO maserky(jmeno,poradi,barva) VALUES(?,?,?)');
     $barvy = ['#b07a3a', '#5b8a72', '#7a5ea8', '#c0605a', '#3f7fae'];
     for ($i = 1; $i <= 5; $i++) $sm->execute(["Masérka $i", $i, $barvy[$i - 1]]);
+}
+
+/** v12: pevně přiřazená masérna u rezervace (klíč masérny; prázdné = zatím jen návrh). Mění se přetažením na obrazovce Masérny. */
+function migrate_v12(PDO $pdo): void
+{
+    $pdo->exec("ALTER TABLE rezervace ADD COLUMN maserna TEXT NOT NULL DEFAULT ''");
 }
 
 /** v10: akce asistenta (potvrzení žádosti, přesun, změna stavu, volno) a trvalé přihlášení v aplikaci. */
