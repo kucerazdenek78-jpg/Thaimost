@@ -22,6 +22,7 @@ if ($cesta !== '/') { http_response_code(404); exit('Nenalezeno'); }
 
 require $root . '/app/layout.php';
 require $root . '/app/stranky.php';
+require $root . '/app/prehled.php';
 
 // Spouštěč vzorových dat přes soubor (když nejde terminál kontejneru): nahrát do data/ prázdný soubor
 // „vzor-nahrat“ nebo „vzor-smazat“ (File Station). Při nejbližším načtení stránky se akce provede,
@@ -71,7 +72,7 @@ $u = vyzaduj_prihlaseni();
 uzavri_probehle();
 
 $stranky = [
-    'dnes' => 'stranka_dnes', 'kalendar' => 'stranka_kalendar',
+    'dnes' => 'stranka_prehled', 'dnes_stary' => 'stranka_dnes', 'kalendar' => 'stranka_kalendar',
     'rez_nova' => 'stranka_rez_nova', 'rezervace' => 'stranka_rezervace',
     'zakaznici' => 'stranka_zakaznici', 'zakaznik' => 'stranka_zakaznik', 'hledat' => 'stranka_hledat',
     'poukazy' => 'stranka_poukazy', 'poukaz' => 'stranka_poukaz', 'poukaz_novy' => 'stranka_poukaz_novy',

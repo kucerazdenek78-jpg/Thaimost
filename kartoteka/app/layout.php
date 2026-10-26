@@ -12,18 +12,25 @@ function hlavicka(string $titul, string $aktivni = ''): void
     $u = uzivatel();
     $zadosti = $u ? (int)qv("SELECT COUNT(*) FROM rezervace WHERE stav='zadost'") : 0;
     $poukazyCekaji = $u ? (int)qv("SELECT COUNT(*) FROM poukazy WHERE stav='objednano'") : 0;
+    // Zjednodušené menu pro recepci: Masérny / Kalendář / Zákazníci (+ Správa jen pro vedoucí a admina).
+    // Poukazy a Karty jsou podmenu Zákazníků; Volné termíny se otevírají z Kalendáře; Tým, Směny, Uživatelé, Volna a Nastavení jsou ve Správě.
+    $konfl = ($u && smi_upravit_tym($u)) ? count(konflikty_dostupnosti()) : 0;
     $menu = [
-        'dnes' => 'Dnes' . ($zadosti ? " <b class=\"cnt\">$zadosti</b>" : ''),
-        'kalendar' => '📅 Den',
-        'zakaznici' => 'Zákazníci',
-        'volno' => 'Volné termíny',
-        'dostupnost' => 'Volna a přesčasy' . (($kn = $u ? count(konflikty_dostupnosti()) : 0) ? " <b class=\"cnt\">$kn</b>" : ''),
-        'poukazy' => 'Poukazy' . ($poukazyCekaji ? " <b class=\"cnt\">$poukazyCekaji</b>" : ''),
-        'karty' => 'Karty',
-        'nastaveni' => 'Nastavení',
+        'dnes' => ['/?r=dnes', 'Masérny' . ($zadosti ? " <b class=\"cnt\">$zadosti</b>" : '')],
+        'kalendar' => ['/?r=kalendar&pohled=masterny', '📅 Kalendář'],
+        'zakaznici' => ['/?r=zakaznici', 'Zákazníci' . ($poukazyCekaji ? " <b class=\"cnt\">$poukazyCekaji</b>" : '')],
     ];
-    // Tým, Směny a Uživatelé jsou v Nastavení → Tým; v menu se tam zvýrazní Nastavení
-    if (in_array($aktivni, ['tym', 'smeny', 'uzivatele'], true)) $aktivni = 'nastaveni';
+    if ($u && smi_upravit_tym($u)) $menu['nastaveni'] = ['/?r=nastaveni', 'Správa' . ($konfl ? " <b class=\"cnt\">$konfl</b>" : '')];
+    // stránky, které patří pod jinou položku menu
+    $patri = ['dnes_stary' => 'dnes', 'volno' => 'kalendar', 'poukazy' => 'zakaznici', 'karty' => 'zakaznici',
+              'tym' => 'nastaveni', 'smeny' => 'nastaveni', 'uzivatele' => 'nastaveni', 'dostupnost' => 'nastaveni'];
+    $podmenu = null;
+    if (in_array($aktivni, ['zakaznici', 'poukazy', 'karty'], true)) {
+        $podmenu = ['zakaznici' => ['/?r=zakaznici', 'Zákazníci'],
+                    'poukazy' => ['/?r=poukazy', 'Poukazy' . ($poukazyCekaji ? " <b class=\"cnt\">$poukazyCekaji</b>" : '')], 'karty' => ['/?r=karty', 'Věrnostní karty']];
+        $podAkt = $aktivni;
+    }
+    $aktivni = $patri[$aktivni] ?? $aktivni;
     ?><!doctype html>
 <html lang="cs"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -38,7 +45,7 @@ function hlavicka(string $titul, string $aktivni = ''): void
 <?php if ($u && !je_okno()): ?>
 <header class="top">
   <a class="logo" href="/?r=dnes">Thai Most <span>kartotéka</span></a>
-  <nav><?php foreach ($menu as $k => $t): ?><a href="/?r=<?= $k ?>"<?= $aktivni === $k ? ' class="on"' : '' ?>><?= $t ?></a><?php endforeach ?></nav>
+  <nav><?php foreach ($menu as $k => [$href, $t]): ?><a href="<?= $href ?>"<?= $aktivni === $k ? ' class="on"' : '' ?>><?= $t ?></a><?php endforeach ?></nav>
   <div class="gs"><input id="gs" type="search" placeholder="🔍 příjmení, telefon, kód karty / poukazu" autocomplete="off"><button type="button" id="gscan" class="gscan" title="Skenovat QR kód karty fotoaparátem">📷</button><div id="gsr" class="gsr" hidden></div></div>
   <a class="btn primary" href="/?r=rez_nova">+ Rezervace</a>
   <span class="who"><?= h($u['jmeno']) ?> · <a href="/?r=logout">odhlásit</a></span>
@@ -47,6 +54,7 @@ function hlavicka(string $titul, string $aktivni = ''): void
 <main>
 <?php if ($u && !je_okno() && function_exists('demo_pocet') && demo_pocet()): ?><div class="flash vzor">🧪 <b>VZOR</b> – v systému jsou vzorová data na zkoušení (<?= demo_pocet() ?> zákazníků se štítkem VZOR). Před ostrým provozem je smažte v <a href="/?r=nastaveni">Nastavení</a>.</div><?php endif ?>
 <?php foreach (flash() as [$typ, $msg]): ?><div class="flash <?= h($typ) ?>"><?= h($msg) ?></div><?php endforeach ?>
+<?php if ($podmenu && $u && !je_okno()): ?><p class="subnav"><?php foreach ($podmenu as $k => [$href, $t]): ?><a href="<?= $href ?>"<?= $podAkt === $k ? ' class="on"' : '' ?>><?= $t ?></a> <?php endforeach ?></p><?php endif ?>
 <?php
 }
 

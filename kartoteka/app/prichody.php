@@ -137,7 +137,7 @@ function prichody_panel(): void
     ?>
     <section class="card prichody">
       <h2>Příchody <span class="muted">(<?= count($rez) ?> v nejbližší době)</span></h2>
-      <p class="muted small">Návrh rozdělení do masérn a masérek. Přečtěte zákazníkům, kam mají jít, případně v řádku cokoli přehoďte a pak jedním klepnutím pošlete všechny na tablety.</p>
+      <p class="muted small">Řekněte zákazníkům, kam mají jít (v řádku jde masérna i masérka přehodit), a pošlete je jedním klepnutím na tablety.</p>
       <form method="post">
         <?= csrf_pole() ?><input type="hidden" name="akce" value="prichody_poslat">
         <?php foreach ($rez as $r): $n = $navrh[(int)$r['id']]; $rid = (int)$r['id'];
@@ -300,6 +300,7 @@ function kalendar_masterny(string $d): void
       <a class="btn" href="/?r=kalendar&pohled=masterny">Dnes</a>
       <a class="btn" href="/?r=kalendar&d=<?= h($d) ?>">Obsazenost masérek</a>
       <a class="btn primary" href="/?r=kalendar&pohled=masterny&d=<?= h($d) ?>">Obsazenost masérn</a>
+      <a class="btn" href="/?r=volno" title="Hledání volných termínů na několik dní dopředu">🔎 Volné termíny</a>
       <h1><?= h(datum_cz($d, false)) ?></h1>
     </div>
     <?php if (!$skupiny): ?><p class="flash warn">Nejsou nastavené masérny. Přidejte je v Tým → Masérny.</p><?php else: ?>
