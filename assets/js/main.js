@@ -50,7 +50,7 @@
   const iban = D.platba.iban || V.ibanZUctu(D.platba.cislo_uctu);
   if (iban) $("#platba").insertAdjacentHTML("beforeend", '<option value="prevod">Převodem / QR platbou předem</option>');
 
-  const st = { typ: "hodnota", hodnota: 1000, sluzbaId: D.sluzby[0].id, varIdx: 0, motiv: "teak" };
+  const st = { typ: "hodnota", hodnota: 1000, sluzbaId: D.sluzby[0].id, varIdx: 0 };
   const HODNOTY = [500, 790, 1000, 1500, 2000];
 
   $("#chips").innerHTML = HODNOTY.map(h => `<button type="button" data-h="${h}">${V.kc(h)}</button>`).join("") + `<button type="button" data-h="x">Jiná částka</button>`;
@@ -74,8 +74,7 @@
     return {
       typ: st.typ, hodnota: st.hodnota,
       sluzba: s.nazev, varianta: s.ceny[st.varIdx][0],
-      komu: $("#komu").value.trim(), od: $("#od").value.trim(), venovani: $("#venovani").value.trim(),
-      motiv: st.motiv
+      komu: $("#komu").value.trim(), od: $("#od").value.trim(), venovani: $("#venovani").value.trim()
     };
   }
   function update() {
@@ -86,7 +85,7 @@
     $("#vlastniBox").style.display = st.vlastni ? "" : "none";
     $("#boxHodnota").style.display = st.typ === "hodnota" ? "" : "none";
     $("#boxSluzba").style.display = st.typ === "sluzba" ? "" : "none";
-    $("#vPreview").innerHTML = V.render(data());
+    V.mount($("#vPreview"), data());
     $("#vTotal").textContent = cena() ? V.kc(cena()) : "—";
   }
 
@@ -101,12 +100,6 @@
   $("#selSluzba").addEventListener("change", e => { st.sluzbaId = e.target.value; fillVar(); update(); });
   $("#selVar").addEventListener("change", e => { st.varIdx = +e.target.value; update(); });
   ["#komu", "#od", "#venovani"].forEach(id => $(id).addEventListener("input", update));
-  $("#motivy").addEventListener("click", e => {
-    const b = e.target.closest("button"); if (!b) return;
-    st.motiv = b.dataset.m;
-    document.querySelectorAll("#motivy button").forEach(x => x.classList.toggle("on", x === b));
-    update();
-  });
 
   /* „Darovat jako poukaz“ u služby */
   grid.addEventListener("click", e => {
@@ -142,7 +135,6 @@ Cena: ${V.kc(cena())}
 Pro: ${d.komu || "-"}
 Od: ${d.od || "-"}
 Přání: ${d.venovani || "-"}
-Motiv: ${d.motiv}
 
 Objednatel: ${$("#jmeno").value.trim()}
 Telefon: ${$("#tel").value.trim()}

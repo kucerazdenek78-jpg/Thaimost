@@ -412,36 +412,41 @@ function volne_sloty(array $var, int $delka, array $kandidati, string $od, int $
 }
 
 // ---------- Tisk poukazu ----------
+/** Tisk poukazu z prohlížeče: originální návrh salonu s vyplněnými políčky (stejně jako PDF). */
 function stranka_poukaz_tisk(array $u): void
 {
     $p = q1('SELECT * FROM poukazy WHERE id=?', [(int)($_GET['id'] ?? 0)]);
     if (!$p) { http_response_code(404); exit('Poukaz nenalezen.'); }
-    $hodnota = $p['sluzba_text'] ?: kc($p['hodnota']);
-    ?><!doctype html><html lang="cs"><head><meta charset="utf-8"><title>Poukaz <?= h($p['kod']) ?></title>
-<style>
-@page{size:A5 landscape;margin:0}
-body{margin:0;font-family:Georgia,"Times New Roman",serif;color:#3b2a18;background:#eee}
-.p{width:210mm;height:148mm;margin:0 auto;background:#fffaf0;border:3mm double #b07a3a;box-sizing:border-box;padding:12mm 16mm;display:flex;flex-direction:column;align-items:center;text-align:center;position:relative}
-.p h1{margin:0;font-size:34pt;letter-spacing:3px;color:#6b4a2b;font-weight:400}.p .s{letter-spacing:5px;font-size:11pt;color:#b07a3a;margin:2mm 0 6mm}
-.p .h{font-size:30pt;font-weight:700;color:#6b4a2b;margin:2mm 0}.p .r{font-size:13pt;margin:1mm 0}
-.p .v{font-size:15pt;font-style:italic;margin:6mm 10mm 2mm;max-width:150mm}
-.p .f{position:absolute;left:16mm;right:16mm;bottom:10mm;display:flex;justify-content:space-between;align-items:flex-end;font-size:10pt;text-align:left}
-.p .q{width:24mm;height:24mm}.top{padding:10px;text-align:center;font:14px sans-serif}
-@media print{body{background:#fff}.top{display:none}}
+    ?><!doctype html><html lang="cs"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Poukaz <?= h($p['kod']) ?></title>
+<style><?= poukaz_css() ?>
+@page{size:A4 portrait;margin:0}
+body{margin:0;background:#eee;font:16px/1.4 system-ui,sans-serif;color:#3b2a18}
+.top{padding:14px;text-align:center}.top .btn{display:inline-block;margin:4px;padding:14px 22px;border:0;border-radius:10px;background:#a63f13;color:#fff;font:inherit;font-weight:600;text-decoration:none;cursor:pointer}
+.top .btn.sv{background:#fff;color:#a63f13;border:1px solid #a63f13}.top p{margin:6px 0 0;font-size:14px;color:#6b5a48}
+.pk-list{width:min(210mm,96vw);margin:8px auto 24px;box-shadow:0 6px 24px rgba(0,0,0,.25)}
+@media print{body{background:#fff}.top{display:none}.pk-list{width:210mm;margin:0;box-shadow:none}}
 </style></head><body>
-<div class="top"><button onclick="print()">Tisknout</button> – A5 na šířku, bez záhlaví a zápatí</div>
-<div class="p">
-  <h1>Dárkový poukaz</h1><div class="s">THAI MOST · THAJSKÉ MASÁŽE · MOST</div>
-  <div class="h"><?= h($hodnota) ?></div>
-  <?php if ($p['sluzba_text']): ?><div class="r">v hodnotě <?= h(kc($p['hodnota'])) ?></div><?php endif ?>
-  <?php if ($p['pro_koho']): ?><div class="r">Pro: <b><?= h($p['pro_koho']) ?></b></div><?php endif ?>
-  <?php if ($p['od_koho']): ?><div class="r">Od: <b><?= h($p['od_koho']) ?></b></div><?php endif ?>
-  <?php if ($p['venovani']): ?><div class="v">„<?= h($p['venovani']) ?>“</div><?php endif ?>
-  <div class="f"><div>Kód poukazu: <b style="font-size:13pt;letter-spacing:1px"><?= h($p['kod']) ?></b><br>Platnost do: <b><?= $p['platnost_do'] ? h(date('j. n. Y', strtotime($p['platnost_do']))) : 'neomezeně' ?></b></div>
-    <div class="q" data-qr="<?= h($p['kod']) ?>"></div></div>
+<div class="top">
+  <button class="btn" onclick="print()">🖨 Tisknout</button>
+  <a class="btn sv" href="/?r=poukaz_pdf&amp;id=<?= (int)$p['id'] ?>&amp;stahnout=1">⬇ Stáhnout PDF</a>
+  <a class="btn sv" href="/?r=poukaz&amp;id=<?= (int)$p['id'] ?>">← Zpět na poukaz</a>
+  <p>Tiskne se na A4 bez záhlaví a zápatí. Poukaz má 210 × 100 mm, na papíru zabere horní třetinu a stačí ho vystřihnout.</p>
 </div>
-<script src="/qrcode.js"></script>
-<script>document.querySelectorAll('.q').forEach(function(e){var q=qrcode(0,'M');q.addData(e.dataset.qr);q.make();e.innerHTML=q.createSvgTag({cellSize:4,margin:0,scalable:true});var v=e.querySelector('svg');if(v){v.style.width='100%';v.style.height='100%'}})</script>
+<div class="pk-list"><?= poukaz_html($p) ?></div>
 </body></html><?php
+    exit;
+}
+
+/** PDF poukazu: originální návrh s vyplněnými políčky (zobrazí se v prohlížeči; s &stahnout=1 se stáhne). */
+function stranka_poukaz_pdf(array $u): void
+{
+    $p = q1('SELECT * FROM poukazy WHERE id=?', [(int)($_GET['id'] ?? 0)]);
+    if (!$p) { http_response_code(404); exit('Poukaz nenalezen.'); }
+    $pdf = poukaz_pdf($p);
+    header('Content-Type: application/pdf');
+    header('Content-Disposition: ' . (isset($_GET['stahnout']) ? 'attachment' : 'inline') . '; filename="' . poukaz_soubor($p) . '"');
+    header('Content-Length: ' . strlen($pdf));
+    header('Cache-Control: private, no-store');
+    echo $pdf;
     exit;
 }

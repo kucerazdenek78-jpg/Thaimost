@@ -109,6 +109,11 @@ function stranka_poukaz(array $u): void
             q('UPDATE poukazy SET platnost_do=?, poznamka=?, zakaznik_id=COALESCE(?, zakaznik_id), pro_koho=?, od_koho=?, venovani=? WHERE id=?',
                 [$platnost, trim($_POST['poznamka'] ?? ''), $zid, trim($_POST['pro_koho'] ?? ''), trim($_POST['od_koho'] ?? ''), mb_substr(trim($_POST['venovani'] ?? ''), 0, 200), $id]);
             flash('Uloženo.');
+        } elseif ($akce === 'email') {
+            $komu = trim($_POST['email'] ?? '');
+            if (!poukaz_lze_poslat($p)) flash('Poukaz se dá poslat až po zaplacení (stav Zaplaceno nebo Vydáno).', 'err');
+            elseif (!filter_var($komu, FILTER_VALIDATE_EMAIL)) flash('Zadejte platnou e-mailovou adresu.', 'err');
+            else { [$zprava, $typ] = poukaz_posli_emailem($p, $komu); flash($zprava, $typ); }
         } elseif ($akce === 'cerpani') {
             $c = (int)($_POST['castka'] ?? 0);
             if ($c > 0 && $c <= $p['zustatek']) {
@@ -127,6 +132,22 @@ function stranka_poukaz(array $u): void
     <h1>Poukaz <?= h($p['kod']) ?> <span class="stav p-<?= h($p['stav']) ?>"><?= h(STAVY_POUKAZU[$p['stav']]) ?></span></h1>
     <div class="cols">
       <div>
+        <section class="card">
+          <style><?= poukaz_css() ?></style>
+          <div style="max-width:720px"><?= poukaz_html($p) ?></div>
+          <p>
+            <a class="btn primary" href="/?r=poukaz_tisk&id=<?= $p['id'] ?>" target="_blank">🖨 Tisk poukazu</a>
+            <a class="btn" href="/?r=poukaz_pdf&id=<?= $p['id'] ?>&stahnout=1">⬇ Stáhnout PDF</a>
+          </p>
+          <p class="muted small">Na originální návrh se vyplní Jméno (Pro koho), Procedura (služba, jinak hodnota) a Platnost, dole kód s QR. Co chybí, zůstane prázdné k dopsání tužkou. Údaje „Od koho“ a věnování se na poukaz netisknou, zůstávají jen v kartotéce.</p>
+        </section>
+        <form method="post" class="card">
+          <?= csrf_pole() ?><input type="hidden" name="akce" value="email">
+          <h2>Poslat zákazníkovi e-mailem</h2>
+          <label>E-mail<input type="email" name="email" value="<?= h($p['objednal_email']) ?>" required placeholder="zakaznik@example.cz"></label>
+          <button class="btn primary"<?= poukaz_lze_poslat($p) ? '' : ' disabled' ?>>✉ Poslat poukaz jako PDF</button>
+          <?php if (!poukaz_lze_poslat($p)): ?><p class="muted small">Poslat jde až po zaplacení: nastavte stav Zaplaceno nebo Vydáno.</p><?php endif ?>
+        </form>
         <section class="card">
           <dl>
             <dt>Hodnota</dt><dd><?= kc($p['hodnota']) ?><?= $p['sluzba_text'] ? ' · ' . h($p['sluzba_text']) : '' ?></dd>
@@ -153,7 +174,6 @@ function stranka_poukaz(array $u): void
           <label>Vzkaz / věnování na poukazu<textarea name="venovani" rows="2" maxlength="200"><?= h($p['venovani']) ?></textarea></label>
           <label>Poznámka (interní)<textarea name="poznamka" rows="2"><?= h($p['poznamka']) ?></textarea></label>
           <button class="btn">Uložit</button>
-          <a class="btn" href="/?r=poukaz_tisk&id=<?= $p['id'] ?>" target="_blank">🖨 Tisk poukazu</a>
         </form>
         <section class="card">
           <h2>Pohyby</h2>
@@ -202,4 +222,30 @@ function uplatni_poukaz(array $r, string $kod, int $castka): ?string
     q("UPDATE rezervace SET poukaz_id=?, platba='poukaz', zmeneno=?, zmenil=? WHERE id=?", [$p['id'], nyni(), kdo(), $r['id']]);
     zapis_log('poukaz_uplatneni', "$kod −$castka na #$r[id]");
     return null;
+}
+
+/** Poukaz se zákazníkovi posílá až po zaplacení (dřív by šel uplatnit bez platby). */
+function poukaz_lze_poslat(array $p): bool { return in_array($p['stav'], ['zaplaceno', 'vydano'], true); }
+
+/** Pošle poukaz jako PDF v příloze. Vrací [text hlášky, 'ok'|'err'] podle toho, co se opravdu stalo. */
+function poukaz_posli_emailem(array $p, string $komu): array
+{
+    $t = poukaz_texty($p);
+    $radky = ["Dobrý den,", '', 'v příloze posíláme dárkový poukaz Thajské masáže Most.', '', 'Kód poukazu: ' . $p['kod']];
+    if (!empty($t['jmeno'])) $radky[] = 'Pro: ' . $t['jmeno']['text'];
+    if (!empty($t['procedura'])) $radky[] = 'Poukaz: ' . $t['procedura']['text'];
+    if (!empty($t['platnost'])) $radky[] = 'Platnost: ' . $t['platnost']['text'];
+    array_push($radky, '',
+        'Poukaz si můžete vytisknout. Má rozměr 210 × 100 mm, na papíru A4 zabere horní třetinu a stačí ho vystřihnout.',
+        'Termín masáže si můžete domluvit telefonicky na 778 429 329 nebo na www.thai-most.cz.',
+        'STORNO: objednanou masáž lze zrušit nejpozději 24 hodin předem, jinak propadá bez náhrady.',
+        '', 'Děkujeme a těšíme se na vás.', 'Thajské masáže Most', 'SNP 2654/26, 434 01 Most', 'www.thai-most.cz');
+    $id = posli_email($komu, 'Thai Most – dárkový poukaz ' . $p['kod'], implode("\n", $radky) . "\n",
+        ['nazev' => poukaz_soubor($p), 'mime' => 'application/pdf', 'obsah' => poukaz_pdf($p)]);
+    if ($id === 0) return ['Neplatná e-mailová adresa.', 'err'];
+    zapis_log('poukaz_email', $p['kod'] . ' → ' . $komu);
+    $r = q1('SELECT stav, chyba FROM emaily WHERE id=?', [$id]);
+    if (($r['stav'] ?? '') === 'odeslano') return ["Poukaz $p[kod] odeslán na $komu.", 'ok'];
+    if (($r['stav'] ?? '') === 'chyba') return ['Odeslání se nepovedlo: ' . ($r['chyba'] ?: 'neznámá chyba') . ' E-mail zůstává ve frontě.', 'err'];
+    return ['E-mail je připravený ve frontě, ale neodešel: v config.php zatím není nastavený SMTP.', 'err'];
 }

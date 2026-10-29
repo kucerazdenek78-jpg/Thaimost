@@ -18,7 +18,9 @@ Volné termíny se počítají z otevírací doby (Nastavení) a potvrzených re
 - Razítka = zaplacené masáže + počáteční razítka (stejná logika jako dosud; každá N-tá zdarma, N v Nastavení).
 
 ## Poukazy
-- Poukaz se vede pod kupujícím (podle telefonu). Na kartě poukazu: **Držitel** (komu patří – lze změnit, když ho kupující daruje), **věnováno komu / od koho / vzkaz**, tlačítko **🖨 Tisk poukazu** (A5 na šířku, s QR kódem poukazu).
+- Poukaz se vede pod kupujícím (podle telefonu). Na kartě poukazu: **Držitel** (komu patří – lze změnit, když ho kupující daruje), **věnováno komu / od koho / vzkaz**, náhled poukazu a tlačítka **🖨 Tisk poukazu** (A4, poukaz 210 × 100 mm nahoře, stačí vystřihnout), **⬇ Stáhnout PDF** a **✉ Poslat poukaz jako PDF** (zákazníkovi e-mailem, jen u zaplaceného nebo vydaného poukazu).
+- Vzhled je originální návrh salonu (`app/poukaz/darkovy-poukaz-original.pdf`). Vyplní se **Jméno** (Pro koho), **Procedura** (služba, jinak „Hodnota … Kč“) a **Platnost**; dole je kód poukazu a QR (čte ho skener v horním hledání). Co v kartotéce chybí, zůstane prázdné k dopsání. „Od koho“ a věnování se netisknou, zůstávají jen v kartotéce.
+- E-mail s PDF odejde jen když je v `config.php` nastavený SMTP; jinak se uloží do fronty („Neodeslané e-maily“) a kartotéka to při odeslání napíše.
 - Poukaz jde najít v horním hledání podle kódu nebo jména.
 
 ## Import kontaktů (Google / Android)

@@ -330,13 +330,15 @@ const STAVY_POUKAZU = [
 ];
 
 // ---------- E-maily ----------
-function posli_email(string $komu, string $predmet, string $text, ?array $priloha = null): void
+/** Zařadí e-mail do fronty a (je-li nastaven SMTP) hned ho odešle. Vrací číslo ve frontě, 0 = neplatná adresa. */
+function posli_email(string $komu, string $predmet, string $text, ?array $priloha = null): int
 {
-    if (!filter_var($komu, FILTER_VALIDATE_EMAIL)) return;
+    if (!filter_var($komu, FILTER_VALIDATE_EMAIL)) return 0;
     q('INSERT INTO emaily(komu,predmet,text,priloha_nazev,priloha_mime,priloha_obsah) VALUES(?,?,?,?,?,?)',
         [$komu, $predmet, $text, $priloha['nazev'] ?? '', $priloha['mime'] ?? '', $priloha['obsah'] ?? '']);
     $id = (int)db()->lastInsertId();
     odesli_frontu($id);
+    return $id;
 }
 
 function odesli_frontu(?int $jenId = null): void

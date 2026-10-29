@@ -42,7 +42,7 @@
   <div class="wrap">
     <span class="eyebrow">Pro salon</span>
     <h1 class="h2">Vystavit dárkový poukaz</h1>
-    <p class="lead">Vyplňte údaje, zkontrolujte náhled a dejte „Uložit a vytisknout“. V tisku zvolte „Uložit jako PDF“, pokud poukaz posíláte e-mailem.</p>
+    <p class="lead">Vyplňte údaje, zkontrolujte náhled a dejte „Uložit a vytisknout“. Na originální návrh salonu se vyplní Jméno (Pro), Procedura a Platnost, dole kód s QR. Tiskne se na A4, poukaz zabere horní třetinu. V tisku zvolte „Uložit jako PDF“, pokud poukaz posíláte e-mailem.</p>
 
     <div class="v-wrap">
       <form class="v-form" id="f" novalidate>
@@ -57,9 +57,9 @@
         </div>
         <div class="row2">
           <div class="field"><label for="komu">Pro</label><input id="komu" maxlength="40"></div>
-          <div class="field"><label for="od">Od</label><input id="od" maxlength="40"></div>
+          <div class="field"><label for="od">Od <span class="hint">(jen do evidence)</span></label><input id="od" maxlength="40"></div>
         </div>
-        <div class="field"><label for="ven">Přání</label><textarea id="ven" maxlength="120"></textarea></div>
+        <div class="field"><label for="ven">Přání <span class="hint">(jen do evidence)</span></label><textarea id="ven" maxlength="120"></textarea></div>
         <div class="row2">
           <div class="field"><label for="plat">Platnost do</label><input id="plat" type="date">
             <div class="quick"><button type="button" data-m="3">+3 měs.</button><button type="button" data-m="6">+6 měs.</button><button type="button" data-m="12">+12 měs.</button></div>
@@ -71,13 +71,6 @@
         <div class="row2">
           <div class="field"><label for="obj">Objednatel / č. objednávky</label><input id="obj" placeholder="nepovinné"></div>
           <div class="field"><label for="zapl">Zaplaceno</label><select id="zapl"><option>hotově</option><option>kartou</option><option>převodem</option><option>nezaplaceno</option></select></div>
-        </div>
-        <div class="field"><label>Motiv</label>
-          <div class="motivy" id="motivy">
-            <button type="button" class="on" data-m="teak" style="background:#2b1e16"></button>
-            <button type="button" data-m="jade" style="background:#2f5446"></button>
-            <button type="button" data-m="rose" style="background:#b98a76"></button>
-          </div>
         </div>
         <div class="err" id="err"></div>
         <button class="btn btn-dark" type="submit" style="width:100%;margin-top:8px">Uložit a vytisknout</button>

@@ -4,7 +4,7 @@
   const load = () => { try { return JSON.parse(localStorage.getItem(KEY)) || []; } catch { return []; } };
   const save = l => { try { localStorage.setItem(KEY, JSON.stringify(l)); } catch { alert("Evidenci se nepodařilo uložit (prohlížeč blokuje úložiště)."); } };
 
-  const st = { typ: "hodnota", motiv: "teak" };
+  const st = { typ: "hodnota" };
   const ABC = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
   function novyKod() {
     const used = new Set(load().map(p => p.kod));
@@ -29,14 +29,14 @@
       typ: st.typ, hodnota: +$("#hodnota").value || 0,
       sluzba: s.nazev, varianta: c[0], cena: st.typ === "sluzba" ? c[1] : (+$("#hodnota").value || 0),
       komu: $("#komu").value.trim(), od: $("#od").value.trim(), venovani: $("#ven").value.trim(),
-      motiv: st.motiv, kod: $("#kod").value, platnostIso: $("#plat").value, platnost: czDate($("#plat").value),
+      motiv: "original", kod: $("#kod").value, platnostIso: $("#plat").value, platnost: czDate($("#plat").value),
       objednatel: $("#obj").value.trim(), zaplaceno: $("#zapl").value
     };
   }
   const update = () => {
     $("#bH").style.display = st.typ === "hodnota" ? "" : "none";
     $("#bS").style.display = st.typ === "sluzba" ? "" : "none";
-    $("#tisk").innerHTML = V.render(data());
+    V.mount($("#tisk"), data());
   };
 
   document.querySelectorAll('input[name="typ"]').forEach(r => r.addEventListener("change", () => { st.typ = r.value; update(); }));
@@ -47,10 +47,6 @@
     $("#plat").value = d.toISOString().slice(0, 10); update();
   }));
   $("#novy").addEventListener("click", () => { novyKod(); update(); });
-  $("#motivy").addEventListener("click", e => {
-    const b = e.target.closest("button"); if (!b) return;
-    st.motiv = b.dataset.m; document.querySelectorAll("#motivy button").forEach(x => x.classList.toggle("on", x === b)); update();
-  });
 
   function check() {
     const d = data(), ch = [];
@@ -96,7 +92,7 @@
     if (b.dataset.a === "use") { if (!confirm(`Označit poukaz ${p.kod} jako uplatněný?`)) return; p.stav = "uplatnen"; p.uplatnen = new Date().toLocaleDateString("cs-CZ"); }
     if (b.dataset.a === "undo") { p.stav = "platny"; delete p.uplatnen; }
     if (b.dataset.a === "del") { if (!confirm(`Smazat poukaz ${p.kod} z evidence?`)) return; l.splice(l.indexOf(p), 1); }
-    if (b.dataset.a === "print") { $("#tisk").innerHTML = V.render(p); window.print(); setTimeout(update, 500); return; }
+    if (b.dataset.a === "print") { V.mount($("#tisk"), p); window.print(); setTimeout(update, 500); return; }
     save(l); renderTab();
   });
 

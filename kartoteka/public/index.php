@@ -23,6 +23,7 @@ if ($cesta !== '/') { http_response_code(404); exit('Nenalezeno'); }
 require $root . '/app/layout.php';
 require $root . '/app/stranky.php';
 require $root . '/app/plan.php';
+require $root . '/app/poukaz_pdf.php';
 require $root . '/app/prehled.php';
 
 // Spouštěč vzorových dat přes soubor (když nejde terminál kontejneru): nahrát do data/ prázdný soubor
@@ -84,7 +85,7 @@ $stranky = [
     'masterny' => 'stranka_masterny', 'odmena' => 'stranka_odmena',
     'tym' => 'stranka_maserky', 'maserky' => 'stranka_maserky', 'maserka' => 'stranka_maserka', 'recepcni' => 'stranka_recepcni', 'uzivatele' => 'stranka_recepcni', 'smeny' => 'stranka_smeny',
     'hledej_zak' => 'stranka_hledej_zak', 'karty' => 'stranka_karty', 'karty_tisk' => 'stranka_karty_tisk',
-    'volno' => 'stranka_volno', 'den_obs' => 'stranka_den_obs', 'poplach' => 'stranka_poplach', 'dostupnost' => 'stranka_dostupnost', 'import' => 'stranka_import', 'poukaz_tisk' => 'stranka_poukaz_tisk',
+    'volno' => 'stranka_volno', 'den_obs' => 'stranka_den_obs', 'poplach' => 'stranka_poplach', 'dostupnost' => 'stranka_dostupnost', 'import' => 'stranka_import', 'poukaz_tisk' => 'stranka_poukaz_tisk', 'poukaz_pdf' => 'stranka_poukaz_pdf',
     'ai' => 'stranka_ai', 'ai_pravidla' => 'stranka_ai_pravidla', 'ai_log' => 'stranka_ai_log',
 ];
 if (!isset($stranky[$r])) { http_response_code(404); $r = 'dnes'; }

@@ -1,15 +1,8 @@
-/* Sdílené vykreslení dárkového poukazu (web i stránka pro salon) */
+/* Sdílené vykreslení dárkového poukazu (web i stránka pro salon).
+   Podklad je originální návrh salonu (assets/img/poukaz-pozadi.jpg, z PDF „Thai – Dárkový poukaz“); do prázdných políček
+   Jméno / Procedura / Platnost se doplní text, dole kód a QR. Rozměry jsou stejné jako v kartotéce
+   (kartoteka/app/poukaz_pdf.php), polohy v bodech originálního PDF (595,276 × 283,465 pt). */
 (function () {
-  const LOTUS = `<svg viewBox="0 0 120 80" aria-hidden="true" class="v-lotus">
-    <g fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round">
-      <path d="M60 70 C52 52 52 30 60 10 C68 30 68 52 60 70Z"/>
-      <path d="M60 70 C46 60 36 44 34 26 C48 32 58 48 60 70Z"/>
-      <path d="M60 70 C74 60 84 44 86 26 C72 32 62 48 60 70Z"/>
-      <path d="M60 70 C40 68 22 58 12 42 C30 42 48 52 60 70Z"/>
-      <path d="M60 70 C80 68 98 58 108 42 C90 42 72 52 60 70Z"/>
-      <path d="M30 74 Q60 80 90 74"/>
-    </g></svg>`;
-
   const kc = n => Number(n).toLocaleString("cs-CZ") + " Kč";
   const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 
@@ -19,33 +12,57 @@
     return q.createSvgTag({ cellSize: Math.max(2, Math.floor(size / q.getModuleCount())), margin: 0, scalable: true });
   }
 
-  /* d = {typ:'hodnota'|'sluzba', hodnota, sluzba, varianta, komu, od, venovani, motiv, kod, platnost} */
+  const W = 595.276, H = 283.465;
+  const POLE = { jmeno: [25.4, 169.9], procedura: [184.3, 329.3], platnost: [343.7, 488.2] };
+  const ZAKLADNI_LINKA = 235.0, VELIKOST = 11, VELIKOST_MIN = 6.5, ODSAZENI = 5.5;
+  const KOD = { right: 518.0, top: 188.7, size: 6.8 };      // bílý kód na zeleném pruhu
+  const QR = { x: 214.0, y: 147.0, size: 33.0 };            // QR v béžovém panelu vpravo od „MOST“
+  // řádek s line-height:1 má základní linku 0,793 výšky písma pod horním okrajem (metriky Gelasio: ascent 1900, descent 700, 2048 j./em)
+  const NAD_LINKOU = 0.793;
+
+  const pct = (v, z) => (v / z * 100).toFixed(3) + "%";
+  const cq = pt => (pt / W * 100).toFixed(3) + "cqw";
+
+  /* d = {typ:'hodnota'|'sluzba', hodnota, sluzba, varianta, komu, kod, platnost} */
+  function texty(d) {
+    const procedura = d.typ === "sluzba" && d.sluzba
+      ? d.sluzba + (d.varianta ? " (" + d.varianta + ")" : "")
+      : (+d.hodnota > 0 ? "Hodnota " + kc(d.hodnota) : "");
+    return { jmeno: (d.komu || "").trim(), procedura, platnost: d.platnost ? "do " + d.platnost : "" };
+  }
+
   function render(d) {
-    const hlavni = d.typ === "sluzba" && d.sluzba
-      ? `<div class="v-what">${esc(d.sluzba)}</div><div class="v-sub">${esc(d.varianta || "")}</div>`
-      : `<div class="v-value">${d.hodnota ? kc(d.hodnota) : "— Kč"}</div><div class="v-sub">na libovolnou masáž nebo wellness</div>`;
-    const qr = d.kod ? qrSvg(d.kod, 72) : "";
-    return `<div class="voucher motiv-${esc(d.motiv || "teak")}">
-      <div class="v-frame"></div>
-      <div class="v-left">
-        <div class="v-brand">${LOTUS}<span>Thai Most</span></div>
-        <div class="v-title">Dárkový poukaz</div>
-        ${hlavni}
-      </div>
-      <div class="v-right">
-        <div class="v-row"><span>Pro</span><b>${esc(d.komu) || "&nbsp;"}</b></div>
-        <div class="v-row"><span>Od</span><b>${esc(d.od) || "&nbsp;"}</b></div>
-        ${d.venovani ? `<p class="v-msg">„${esc(d.venovani)}“</p>` : `<p class="v-msg v-empty"></p>`}
-        <div class="v-foot">
-          <div>
-            ${d.kod ? `<div class="v-code">${esc(d.kod)}</div>` : `<div class="v-code v-muted">kód doplní salon</div>`}
-            ${d.platnost ? `<div class="v-valid">Platnost do ${esc(d.platnost)}</div>` : ""}
-            <div class="v-contact">Objednání: +420 778 429 329 · SNP 2654/26, Most</div>
-          </div>
-          ${qr ? `<div class="v-qr">${qr}</div>` : ""}
-        </div>
-      </div>
-    </div>`;
+    const t = texty(d);
+    let h = `<div class="pk"><img src="assets/img/poukaz-pozadi.jpg" alt="Dárkový poukaz Thajské masáže Most">`;
+    for (const k of Object.keys(POLE)) {
+      if (!t[k]) continue;
+      const [x0, x1] = POLE[k], max = x1 - x0 - 2 * ODSAZENI;
+      h += `<span class="pk-t" data-max="${max}" style="left:${pct(x0 + ODSAZENI, W)};top:${pct(ZAKLADNI_LINKA - NAD_LINKOU * VELIKOST, H)};font-size:${cq(VELIKOST)};max-width:${pct(max, W)}">${esc(t[k])}</span>`;
+    }
+    if (d.kod) {
+      h += `<span class="pk-k" style="right:${pct(W - KOD.right, W)};top:${pct(KOD.top - NAD_LINKOU * KOD.size, H)};font-size:${cq(KOD.size)}">KÓD&nbsp; ${esc(d.kod)}</span>`;
+      const qr = qrSvg(d.kod, 120);
+      if (qr) h += `<div class="pk-qr" style="left:${pct(QR.x, W)};top:${pct(QR.y, H)};width:${pct(QR.size, W)};padding:${pct(2, W)}">${qr}</div>`;
+    }
+    return h + `</div>`;
+  }
+
+  /* Zmenší písmo v políčku tak, aby se text vešel (stejně jako v PDF), nejmíň na 6,5 pt; pak ho zkrátí třemi tečkami. */
+  function fit(root) {
+    root.querySelectorAll(".pk-t").forEach(el => {
+      const pk = el.parentElement, max = +el.dataset.max / W * pk.clientWidth;
+      let v = VELIKOST;
+      el.style.fontSize = cq(v);
+      while (v > VELIKOST_MIN && el.scrollWidth > max + 0.5) { v -= 0.25; el.style.fontSize = cq(v); }
+    });
+  }
+
+  /* Vloží poukaz do prvku a po načtení písma ho přizpůsobí (měření šířky textu potřebuje hotové písmo). */
+  function mount(el, d) {
+    el.innerHTML = render(d);
+    fit(el);
+    if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => { if (el.isConnected) fit(el); });
+    if (window.ResizeObserver && !el._pkRO) { el._pkRO = new ResizeObserver(() => fit(el)); el._pkRO.observe(el); }
   }
 
   /* QR Platba (formát SPD 1.0 – standard České bankovní asociace) */
@@ -67,5 +84,5 @@
     return "CZ" + String(98 - r).padStart(2, "0") + bban;
   }
 
-  window.Voucher = { render, qrSvg, spd, kc, esc, ibanZUctu };
+  window.Voucher = { render, mount, fit, qrSvg, spd, kc, esc, ibanZUctu };
 })();
