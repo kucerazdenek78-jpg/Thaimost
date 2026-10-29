@@ -29,10 +29,56 @@ const POUKAZ_KOD = [518.0, 188.7, 6.8];
 
 function poukaz_dir(): string { return __DIR__ . '/poukaz'; }
 
+/**
+ * Podklady poukazu jsou binární soubory (PDF šablona, písmo, obrázek). Nasazují se spolu s kódem, ale na NAS je nelze
+ * nahrát přes textové rozhraní, proto je kartotéka při prvním použití poukazu sama stáhne z GitHubu. Stahuje se pevný commit
+ * (adresa se nemění) a každý soubor se před uložením ověří podle SHA-256, takže nelze podstrčit jiný obsah.
+ * Soubory, které už na disku jsou, se nestahují. Při změně podkladů se tady změní commit a součty.
+ */
+const POUKAZ_ZDROJ = 'https://raw.githubusercontent.com/kucerazdenek78-jpg/thaimost/07a37223774302d23cad3f37d12396279f627ce7/kartoteka/';
+const POUKAZ_PODKLADY = [   // cesta v kartotéce => SHA-256
+    'app/poukaz/sablona.pdf' => '3cca0433bba07b83f97a5e76f325769d2a2a2512da78c9e3f7238c917c4207c5',
+    'app/poukaz/pismo.ttf' => '795ff699ad2fdcfa5ce3585f35e0e8938b739d2cb30ae55961aeccd7fe514a19',
+    'app/poukaz/pismo.json' => '5cf0f3b764a94b785a314744988e60a4f7a971dffb2c1a74411100cde768bbbb',
+    'app/poukaz/darkovy-poukaz-original.pdf' => '2379a9a63d8d6f0dd0116bc4fecaccedf010f657e78d82d6aa531cf441abff6c',
+    'public/poukaz-pozadi.jpg' => '0ad6943bfd6834cc3bdca949f16c3c1d1fad0de53447c1164dd57bf59b437ec1',
+];
+
+/** Zajistí, že všechny podklady poukazu jsou na disku; chybějící stáhne a ověří. Při neúspěchu vyhodí výjimku s návodem. */
+function poukaz_podklady(): void
+{
+    static $hotovo = false;
+    if ($hotovo) return;
+    $koren = dirname(__DIR__);
+    foreach (POUKAZ_PODKLADY as $cesta => $hash) {
+        $f = "$koren/$cesta";
+        if (is_file($f)) continue;
+        $url = POUKAZ_ZDROJ . $cesta;
+        $data = false;
+        if (function_exists('curl_init')) {
+            $c = curl_init($url);
+            curl_setopt_array($c, [CURLOPT_RETURNTRANSFER => true, CURLOPT_FOLLOWLOCATION => true, CURLOPT_CONNECTTIMEOUT => 10, CURLOPT_TIMEOUT => 40, CURLOPT_USERAGENT => 'kartoteka-thaimost']);
+            $data = curl_exec($c);
+            if (curl_getinfo($c, CURLINFO_RESPONSE_CODE) !== 200) $data = false;
+            curl_close($c);
+        } elseif (ini_get('allow_url_fopen')) {
+            $data = @file_get_contents($url, false, stream_context_create(['http' => ['timeout' => 40, 'user_agent' => 'kartoteka-thaimost']]));
+        }
+        $ruka = "Nahrajte ho ručně do složky kartotéky na NAS (je v repozitáři kucerazdenek78-jpg/thaimost jako kartoteka/$cesta).";
+        if (!is_string($data) || $data === '') throw new RuntimeException("Podklad poukazu $cesta chybí a nepodařilo se ho stáhnout z GitHubu. $ruka");
+        if (!hash_equals($hash, hash('sha256', $data))) throw new RuntimeException("Podklad poukazu $cesta se stáhl poškozený (nesedí kontrolní součet). $ruka");
+        if (!is_dir(dirname($f)) && !@mkdir(dirname($f), 0775, true)) throw new RuntimeException("Nejde vytvořit složku pro $cesta. $ruka");
+        $tmp = $f . '.tmp' . getmypid();
+        if (@file_put_contents($tmp, $data) !== strlen($data) || !@rename($tmp, $f)) { @unlink($tmp); throw new RuntimeException("Podklad poukazu $cesta se nepodařilo uložit na disk. $ruka"); }
+    }
+    $hotovo = true;
+}
+
 /** Metriky písma (mapa Unicode → glyf, šířky, rozměry). */
 function poukaz_pismo(): array
 {
     static $m = null;
+    poukaz_podklady();
     return $m ??= json_decode((string)file_get_contents(poukaz_dir() . '/pismo.json'), true, 512, JSON_THROW_ON_ERROR);
 }
 
@@ -148,6 +194,7 @@ function poukaz_vrstva(array $p): string
 /** Hotové PDF poukazu (řetězec bajtů). */
 function poukaz_pdf(array $p): string
 {
+    poukaz_podklady();
     $sab = (string)file_get_contents(poukaz_dir() . '/sablona.pdf');
     if (!preg_match('~startxref\s+(\d+)\s+%%EOF\s*$~', $sab, $m)) throw new RuntimeException('Šablona poukazu je poškozená (startxref).');
     $prev = (int)$m[1];
@@ -281,6 +328,7 @@ function poukaz_html(array $p): string
 /** Styl pro poukaz_html(); písmo se vkládá přímo do stránky, aby nebylo třeba další soubor. */
 function poukaz_css(): string
 {
+    poukaz_podklady();
     $font = base64_encode((string)file_get_contents(poukaz_dir() . '/pismo.ttf'));
     [$r, $g, $b] = POUKAZ_BARVA_TEXTU;
     $barva = sprintf('#%02x%02x%02x', (int)round($r * 255), (int)round($g * 255), (int)round($b * 255));
@@ -292,4 +340,14 @@ function poukaz_css(): string
         . ".pk-t{color:$barva}"
         . ".pk-k{color:#fff;letter-spacing:.04em}"
         . ".pk-qr{position:absolute;aspect-ratio:1;height:auto}";
+}
+
+/** Náhled pro kartu poukazu: styl + poukaz, a když se podklady nepovedlo zajistit, srozumitelné upozornění místo pádu stránky. */
+function poukaz_nahled(array $p): string
+{
+    try {
+        return '<style>' . poukaz_css() . '</style><div style="max-width:720px">' . poukaz_html($p) . '</div>';
+    } catch (Throwable $e) {
+        return '<p class="muted">Náhled poukazu není k dispozici: ' . htmlspecialchars($e->getMessage(), ENT_QUOTES, 'UTF-8') . '</p>';
+    }
 }

@@ -133,8 +133,7 @@ function stranka_poukaz(array $u): void
     <div class="cols">
       <div>
         <section class="card">
-          <style><?= poukaz_css() ?></style>
-          <div style="max-width:720px"><?= poukaz_html($p) ?></div>
+          <?= poukaz_nahled($p) ?>
           <p>
             <a class="btn primary" href="/?r=poukaz_tisk&id=<?= $p['id'] ?>" target="_blank">🖨 Tisk poukazu</a>
             <a class="btn" href="/?r=poukaz_pdf&id=<?= $p['id'] ?>&stahnout=1">⬇ Stáhnout PDF</a>
@@ -230,7 +229,7 @@ function poukaz_lze_poslat(array $p): bool { return in_array($p['stav'], ['zapla
 /** Pošle poukaz jako PDF v příloze. Vrací [text hlášky, 'ok'|'err'] podle toho, co se opravdu stalo. */
 function poukaz_posli_emailem(array $p, string $komu): array
 {
-    $t = poukaz_texty($p);
+    try { $t = poukaz_texty($p); } catch (Throwable $e) { return ['Poukaz se nepodařilo připravit: ' . $e->getMessage(), 'err']; }
     $radky = ["Dobrý den,", '', 'v příloze posíláme dárkový poukaz Thajské masáže Most.', '', 'Kód poukazu: ' . $p['kod']];
     if (!empty($t['jmeno'])) $radky[] = 'Pro: ' . $t['jmeno']['text'];
     if (!empty($t['procedura'])) $radky[] = 'Poukaz: ' . $t['procedura']['text'];
@@ -240,8 +239,9 @@ function poukaz_posli_emailem(array $p, string $komu): array
         'Termín masáže si můžete domluvit telefonicky na 778 429 329 nebo na www.thai-most.cz.',
         'STORNO: objednanou masáž lze zrušit nejpozději 24 hodin předem, jinak propadá bez náhrady.',
         '', 'Děkujeme a těšíme se na vás.', 'Thajské masáže Most', 'SNP 2654/26, 434 01 Most', 'www.thai-most.cz');
+    try { $pdf = poukaz_pdf($p); } catch (Throwable $e) { return ['PDF poukazu se nepodařilo vytvořit: ' . $e->getMessage(), 'err']; }
     $id = posli_email($komu, 'Thai Most – dárkový poukaz ' . $p['kod'], implode("\n", $radky) . "\n",
-        ['nazev' => poukaz_soubor($p), 'mime' => 'application/pdf', 'obsah' => poukaz_pdf($p)]);
+        ['nazev' => poukaz_soubor($p), 'mime' => 'application/pdf', 'obsah' => $pdf]);
     if ($id === 0) return ['Neplatná e-mailová adresa.', 'err'];
     zapis_log('poukaz_email', $p['kod'] . ' → ' . $komu);
     $r = q1('SELECT stav, chyba FROM emaily WHERE id=?', [$id]);

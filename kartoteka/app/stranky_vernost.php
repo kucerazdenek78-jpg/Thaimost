@@ -417,8 +417,9 @@ function stranka_poukaz_tisk(array $u): void
 {
     $p = q1('SELECT * FROM poukazy WHERE id=?', [(int)($_GET['id'] ?? 0)]);
     if (!$p) { http_response_code(404); exit('Poukaz nenalezen.'); }
+    try { $css = poukaz_css(); $poukaz = poukaz_html($p); } catch (Throwable $e) { http_response_code(500); exit('Poukaz se nepodařilo připravit: ' . h($e->getMessage())); }
     ?><!doctype html><html lang="cs"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Poukaz <?= h($p['kod']) ?></title>
-<style><?= poukaz_css() ?>
+<style><?= $css ?>
 @page{size:A4 portrait;margin:0}
 body{margin:0;background:#eee;font:16px/1.4 system-ui,sans-serif;color:#3b2a18}
 .top{padding:14px;text-align:center}.top .btn{display:inline-block;margin:4px;padding:14px 22px;border:0;border-radius:10px;background:#a63f13;color:#fff;font:inherit;font-weight:600;text-decoration:none;cursor:pointer}
@@ -432,7 +433,7 @@ body{margin:0;background:#eee;font:16px/1.4 system-ui,sans-serif;color:#3b2a18}
   <a class="btn sv" href="/?r=poukaz&amp;id=<?= (int)$p['id'] ?>">← Zpět na poukaz</a>
   <p>Tiskne se na A4 bez záhlaví a zápatí. Poukaz má 210 × 100 mm, na papíru zabere horní třetinu a stačí ho vystřihnout.</p>
 </div>
-<div class="pk-list"><?= poukaz_html($p) ?></div>
+<div class="pk-list"><?= $poukaz ?></div>
 </body></html><?php
     exit;
 }
@@ -442,7 +443,7 @@ function stranka_poukaz_pdf(array $u): void
 {
     $p = q1('SELECT * FROM poukazy WHERE id=?', [(int)($_GET['id'] ?? 0)]);
     if (!$p) { http_response_code(404); exit('Poukaz nenalezen.'); }
-    $pdf = poukaz_pdf($p);
+    try { $pdf = poukaz_pdf($p); } catch (Throwable $e) { http_response_code(500); exit('PDF poukazu se nepodařilo vytvořit: ' . h($e->getMessage())); }
     header('Content-Type: application/pdf');
     header('Content-Disposition: ' . (isset($_GET['stahnout']) ? 'attachment' : 'inline') . '; filename="' . poukaz_soubor($p) . '"');
     header('Content-Length: ' . strlen($pdf));
