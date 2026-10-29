@@ -11,7 +11,6 @@ declare(strict_types=1);
  *    a QR a nový objekt stránky; původní návrh se tím nijak nemění,
  *  - totéž (text + QR) umí poukaz_html() pro tisk z prohlížeče a e-mail zákazníkovi dostane PDF jako přílohu.
  */
-require_once __DIR__ . '/qrcode.php';
 
 const POUKAZ_SIRKA = 595.276;                 // šířka stránky v bodech (210 mm)
 const POUKAZ_VYSKA = 283.465;                 // výška stránky v bodech (100 mm)
@@ -30,9 +29,9 @@ const POUKAZ_KOD = [518.0, 188.7, 6.8];
 function poukaz_dir(): string { return __DIR__ . '/poukaz'; }
 
 /**
- * Podklady poukazu jsou binární soubory (PDF šablona, písmo, obrázek). Nasazují se spolu s kódem, ale na NAS je nelze
- * nahrát přes textové rozhraní, proto je kartotéka při prvním použití poukazu sama stáhne z GitHubu. Stahuje se pevný commit
- * (adresa se nemění) a každý soubor se před uložením ověří podle SHA-256, takže nelze podstrčit jiný obsah.
+ * Podklady poukazu (PDF šablona, písmo, obrázek) a knihovna pro QR kód (app/qrcode.php) se nasazují spolu s kódem, ale na NAS
+ * je nelze nahrát přes textové rozhraní, proto je kartotéka při prvním použití poukazu sama stáhne z GitHubu. Stahuje se pevný
+ * commit (adresa se nemění) a každý soubor se před uložením ověří podle SHA-256, takže nelze podstrčit jiný obsah.
  * Soubory, které už na disku jsou, se nestahují. Při změně podkladů se tady změní commit a součty.
  */
 const POUKAZ_ZDROJ = 'https://raw.githubusercontent.com/kucerazdenek78-jpg/thaimost/07a37223774302d23cad3f37d12396279f627ce7/kartoteka/';
@@ -42,6 +41,7 @@ const POUKAZ_PODKLADY = [   // cesta v kartotéce => SHA-256
     'app/poukaz/pismo.json' => '5cf0f3b764a94b785a314744988e60a4f7a971dffb2c1a74411100cde768bbbb',
     'app/poukaz/darkovy-poukaz-original.pdf' => '2379a9a63d8d6f0dd0116bc4fecaccedf010f657e78d82d6aa531cf441abff6c',
     'public/poukaz-pozadi.jpg' => '0ad6943bfd6834cc3bdca949f16c3c1d1fad0de53447c1164dd57bf59b437ec1',
+    'app/qrcode.php' => '839337a00e1ab8be1916ab20702d724aa41cdd7991dd7fc8187ffbc602998b4e',   // knihovna QR (MIT)
 ];
 
 /** Zajistí, že všechny podklady poukazu jsou na disku; chybějící stáhne a ověří. Při neúspěchu vyhodí výjimku s návodem. */
@@ -132,6 +132,8 @@ function poukaz_texty(array $p): array
 /** Matice QR kódu (pole řádků po bitech) pro kód poukazu. */
 function poukaz_qr(string $kod): array
 {
+    poukaz_podklady();
+    require_once __DIR__ . '/qrcode.php';
     $qr = new QRCode();
     $qr->setErrorCorrectLevel(QR_ERROR_CORRECT_LEVEL_M);
     $qr->addData($kod);
