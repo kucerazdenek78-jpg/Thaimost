@@ -7,13 +7,16 @@ Web na GitHub Pages posílá žádosti o termín a objednávky poukazů na `/api
 ## AI asistent
 Plovoucí ikona **🤖** vpravo dole na každé stránce (hlasem i psaním): recepce se ptá česky, asistent (Claude API) dohledá data a navrhne termíny; rezervaci vždy ukládá recepce. Zapnutí a pravidla: `docs/ai-asistent.md`.
 
+## Zákazníci v telefonu
+**Správa → Google kontakty** zapisuje zákazníky (se značkami ⭐ stálý, 🎁 poukaz, 🎉 masáž zdarma, masérka…) do Google kontaktů, takže telefon při hovoru ukáže, kdo volá. Postup a pravidla: `docs/zakaznici-karty.md` (kapitola „Zákazníci v telefonu“).
+
 ## Technika
 PHP 8.3 + SQLite, bez frameworku a bez závislostí. Schéma se vytvoří samo při prvním spuštění (`app/db.php`), ceník se naplní z `app/seed-sluzby.json` (vygenerováno z `assets/js/data.js` webu).
 
 ```
 kartoteka/
   public/      index.php (vstup), router.php, style.css
-  app/         lib.php (pomocné), db.php (schéma), api.php (web), layout.php, stranky*.php, smtp.php
+  app/         lib.php (pomocné), db.php (schéma), api.php (web), layout.php, stranky*.php, smtp.php, google_kontakty.php (Google kontakty)
   bin/         uzivatel.php – založení uživatele
   data/        kartoteka.sqlite + session (NEcommituje se – zálohovat!)
   config.php   z config.example.php (NEcommituje se)

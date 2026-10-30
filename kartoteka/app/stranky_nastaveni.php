@@ -48,6 +48,13 @@ function stranka_nastaveni(array $u): void
     hlavicka('Nastavení', 'nastaveni'); ?>
     <h1>Nastavení</h1>
     <?php aplikace_karta(); ?>
+    <?php if (je_admin($u)): ?>
+    <section class="card"><h2>📇 Zákazníci v telefonu (Google kontakty)</h2>
+      <p style="margin-top:0">Zákazníci z kartotéky se sami objeví v kontaktech telefonu i se značkami (⭐ stálý, 🎁 poukaz, 🎉 masáž zdarma, oblíbená masérka), takže při hovoru hned víte, kdo volá.
+        <?php $gkp = gk_pripojeno(); ?><?= $gkp ? '<span class="tag zdarma">✅ Google účet připojený</span>' : '<span class="tag">zatím nepřipojeno</span>' ?></p>
+      <a class="btn primary" href="/?r=google">Nastavit Google kontakty</a>
+    </section>
+    <?php endif ?>
     <div class="cols">
       <div>
         <form method="post" class="card">

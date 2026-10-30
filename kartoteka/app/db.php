@@ -26,7 +26,7 @@ function q(string $sql, array $p = []): PDOStatement
 function q1(string $sql, array $p = []): ?array { $r = q($sql, $p)->fetch(); return $r ?: null; }
 function qv(string $sql, array $p = []) { $r = q($sql, $p)->fetchColumn(); return $r === false ? null : $r; }
 
-const DB_VERZE = 12;
+const DB_VERZE = 13;
 
 /** Migrace běží v jedné transakci a po získání zámku se verze ověří znovu (souběžné první požadavky). */
 function migrate(PDO $pdo): void
@@ -47,6 +47,7 @@ function migrate(PDO $pdo): void
         if ($ver < 10) migrate_v10($pdo);
         if ($ver < 11) migrate_v11($pdo);
         if ($ver < 12) migrate_v12($pdo);
+        if ($ver < 13) migrate_v13($pdo);
         $pdo->exec('PRAGMA user_version = ' . DB_VERZE);
         $pdo->exec('COMMIT');
     } catch (Throwable $e) {
@@ -161,6 +162,24 @@ function migrate_v1(PDO $pdo): void
     $sm = $pdo->prepare('INSERT INTO maserky(jmeno,poradi,barva) VALUES(?,?,?)');
     $barvy = ['#b07a3a', '#5b8a72', '#7a5ea8', '#c0605a', '#3f7fae'];
     for ($i = 1; $i <= 5; $i++) $sm->execute(["Masérka $i", $i, $barvy[$i - 1]]);
+}
+
+/**
+ * v13: Google kontakty (zákazníci v telefonu). google_nast = nastavení a přihlašovací údaje k Googlu (odděleně od „nastaveni“,
+ * aby se tajné údaje nikdy nedostaly do běžných výpisů); google_kontakty = vazba zákazník ↔ kontakt v Google účtu
+ * (bez cizího klíče: smazaný zákazník nechá vazbu jako „sirotka“, ať je vidět, že kontakt v Googlu zůstal).
+ */
+function migrate_v13(PDO $pdo): void
+{
+    $pdo->exec(<<<SQL
+    CREATE TABLE google_nast (klic TEXT PRIMARY KEY, hodnota TEXT NOT NULL);
+    CREATE TABLE google_kontakty (
+        zakaznik_id INTEGER PRIMARY KEY, resource_name TEXT NOT NULL, etag TEXT NOT NULL DEFAULT '',
+        hash TEXT NOT NULL DEFAULT '', telefon TEXT NOT NULL DEFAULT '', jmeno TEXT NOT NULL DEFAULT '',
+        synchronizovano TEXT NOT NULL DEFAULT (datetime('now','localtime'))
+    );
+    CREATE UNIQUE INDEX google_kontakty_res ON google_kontakty(resource_name);
+    SQL);
 }
 
 /** v12: pevně přiřazená masérna u rezervace (klíč masérny; prázdné = zatím jen návrh). Mění se přetažením na obrazovce Masérny. */

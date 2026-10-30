@@ -26,3 +26,22 @@ Volné termíny se počítají z otevírací doby (Nastavení) a potvrzených re
 ## Import kontaktů (Google / Android)
 Zákazníci → **Import z Google kontaktů**. Nahrajete export kontaktů (Google CSV nebo vCard `.vcf`), uvidíte náhled (nový / už existuje / bez telefonu), vyberete a importujete. Existující zákazníci (stejný telefon) se nepřepisují, jen se doplní prázdné jméno a e-mail; další čísla kontaktu jdou do interní poznámky.
 Export: contacts.google.com → Exportovat → Google CSV; nebo v aplikaci Kontakty na Androidu → Nastavení → Exportovat → soubor .vcf (kontakty uložené jen v telefonu).
+
+## Zákazníci v telefonu (Google kontakty)
+**Správa → Zákazníci v telefonu (Google kontakty)** (jen admin). Kartotéka zapíše zákazníky do Google kontaktů jednoho účtu (např. firemního telefonu salonu), takže při příchozím hovoru telefon ukáže jméno i značky. Používá se Google People API; kontakty se **nikdy nemažou**.
+
+**Co se zapíše**
+- Jméno + značky: ⛔ blokovaný · ⚠️ nespolehlivý · ⭐ stálý · 🆕 nový · 💤 spící · 🎁 platný poukaz · 🎉 nárok na masáž zdarma (razítka) · ⏱ vezme i volný termín; volitelně „· Lenka“ (oblíbená, jinak poslední masérka). Příklad: *Jana Nováková ⭐🎁 · Lenka*.
+- Číslo a krátká poznámka (poslední návštěva, razítka, zůstatek poukazu). Poznámku kartotéka přepisuje jen mezi řádky `▶ Thai Most kartotéka` a `◀ konec zápisu`; váš vlastní text kolem zůstane.
+- Do telefonu **nejde**: zdraví, interní poznámky, preference, e-mail, kód poukazu.
+- Kontakty jsou i ve skupině „Thai Most“.
+
+**Jednorázové nastavení** (návod je i přímo na stránce): v Google Cloud vytvořit projekt, zapnout People API, nastavit OAuth (publikum Externí, oprávnění `…/auth/contacts`, aplikaci **publikovat** – jinak přihlášení po 7 dnech vyprší), vytvořit klienta typu Webová aplikace s adresou přesměrování `https://masage.dvere.app/google-zpet`, zkopírovat ID klienta a tajný klíč na stránku a **Připojit Google účet**. Google ukáže „Aplikace není ověřená“ – je to vaše vlastní aplikace pro jeden účet (Rozšířené → Pokračovat). V telefonu musí být tento účet přidaný se zapnutou synchronizací kontaktů.
+
+**Jak se synchronizuje**
+1. **Náhled změn** nic nezapisuje; ukáže, kdo se založí, komu se změní jméno/značky a kde už v Googlu kontakt se stejným číslem je (předzaškrtnuté jsou jen případy, kdy jde evidentně o stejnou osobu).
+2. **Zapsat vybrané** provede zápis. Cizí kontakty (už existující v Googlu) se přepíšou jen když je výslovně vyberete.
+3. Kontakt, který někdo v Googlu smazal, se sám nevrací; v náhledu se nabídne k obnovení.
+4. Po první ruční synchronizaci jde zapnout **automatika**: při práci v kartotéce (kontrola při běžném dotazu na pozadí, nejvýš jednou za 5 minut) se přidají noví zákazníci a změní značky. Bez změn se Google vůbec nevolá. Automatika nepřepisuje cizí kontakty a nevrací smazané. Při chybě se na půl hodiny odmlčí a administrátorovi se nahoře ukáže upozornění.
+
+**Soukromí:** zákazníci jsou tím uloženi i u Googlu (v účtu salonu) – počítejte s tím v informacích pro zákazníky o zpracování osobních údajů. Přihlašovací údaje (tajný klíč, tokeny) jsou v databázi v samostatné tabulce a na stránkách se nikdy nezobrazují. Odpojení účtu přístup odvolá u Googlu.

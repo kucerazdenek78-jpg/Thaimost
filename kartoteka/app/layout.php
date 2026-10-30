@@ -53,6 +53,7 @@ function hlavicka(string $titul, string $aktivni = ''): void
 <?php endif ?>
 <main>
 <?php if ($u && !je_okno() && function_exists('demo_pocet') && demo_pocet()): ?><div class="flash vzor">🧪 <b>VZOR</b> – v systému jsou vzorová data na zkoušení (<?= demo_pocet() ?> zákazníků se štítkem VZOR). Před ostrým provozem je smažte v <a href="/?r=nastaveni">Nastavení</a>.</div><?php endif ?>
+<?php if ($u && !je_okno() && function_exists('gk_upozorneni') && ($gkv = gk_upozorneni()) !== ''): ?><div class="flash err"><?= $gkv ?></div><?php endif ?>
 <?php foreach (flash() as [$typ, $msg]): ?><div class="flash <?= h($typ) ?>"><?= h($msg) ?></div><?php endforeach ?>
 <?php if ($podmenu && $u && !je_okno()): ?><p class="subnav"><?php foreach ($podmenu as $k => [$href, $t]): ?><a href="<?= $href ?>"<?= $podAkt === $k ? ' class="on"' : '' ?>><?= $t ?></a> <?php endforeach ?></p><?php endif ?>
 <?php

@@ -18,6 +18,9 @@ if (str_starts_with($cesta, '/api/')) {
     catch (Throwable $e) { error_log((string)$e); api_odpoved(['ok' => false, 'chyba' => 'Chyba serveru, zkuste to prosím později nebo zavolejte.'], 500); }
 }
 
+// návrat z přihlášení ke Googlu (Google vyžaduje pevnou adresu bez ?r=…)
+if ($cesta === '/google-zpet') { $cesta = '/'; $_GET['r'] = 'google_zpet'; }
+
 if ($cesta !== '/') { http_response_code(404); exit('Nenalezeno'); }
 
 require $root . '/app/layout.php';
@@ -25,6 +28,7 @@ require $root . '/app/stranky.php';
 require $root . '/app/plan.php';
 require $root . '/app/poukaz_pdf.php';
 require $root . '/app/prehled.php';
+require $root . '/app/google_kontakty.php';
 
 // Spouštěč vzorových dat přes soubor (když nejde terminál kontejneru): nahrát do data/ prázdný soubor
 // „vzor-nahrat“ nebo „vzor-smazat“ (File Station). Při nejbližším načtení stránky se akce provede,
@@ -87,7 +91,9 @@ $stranky = [
     'hledej_zak' => 'stranka_hledej_zak', 'karty' => 'stranka_karty', 'karty_tisk' => 'stranka_karty_tisk',
     'volno' => 'stranka_volno', 'den_obs' => 'stranka_den_obs', 'poplach' => 'stranka_poplach', 'dostupnost' => 'stranka_dostupnost', 'import' => 'stranka_import', 'poukaz_tisk' => 'stranka_poukaz_tisk', 'poukaz_pdf' => 'stranka_poukaz_pdf',
     'ai' => 'stranka_ai', 'ai_pravidla' => 'stranka_ai_pravidla', 'ai_log' => 'stranka_ai_log',
+    'google' => 'stranka_google', 'google_zpet' => 'stranka_google_zpet',
 ];
 if (!isset($stranky[$r])) { http_response_code(404); $r = 'dnes'; }
+if ($r === 'poplach') gk_priprav_tik();   // automatická synchronizace Google kontaktů (po odeslání odpovědi; jen když je zapnutá a je na čase)
 if ($_SERVER['REQUEST_METHOD'] === 'POST') over_csrf();
 $stranky[$r]($u);

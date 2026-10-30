@@ -30,6 +30,10 @@ return [
 
     'casova_zona' => 'Europe/Prague',
 
+    // Google kontakty se nastavují přímo v aplikaci (Správa → Google kontakty), do configu se nic nepíše.
+    // Adresa přesměrování se odvozuje z 'url' výše: <url>/google-zpet
+    // Jen pro automatické testy: 'google_test' => ['auth' => '', 'token' => '', 'revoke' => '', 'api' => ''] přepíše adresy Googlu.
+
     // AI asistent recepce (Claude API). Dokud je api_key prázdný, asistent je vypnutý.
     // Klíč: Claude Console → API keys. Tamtéž nastavte měsíční limit útraty.
     'ai' => [
