@@ -241,3 +241,15 @@ Poznámka: ${$("#pozn").value.trim() || "-"}`;
     });
   });
 })();
+
+/* Zvuk úvodního videa (autoplay jde jen potichu, zvuk zapne návštěvník) */
+(function(){
+  var v=document.getElementById('heroVideo'), b=document.getElementById('heroSound');
+  if(!v||!b) return;
+  b.addEventListener('click',function(){
+    var on=v.muted; v.muted=!on; if(on){v.volume=0.6;}
+    b.setAttribute('aria-pressed',on?'true':'false');
+    b.setAttribute('aria-label',on?'Vypnout zvuk videa':'Zapnout zvuk videa');
+    b.querySelector('span').textContent=on?'Ztišit':'Zvuk';
+  });
+})();

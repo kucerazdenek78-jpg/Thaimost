@@ -23,6 +23,9 @@ Texty a ceny jsou převzaté z původního thaimost.cz (stav 6. 10. 2026).
 - WhatsApp tlačítko (`wa.me/420778429329`) u objednávky a v mobilní liště.
 - Adresy v hlavičce, sitemap a robots už ukazují na `https://www.thaimost.cz/` (připraveno na přesměrování domény).
 
+## Úvodní video
+- `assets/video/thaimost-uvod.mp4` (15 s, 16:9, smyčka, s thajskou hudbou) vyrobené v Magnific (Seedance 2.0 Mini), poster `thaimost-uvod-poster.jpg`. Autoplay běží potichu, zvuk zapne tlačítko „Zvuk“ vpravo dole v úvodu.
+
 ## Co je potřeba doplnit / rozhodnout
 - **Číslo účtu** pro platbu poukazů převodem – v `data.js` → `platba.cislo_uctu`. Dokud je prázdné, nabízí se jen platba v salonu. Po doplnění se zákazníkovi zobrazí QR platba s VS = číslo objednávky.
 - **Platnost poukazů** – na webu se neuvádí (původní web ji neuvádí). V `salon.html` se volí při vystavení.
