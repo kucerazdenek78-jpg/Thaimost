@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="cs"><head><meta charset="utf-8">
+<style>
+@font-face{font-family:CG;font-weight:500;src:url(https://cdn.jsdelivr.net/npm/@fontsource/cormorant-garamond/files/cormorant-garamond-latin-ext-500-normal.woff2),url(https://cdn.jsdelivr.net/npm/@fontsource/cormorant-garamond/files/cormorant-garamond-latin-500-normal.woff2)}
+@font-face{font-family:CG;font-weight:500;font-style:italic;src:url(https://cdn.jsdelivr.net/npm/@fontsource/cormorant-garamond/files/cormorant-garamond-latin-ext-500-italic.woff2),url(https://cdn.jsdelivr.net/npm/@fontsource/cormorant-garamond/files/cormorant-garamond-latin-500-italic.woff2)}
+@font-face{font-family:CG;font-weight:600;src:url(https://cdn.jsdelivr.net/npm/@fontsource/cormorant-garamond/files/cormorant-garamond-latin-ext-600-normal.woff2),url(https://cdn.jsdelivr.net/npm/@fontsource/cormorant-garamond/files/cormorant-garamond-latin-600-normal.woff2)}
+@font-face{font-family:CG;font-weight:700;src:url(https://cdn.jsdelivr.net/npm/@fontsource/cormorant-garamond/files/cormorant-garamond-latin-ext-700-normal.woff2),url(https://cdn.jsdelivr.net/npm/@fontsource/cormorant-garamond/files/cormorant-garamond-latin-700-normal.woff2)}
+@font-face{font-family:MR;font-weight:400;src:url(https://cdn.jsdelivr.net/npm/@fontsource/manrope/files/manrope-latin-ext-400-normal.woff2),url(https://cdn.jsdelivr.net/npm/@fontsource/manrope/files/manrope-latin-400-normal.woff2)}
+@font-face{font-family:MR;font-weight:600;src:url(https://cdn.jsdelivr.net/npm/@fontsource/manrope/files/manrope-latin-ext-600-normal.woff2),url(https://cdn.jsdelivr.net/npm/@fontsource/manrope/files/manrope-latin-600-normal.woff2)}
+@font-face{font-family:MR;font-weight:700;src:url(https://cdn.jsdelivr.net/npm/@fontsource/manrope/files/manrope-latin-ext-700-normal.woff2),url(https://cdn.jsdelivr.net/npm/@fontsource/manrope/files/manrope-latin-700-normal.woff2)}
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{background:#fff}
+/* 1 pt = 1 px here; render at deviceScaleFactor 4 */
+.pk{position:relative;width:595.276px;height:283.465px;overflow:hidden;background:#f8f2e9;font-family:MR,sans-serif;color:#2b1e16}
+.top{position:absolute;left:0;top:0;width:100%;height:140px;background:#2b1e16}
+.photo{position:absolute;left:318px;top:0;width:277.276px;height:140px;background:url(../img/ai/whirlpool.jpg) center/cover}
+.photo::after{content:"";position:absolute;inset:0;background:linear-gradient(90deg,#2b1e16 0%,rgba(43,30,22,.55) 22%,rgba(43,30,22,0) 60%)}
+.logo{position:absolute;left:22px;top:14px;display:flex;align-items:center;gap:7px;color:#e6d0a6}
+.logo svg{width:30px;height:20px}
+.logo b{font-family:CG;font-weight:700;font-size:13px;letter-spacing:.02em;color:#f8f2e9;display:block;line-height:1}
+.logo span{font-family:MR;font-weight:700;font-size:4.6px;letter-spacing:.26em;text-transform:uppercase;color:#c69c5d;display:block;margin-top:2px}
+.title{position:absolute;left:22px;top:48px;font-family:CG;font-weight:500;font-size:31px;line-height:.98;color:#fff;letter-spacing:-.01em}
+.title em{font-style:italic;color:#e6d0a6}
+.sub{position:absolute;left:23px;top:116px;font-size:5.2px;letter-spacing:.22em;text-transform:uppercase;color:#c69c5d;font-weight:700}
+.sub::before{content:"";display:inline-block;width:14px;height:1px;background:#c69c5d;vertical-align:middle;margin-right:6px}
+.lotus{position:absolute;right:14px;top:10px;width:46px;height:30px;opacity:.9}
+/* spodní pás */
+.band{position:absolute;left:0;top:140px;width:100%;height:143.465px;background:#f8f2e9}
+.band::before{content:"";position:absolute;left:0;top:0;width:100%;height:1.6px;background:linear-gradient(90deg,#c69c5d,#e6d0a6 50%,#c69c5d)}
+.info{position:absolute;left:25.4px;top:147px;width:178px;font-family:CG;font-weight:500;font-size:8.2px;line-height:1.2;color:#2b1e16}
+.info b{font-weight:600}
+.qrbox{position:absolute;left:212px;top:145px;width:37px;height:37px;border:1px solid #c69c5d;border-radius:3px;background:#fff}
+.qrl{position:absolute;left:255px;top:149px;font-size:5.2px;color:#7a6a5c;line-height:1.5;width:110px}
+.qrl b{color:#2b1e16;font-weight:700}
+.kontakt{position:absolute;right:25px;top:147px;text-align:right;font-size:5px;line-height:1.5;color:#4a3c31;width:200px}
+.kontakt b{font-family:CG;font-size:8.2px;font-weight:600;color:#2b1e16;display:block;margin-bottom:1px}
+.strip{position:absolute;left:25.4px;top:184px;width:492.6px;height:14px;background:#2b1e16;border-radius:2px}
+.strip span{position:absolute;left:8px;top:0;line-height:14px;font-size:5.2px;letter-spacing:.2em;text-transform:uppercase;color:#c69c5d;font-weight:700}
+.f{position:absolute;top:211px;height:38px;background:#fff;border:1px solid #c69c5d;border-radius:4px}
+.f i{position:absolute;left:5.5px;top:3.5px;font-style:normal;font-size:4.8px;letter-spacing:.2em;text-transform:uppercase;color:#a07f52;font-weight:700}
+.f1{left:25.4px;width:144.5px}.f2{left:184.3px;width:145px}.f3{left:343.7px;width:144.5px}
+.storno{position:absolute;left:25.4px;top:256px;width:544px;font-size:5.3px;line-height:1.5;color:#7a6a5c}
+.storno b{color:#2b1e16;font-weight:700}
+.orn{position:absolute;right:500px;top:210px}
+</style></head><body>
+<div class="pk">
+  <div class="top"></div>
+  <div class="photo"></div>
+  <div class="logo">
+    <svg viewBox="6 6 108 70" fill="none" stroke="#c69c5d" stroke-width="5" stroke-linejoin="round" stroke-linecap="round"><path d="M60 70 C52 52 52 30 60 10 C68 30 68 52 60 70Z"/><path d="M60 70 C46 60 36 44 34 26 C48 32 58 48 60 70Z"/><path d="M60 70 C74 60 84 44 86 26 C72 32 62 48 60 70Z"/><path d="M60 70 C40 68 22 58 12 42 C30 42 48 52 60 70Z"/><path d="M60 70 C80 68 98 58 108 42 C90 42 72 52 60 70Z"/></svg>
+    <div><b>Thai Most</b><span>Thajské masáže Most</span></div>
+  </div>
+  <div class="title">Dárkový<br><em>poukaz</em></div>
+  <div class="sub">Od roku 2004 · Wat Pho certifikace</div>
+  <svg class="lotus" viewBox="6 6 108 70" fill="none" stroke="#e6d0a6" stroke-width="3" stroke-linejoin="round" stroke-linecap="round" opacity=".55"><path d="M60 70 C52 52 52 30 60 10 C68 30 68 52 60 70Z"/><path d="M60 70 C46 60 36 44 34 26 C48 32 58 48 60 70Z"/><path d="M60 70 C74 60 84 44 86 26 C72 32 62 48 60 70Z"/><path d="M60 70 C40 68 22 58 12 42 C30 42 48 52 60 70Z"/><path d="M60 70 C80 68 98 58 108 42 C90 42 72 52 60 70Z"/></svg>
+
+  <div class="band"></div>
+  <div class="info"><b>Chvíle klidu v rukou rodilých Thajek.</b><br>Platí na všechny masáže, rituály i privátní wellness. Termín domluvíte na 778 429 329.</div>
+  <div class="qrbox"></div>
+  <div class="qrl"><b>Ověření poukazu</b><br>Načtěte QR kód, nebo zadejte kód na thaimost.cz</div>
+  <div class="kontakt"><b>Thai Most · thajské masáže</b>Slovenského národního povstání 2654/26, 434 01 Most<br>+420 778 429 329 · www.thaimost.cz · Po–Pá 9–20 h</div>
+  <div class="strip"><span>Kód poukazu</span></div>
+  <div class="f f1"><i>Jméno</i></div>
+  <div class="f f2"><i>Procedura</i></div>
+  <div class="f f3"><i>Platnost</i></div>
+  <div class="storno"><b>Storno:</b> objednanou masáž lze zrušit nejpozději 24 hodin předem, jinak propadá bez náhrady. Každá 6. masáž s věrnostní kartičkou zdarma.</div>
+</div>
+</body></html>
