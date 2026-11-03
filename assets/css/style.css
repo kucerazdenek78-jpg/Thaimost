@@ -198,6 +198,35 @@ footer a:hover{color:#fff}
 /* mobilní lišta */
 .callbar{display:none}
 
+/* Proč k nám */
+.why{padding:90px 0;background:var(--paper)}
+.why .lead{margin-bottom:38px}
+.why-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:20px}
+@media (max-width:900px){.why-grid{grid-template-columns:repeat(2,1fr)}}
+@media (max-width:560px){.why-grid{grid-template-columns:1fr}}
+.why-card{background:var(--cream);border:1px solid var(--line);border-radius:var(--r);padding:26px 26px 22px;display:flex;flex-direction:column;gap:10px}
+.why-card b{font-family:"Cormorant Garamond",serif;font-size:1.55rem;font-weight:600;color:var(--bark);line-height:1.15}
+.why-card p{color:#4a3c31;font-size:.95rem;flex:1}
+.why-card a{font-weight:700;font-size:.9rem;text-decoration:none;color:var(--jade)}
+.why-card a:hover{text-decoration:underline}
+/* Recenze */
+.reviews{padding:90px 0;background:var(--sand)}
+.rv-head{display:flex;justify-content:space-between;align-items:flex-end;gap:30px;flex-wrap:wrap;margin-bottom:34px}
+.rv-score{display:flex;align-items:center;gap:14px;text-decoration:none;color:inherit;background:var(--paper);border:1px solid var(--line);border-radius:16px;padding:14px 22px;box-shadow:var(--shadow)}
+.rv-score b{font-family:"Cormorant Garamond",serif;font-size:3rem;font-weight:600;line-height:1;color:var(--bark)}
+.rv-score .stars{display:block;color:var(--gold);letter-spacing:2px;font-size:1.2rem;line-height:1.2}
+.rv-score small{color:var(--muted);font-size:.82rem}
+.rv-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:20px}
+.rv-card{background:var(--paper);border-radius:var(--r);padding:26px;border:1px solid var(--line);font-size:.98rem;line-height:1.6}
+.rv-card p{font-family:"Cormorant Garamond",serif;font-size:1.2rem;color:var(--ink);margin-bottom:14px}
+.rv-card p::before{content:"“";color:var(--gold);font-size:1.6rem;line-height:0;margin-right:4px}
+.rv-card cite{display:block;font-style:normal;font-size:.82rem;color:var(--muted);font-weight:600}
+.rv-btns{display:flex;gap:14px;flex-wrap:wrap;margin-top:34px}
+.rv-btns .btn-ghost{color:var(--teak)}
+/* WhatsApp */
+.btn-wa{background:#25d366;color:#fff;margin:14px 0 10px}
+.btn-wa:hover{background:#1ebe5a;transform:translateY(-2px)}
+
 .reveal{opacity:0;transform:translateY(24px);transition:opacity .8s ease,transform .8s ease}
 .reveal.in{opacity:1;transform:none}
 @media (prefers-reduced-motion:reduce){.reveal{opacity:1;transform:none}html{scroll-behavior:auto}}

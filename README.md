@@ -16,6 +16,13 @@ Texty a ceny jsou převzaté z původního thaimost.cz (stav 6. 10. 2026).
 
 **Vzhled poukazu** je originální návrh salonu (`Thai – Dárkový poukaz`, 210 × 100 mm): do prázdných políček Jméno / Procedura / Platnost se doplní text, dole kód s QR. Originál je v `kartoteka/app/poukaz/darkovy-poukaz-original.pdf`, podklad pro web a tisk je `assets/img/poukaz-pozadi.jpg` (vykreslený z toho PDF), písmo vyplněných políček Gelasio (licence OFL, `assets/fonts/`). Polohy políček jsou v `assets/js/voucher.js` a v `kartoteka/app/poukaz_pdf.php` (stejné číslo v bodech originálního PDF).
 
+## Recenze a „Proč Thai Most“ (11/2026)
+- Sekce `#recenze` na úvodní stránce: hodnocení **4,8 z 240 recenzí Google** (stav 3. 11. 2026) + 4 citace. Čísla jsou napsaná přímo v `index.html` (sekce a `aggregateRating` v JSON-LD) – při výrazné změně počtu recenzí je přepsat na obou místech.
+- Odkazy: profil `https://www.google.com/maps?cid=13481975087391624487`, napsat recenzi `https://search.google.com/local/writereview?placeid=ChIJu1881C0gCkcRJ82kUumYGbs`.
+- Sekce `#proc-my`: 5 masérek, 3 masérny, párová masáž, privátní wellness, ceny, parkování – odlišení od konkurence.
+- WhatsApp tlačítko (`wa.me/420778429329`) u objednávky a v mobilní liště.
+- Adresy v hlavičce, sitemap a robots už ukazují na `https://www.thaimost.cz/` (připraveno na přesměrování domény).
+
 ## Co je potřeba doplnit / rozhodnout
 - **Číslo účtu** pro platbu poukazů převodem – v `data.js` → `platba.cislo_uctu`. Dokud je prázdné, nabízí se jen platba v salonu. Po doplnění se zákazníkovi zobrazí QR platba s VS = číslo objednávky.
 - **Platnost poukazů** – na webu se neuvádí (původní web ji neuvádí). V `salon.html` se volí při vystavení.
