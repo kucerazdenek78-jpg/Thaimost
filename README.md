@@ -29,7 +29,7 @@ Texty a ceny jsou převzaté z původního thaimost.cz (stav 6. 10. 2026).
 ## Co je potřeba doplnit / rozhodnout
 - **Číslo účtu** pro platbu poukazů převodem – v `data.js` → `platba.cislo_uctu`. Dokud je prázdné, nabízí se jen platba v salonu. Po doplnění se zákazníkovi zobrazí QR platba s VS = číslo objednávky.
 - **Platnost poukazů** – na webu se neuvádí (původní web ji neuvádí). V `salon.html` se volí při vystavení.
-- **Fotky a video** se zatím načítají z původního webu (`thaimost.cz/media/…`). Před přesměrováním domény je nahrát do `assets/img/` a upravit cestu `img` v `data.js` a odkazy v `index.html`.
+- **Fotky služeb**: `assets/img/ai/<id>.jpg` (Magnific, Nano Banana 2.1, 11/2026) – vyrobené ve stylu skutečných fotek salonu (černo-zlatý úbor, fialové ručníky, bambus). Původní fotky jsou v `assets/img/sluzby/`. Navíc `ai/parova.jpg` (párová masáž) pro reklamy.
 - Evidence poukazů v `salon.html` je uložená jen v prohlížeči, kde se vystavují – zálohovat přes Export CSV.
 
 ## Zveřejnění
