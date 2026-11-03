@@ -50,6 +50,45 @@
 .hero-stat{display:flex;flex-wrap:wrap;gap:12px;margin-bottom:8px}
 .hero-stat a,.hero-stat span{background:var(--teak);color:var(--cream);border-radius:999px;padding:10px 18px;font-size:.85rem;font-weight:700;text-decoration:none}
 .hero-stat a:hover{background:var(--teak2)}
+
+/* editor ceníku */
+.ce-tools{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin:14px 0}
+.ce-tools .btn{padding:10px 18px;font-size:.85rem}
+.ce-status{font-size:.85rem;color:var(--muted);min-height:1.3em;margin-top:6px}
+.ce-status.ok{color:var(--jade);font-weight:700}.ce-status.err{color:#a63f13;font-weight:700}
+.ce-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(330px,1fr));gap:14px;margin-top:14px}
+.ce{background:var(--cream);border:1px solid var(--line);border-radius:14px;padding:14px 16px}
+.ce h3{font-size:1.15rem;margin-bottom:8px;display:flex;justify-content:space-between;gap:8px;align-items:baseline}
+.ce h3 small{font-size:.7rem;color:var(--muted);font-weight:700;letter-spacing:.14em;text-transform:uppercase}
+.ce table{width:100%;border-collapse:collapse}
+.ce td{padding:3px 2px}
+.ce input{width:100%;padding:7px 9px;border:1px solid var(--line);border-radius:8px;font:inherit;font-size:.9rem;background:#fff;color:var(--ink)}
+.ce input:focus{outline:none;border-color:var(--gold)}
+.ce td.n input{text-align:right}
+.ce td.x{width:30px;text-align:center}
+.ce td.x button,.ce .add{border:0;background:none;cursor:pointer;color:var(--muted);font-weight:700;font:inherit;font-size:.85rem}
+.ce td.x button:hover{color:#a63f13}.ce .add{color:var(--jade);padding:6px 2px}
+.ce.changed{border-color:var(--gold);box-shadow:0 0 0 2px rgba(198,156,93,.25)}
+.gh{background:var(--sand);border-radius:12px;padding:12px 14px;font-size:.85rem;margin-top:10px}
+.gh input{width:100%;padding:9px 10px;border:1px solid var(--line);border-radius:8px;font:inherit;font-size:.9rem;margin-top:6px;background:#fff}
+.gh label{display:block;margin-top:8px;font-size:.82rem}
+.gh details summary{cursor:pointer;font-weight:700}
+.gh ol{margin:8px 0 0 18px;font-size:.82rem;line-height:1.5}
+.fi-section-wide{grid-column:1/-1}
+
+/* SEO */
+.seo-kw{width:100%;border-collapse:collapse;font-size:.88rem;margin-top:10px}
+.seo-kw th,.seo-kw td{text-align:left;padding:8px 6px;border-top:1px solid var(--line);vertical-align:top}
+.seo-kw th{font-size:.72rem;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);border-top:0}
+.seo-kw td b{font-family:"Cormorant Garamond",serif;font-size:1.1rem}
+.seo-list{list-style:none;margin-top:12px}
+.seo-list li{display:grid;grid-template-columns:26px 1fr;gap:10px;padding:9px 0;border-top:1px solid var(--line);font-size:.9rem;align-items:start}
+.seo-list li:first-child{border-top:0}
+.seo-list i{font-style:normal;width:22px;height:22px;border-radius:50%;display:grid;place-items:center;font-size:.75rem;font-weight:800;color:#fff}
+.seo-list .ok i{background:var(--jade)}.seo-list .warn i{background:#c69c5d}.seo-list .bad i{background:#a63f13}
+.seo-list small{display:block;color:var(--muted);font-size:.8rem;margin-top:2px}
+.seo-score{font-family:"Cormorant Garamond",serif;font-size:2.4rem;font-weight:600;color:var(--bark);line-height:1}
+.seo-head{display:flex;justify-content:space-between;align-items:center;gap:14px;flex-wrap:wrap;margin-top:8px}
 .fi-top{display:flex;justify-content:space-between;align-items:flex-start;gap:20px;flex-wrap:wrap}
 .pk-wrap{max-width:560px;margin-top:12px}
 </style>
@@ -150,6 +189,54 @@
         </ul>
       </div>
 
+      <div class="fi-card fi-section-wide" id="seo">
+        <h2>SEO – návrh a kontrola</h2>
+        <div class="sub">Hlavní fráze: <b>thajské masáže Most</b>. Kontrola načte aktuální úvodní stránku a ověří, kde fráze je a co chybí.</div>
+        <div class="seo-head">
+          <div><span class="seo-score" id="seoScore">–</span> <span style="color:var(--muted);font-size:.85rem">bodů ze 100</span></div>
+          <div class="ce-tools" style="margin:0"><button type="button" class="btn btn-dark" id="seoRun">Zkontrolovat web</button><a class="btn btn-ghost" style="color:var(--teak)" href="https://search.google.com/test/rich-results?url=https%3A%2F%2Fwww.thaimost.cz%2F" target="_blank" rel="noopener">Test strukturovaných dat</a><a class="btn btn-ghost" style="color:var(--teak)" href="https://pagespeed.web.dev/analysis?url=https%3A%2F%2Fwww.thaimost.cz%2F" target="_blank" rel="noopener">PageSpeed</a></div>
+        </div>
+        <ul class="seo-list" id="seoList"><li class="warn"><i>?</i><div>Zatím nespuštěno – klikněte na „Zkontrolovat web“.</div></li></ul>
+
+        <h3 style="margin-top:26px;font-size:1.3rem">Klíčová slova a kam patří</h3>
+        <table class="seo-kw">
+          <tr><th>Fráze</th><th>Hledání / měs.</th><th>Pozice 3. 11.</th><th>Kde na webu</th></tr>
+          <tr><td><b>thajské masáže most</b></td><td>880</td><td>4. (mapy 1.)</td><td>title, H1, popis, úvodní odstavec, H2 ceníku, alt fotek, FAQ, Google profil</td></tr>
+          <tr><td><b>masáže most</b></td><td>590</td><td>8.</td><td>H2 ceníku „ceník masáží“, FAQ, Google profil – kategorie Masážní salon</td></tr>
+          <tr><td><b>thajská masáž most</b></td><td>–</td><td>–</td><td>FAQ „Kolik stojí thajská masáž v Mostě“, popisy služeb</td></tr>
+          <tr><td><b>wellness most</b> / privátní wellness most</td><td>170 / 50</td><td>19.</td><td>sekce Proč Thai Most, FAQ, karta Whirlpool a sauna – doporučeno: samostatná stránka /wellness</td></tr>
+          <tr><td><b>dárkový poukaz na masáž</b></td><td>140</td><td>31.</td><td>sekce Poukazy, FAQ, Google profil příspěvek před Vánoci</td></tr>
+          <tr><td><b>těhotenská masáž most</b></td><td>210 (bez města)</td><td>31.</td><td>karta služby – doporučeno: samostatná stránka s textem a FAQ</td></tr>
+          <tr><td><b>masáž zad most</b> / masáž krku</td><td>260</td><td>19.</td><td>karta Masáž zad a krku – doporučeno: samostatná stránka</td></tr>
+          <tr><td><b>párová masáž most</b></td><td>–</td><td>–</td><td>sekce Proč Thai Most, FAQ, fotka párové masáže (reklamy)</td></tr>
+        </table>
+        <p class="small" style="margin-top:12px;color:var(--muted)">Zásady: každá stránka jedno hlavní téma; fráze v title (do 60 znaků), v H1, v prvních 100 slovech, v jednom H2 a v alt obrázků; město vždy „Most“ i „v Mostě“. Nepřehánět – text musí jít číst. Po přesměrování domény přihlásit web do Google Search Console a Seznam Webmaster, sledovat pozice 1× měsíčně.</p>
+      </div>
+      <div class="fi-card fi-section-wide" id="cenik">
+        <h2>Ceník – úprava cen a délek masáží</h2>
+        <div class="sub">Upravte částky a délky, přidejte nebo odeberte variantu. „Uložit na web“ zapíše změny do GitHubu (data.js + ceník v index.html); web se přegeneruje do 1–2 minut.</div>
+        <div class="ce-tools">
+          <button type="button" class="btn btn-dark" id="ceSave">Uložit na web</button>
+          <button type="button" class="btn btn-ghost" style="color:var(--teak)" id="ceDownload">Stáhnout data.js</button>
+          <button type="button" class="btn btn-ghost" style="color:var(--teak)" id="ceReset">Vrátit změny</button>
+          <span class="ce-status" id="ceStatus"></span>
+        </div>
+        <div class="gh">
+          <details id="ghBox">
+            <summary>Přístup k GitHubu (jednorázově)</summary>
+            <label>Token (fine-grained, jen pro repozitář Thaimost, oprávnění Contents: Read and write)
+              <input id="ghToken" type="password" autocomplete="off" placeholder="github_pat_…"></label>
+            <label><input type="checkbox" id="ghRemember" style="width:auto;margin-right:6px"> Zapamatovat v tomto prohlížeči</label>
+            <ol>
+              <li>github.com → Settings → Developer settings → Personal access tokens → <b>Fine-grained tokens</b> → Generate new token.</li>
+              <li>Repository access: <b>Only select repositories</b> → kucerazdenek78-jpg/Thaimost.</li>
+              <li>Permissions → Repository permissions → <b>Contents: Read and write</b>. Platnost např. 1 rok.</li>
+              <li>Token sem vložte. Bez tokenu jde jen „Stáhnout data.js“ a nahrát ručně.</li>
+            </ol>
+          </details>
+        </div>
+        <div class="ce-grid" id="ceGrid"></div>
+      </div>
       <div class="fi-card">
         <h2>Texty do reklam</h2>
         <div class="sub">Hotové věty pro Google Ads, Sklik i Facebook</div>
@@ -177,6 +264,7 @@
   </div>
 </main>
 
+<script src="assets/js/data.js"></script>
 <script>
 (function(){
   var H='a29dc99a7700c4b86150bf9d2d1c79955b0bea378c732e25a214f84dc06c394f';
@@ -191,6 +279,168 @@
     else{document.getElementById('fiErr').textContent='Špatné heslo.';document.getElementById('fiPin').value='';document.getElementById('fiPin').focus();}
   });
   out.addEventListener('click',function(){sessionStorage.removeItem('fiOk');location.reload();});
+})();
+
+
+/* ---------- SEO kontrola ---------- */
+(function(){
+  var KW='thajské masáže most';
+  function norm(s){return String(s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/\s+/g,' ').trim();}
+  var K=norm(KW), K2=norm('thajské masáže v mostě');
+  function has(s){var n=norm(s);return n.indexOf(K)>=0||n.indexOf(K2)>=0;}
+  function count(s){var n=norm(s);return (n.match(new RegExp(K,'g'))||[]).length+(n.match(new RegExp(K2,'g'))||[]).length;}
+  var list=document.getElementById('seoList'), score=document.getElementById('seoScore');
+  async function run(){
+    list.innerHTML='<li class="warn"><i>…</i><div>Načítám úvodní stránku…</div></li>';
+    var res=[]; function add(ok,w,t,hint){res.push({s:ok?'ok':(ok===null?'warn':'bad'),w:w,t:t,hint:hint||''});}
+    try{
+      var html=await (await fetch('index.html',{cache:'no-store'})).text();
+      var d=new DOMParser().parseFromString(html,'text/html');
+      var title=(d.querySelector('title')||{}).textContent||'';
+      add(has(title)&&title.length<=70,10,'Title: „'+title+'“ ('+title.length+' zn.)','Fráze na začátku title, do 60–70 znaků.');
+      var desc=(d.querySelector('meta[name="description"]')||{}).content||'';
+      add(has(desc)&&desc.length>=70&&desc.length<=165,8,'Meta description ('+desc.length+' zn.)',has(desc)?'':'Doplnit frázi „thajské masáže Most“.');
+      var h1=[].slice.call(d.querySelectorAll('h1'));
+      add(h1.length===1&&has(h1[0].textContent),10,'H1: '+(h1.length?'„'+h1[0].textContent.replace(/\s+/g,' ').trim()+'“':'chybí')+(h1.length>1?' (nadpisů H1 je '+h1.length+')':''),'Právě jeden H1 s frází.');
+      var h2=[].slice.call(d.querySelectorAll('h2')).map(function(e){return e.textContent.trim();});
+      var h2k=h2.filter(function(t){return has(t)||norm(t).indexOf('masáž'.normalize('NFD').replace(/[\u0300-\u036f]/g,''))>=0&&norm(t).indexOf('most')>=0;}).length;
+      add(h2k>=1?true:null,6,'H2 s frází nebo „masáž + Most“: '+h2k+' z '+h2.length,'Aspoň jeden H2 (ceník, FAQ).');
+      var body=d.body?d.body.textContent:'';
+      var words=norm(body).split(' ').filter(Boolean).length, c=count(body);
+      add(c>=3&&c<=25?true:(c>25?null:false),8,'Výskyt fráze v textu: '+c+'× při '+words+' slovech','3–15× je přirozené; víc působí jako spam.');
+      var first=norm(body).split(' ').slice(0,150).join(' ');
+      add(first.indexOf(K)>=0||first.indexOf(K2)>=0,6,'Fráze v prvních 150 slovech','Úvodní odstavec hero.');
+      var imgs=[].slice.call(d.querySelectorAll('img')); var noalt=imgs.filter(function(i){return !i.getAttribute('alt');}).length; var altk=imgs.filter(function(i){return has(i.getAttribute('alt'));}).length;
+      add(noalt===0,5,'Obrázky bez alt: '+noalt+' z '+imgs.length,'Každý obrázek popisný alt.');
+      add(altk>=5,5,'Alt s frází: '+altk,'Fotky služeb: „… – thajské masáže Most“.');
+      var can=(d.querySelector('link[rel="canonical"]')||{}).href||'';
+      add(/^https:\/\/www\.thaimost\.cz\/?$/.test(can),6,'Canonical: '+(can||'chybí'),'https://www.thaimost.cz/');
+      var ogt=(d.querySelector('meta[property="og:title"]')||{}).content||'', ogi=(d.querySelector('meta[property="og:image"]')||{}).content||'';
+      add(has(ogt)&&!!ogi,4,'Open Graph: title „'+ogt+'“, obrázek '+(ogi?'ano':'chybí'),'');
+      var lds=[].slice.call(d.querySelectorAll('script[type="application/ld+json"]')); var types=[], okLd=true, agg=false, hours=false, faq=false;
+      lds.forEach(function(s){try{var o=JSON.parse(s.textContent);var t=[].concat(o['@type']);types=types.concat(t);if(o.aggregateRating)agg=true;if(o.openingHoursSpecification)hours=true;if(t.indexOf('FAQPage')>=0)faq=true;}catch(e){okLd=false;}});
+      add(okLd&&types.length>0,6,'Strukturovaná data: '+(okLd?types.join(', '):'CHYBA v JSON-LD'),'LocalBusiness + FAQPage.');
+      add(agg&&hours,5,'JSON-LD: hodnocení '+(agg?'ano':'ne')+', otevírací doba '+(hours?'ano':'ne'),'');
+      add(faq,4,'FAQ sekce se schématem FAQPage: '+(faq?'ano':'ne'),'');
+      var gp=!!d.querySelector('a[href*="google.com/maps?cid="]'); add(gp,3,'Odkaz na Google profil (recenze): '+(gp?'ano':'ne'),'');
+      var tel=!!d.querySelector('a[href^="tel:"]'), wa=!!d.querySelector('a[href*="wa.me"]'); add(tel&&wa,3,'Kontakt: telefon '+(tel?'ano':'ne')+', WhatsApp '+(wa?'ano':'ne'),'');
+      var lang=d.documentElement.getAttribute('lang'); add(lang==='cs',2,'Jazyk stránky: '+(lang||'chybí'),'');
+      var vp=!!d.querySelector('meta[name="viewport"]'); add(vp,2,'Mobilní zobrazení (viewport): '+(vp?'ano':'ne'),'');
+      try{var rb=await (await fetch('robots.txt',{cache:'no-store'})).text(); add(/Sitemap: https:\/\/www\.thaimost\.cz/.test(rb)&&/Disallow: \/firma\.html/.test(rb),3,'robots.txt: sitemap na thaimost.cz, firma/salon zakázány','');}catch(e){add(false,3,'robots.txt nejde načíst','');}
+      try{var sm=await (await fetch('sitemap.xml',{cache:'no-store'})).text(); add(sm.indexOf('https://www.thaimost.cz/')>=0,3,'sitemap.xml ukazuje na thaimost.cz','');}catch(e){add(false,3,'sitemap.xml nejde načíst','');}
+      var https=location.protocol==='https:'||location.hostname==='localhost'||location.hostname==='127.0.0.1'; add(https,2,'HTTPS: '+(https?'ano':'ne'),'');
+      var sub=[].slice.call(d.querySelectorAll('a[href]')).filter(function(a){return /\/(wellness|tehotenska|masaz-zad|parova)/.test(a.getAttribute('href'));}).length;
+      add(sub>0?true:null,6,'Samostatné stránky pro vedlejší fráze (wellness, těhotenská, masáž zad, párová): '+(sub>0?'ano':'zatím ne'),'Doporučený další krok – 4–6 podstránek s vlastním title a textem.');
+      var dom=location.hostname==='www.thaimost.cz'; add(dom?true:null,6,'Web běží na thaimost.cz: '+(dom?'ano':'ne ('+location.hostname+')'),'Po přesměrování domény přihlásit do Search Console a Seznam Webmaster.');
+    }catch(e){add(false,0,'Kontrola selhala: '+e.message,'');}
+    var tot=0,got=0; res.forEach(function(r){tot+=r.w; if(r.s==='ok')got+=r.w; else if(r.s==='warn')got+=r.w/2;});
+    score.textContent=Math.round(got/tot*100);
+    list.innerHTML=res.map(function(r){return '<li class="'+r.s+'"><i>'+(r.s==='ok'?'✓':r.s==='warn'?'!':'✕')+'</i><div>'+r.t.replace(/[<>]/g,'')+(r.hint&&r.s!=='ok'?'<small>'+r.hint+'</small>':'')+'</div></li>';}).join('');
+  }
+  document.getElementById('seoRun').addEventListener('click',run);
+})();
+/* ---------- editor ceníku ---------- */
+(function(){
+  var OWNER='kucerazdenek78-jpg', REPO='Thaimost', BRANCH='main';
+  var D=window.THAI; if(!D) return;
+  var grid=document.getElementById('ceGrid'), st=document.getElementById('ceStatus');
+  var orig=JSON.parse(JSON.stringify(D.sluzby.map(function(s){return {id:s.id,nazev:s.nazev,kat:s.kat,ceny:s.ceny};})));
+  var work=JSON.parse(JSON.stringify(orig));
+  var tok=document.getElementById('ghToken'), rem=document.getElementById('ghRemember');
+  try{var saved=localStorage.getItem('thaimostGhToken'); if(saved){tok.value=saved;rem.checked=true;}}catch(e){}
+  function kc(n){return Number(n).toLocaleString('cs-CZ')+' Kč';}
+  function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
+  function status(t,cls){st.textContent=t;st.className='ce-status'+(cls?' '+cls:'');}
+  function changed(i){return JSON.stringify(work[i].ceny)!==JSON.stringify(orig[i].ceny);}
+  function render(){
+    grid.innerHTML=work.map(function(s,i){
+      return '<div class="ce'+(changed(i)?' changed':'')+'" data-i="'+i+'"><h3>'+esc(s.nazev)+'<small>'+(s.kat==='wellness'?'wellness':'masáž')+'</small></h3><table>'+
+        s.ceny.map(function(c,j){return '<tr><td><input data-k="0" data-j="'+j+'" value="'+esc(c[0])+'" placeholder="60 min"></td><td class="n"><input data-k="1" data-j="'+j+'" type="number" min="0" step="10" value="'+esc(c[1])+'"></td><td>Kč</td><td class="x"><button type="button" data-del="'+j+'" title="Odebrat">✕</button></td></tr>';}).join('')+
+        '</table><button type="button" class="add" data-add="1">+ přidat variantu</button></div>';
+    }).join('');
+  }
+  grid.addEventListener('input',function(e){
+    var card=e.target.closest('.ce'); if(!card) return;
+    var i=+card.dataset.i, j=+e.target.dataset.j, k=+e.target.dataset.k;
+    work[i].ceny[j][k]= k===1 ? Math.max(0,Math.round(+e.target.value||0)) : e.target.value;
+    card.classList.toggle('changed',changed(i));
+  });
+  grid.addEventListener('click',function(e){
+    var card=e.target.closest('.ce'); if(!card) return; var i=+card.dataset.i;
+    if(e.target.dataset.del!=null){ if(work[i].ceny.length<=1){status('Každá služba musí mít aspoň jednu variantu.','err');return;} work[i].ceny.splice(+e.target.dataset.del,1); render(); }
+    if(e.target.dataset.add){ work[i].ceny.push(['60 min',0]); render(); card=grid.querySelector('.ce[data-i="'+i+'"]'); var last=card.querySelectorAll('input[data-k="0"]'); last[last.length-1].focus(); }
+  });
+  document.getElementById('ceReset').addEventListener('click',function(){work=JSON.parse(JSON.stringify(orig));render();status('Změny vráceny.');});
+
+  function clean(){
+    var out=[];
+    for(var i=0;i<work.length;i++){
+      var c=work[i].ceny.map(function(v){return [String(v[0]).trim(),Math.round(+v[1]||0)];}).filter(function(v){return v[0];});
+      if(!c.length) throw new Error('Služba „'+work[i].nazev+'“ nemá žádnou variantu.');
+      if(c.some(function(v){return v[1]<=0;})) throw new Error('Služba „'+work[i].nazev+'“ má nulovou cenu.');
+      out.push({id:work[i].id,nazev:work[i].nazev,ceny:c});
+    }
+    return out;
+  }
+  function jsArr(c){return '['+c.map(function(v){return '["'+v[0].replace(/\\/g,'\\\\').replace(/"/g,'\\"')+'", '+v[1]+']';}).join(', ')+']';}
+  function rx(s){return s.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');}
+  function patchData(txt,list){
+    list.forEach(function(s){
+      var re=new RegExp('(\\{ id: "'+rx(s.id)+'"[\\s\\S]*?ceny: )\\[\\[[^\\n]*?\\]\\]');
+      if(!re.test(txt)) throw new Error('V data.js nenalezena služba '+s.id+'.');
+      txt=txt.replace(re,function(m,a){return a+jsArr(s.ceny);});
+    });
+    return txt;
+  }
+  function patchIndex(txt,list){
+    list.forEach(function(s){
+      var name=esc(s.nazev);
+      var re=new RegExp('(<h3>'+rx(name)+'</h3>[\\s\\S]*?<ul class="prices">)[\\s\\S]*?(</ul>)');
+      if(re.test(txt)) txt=txt.replace(re,function(m,a,b){return a+s.ceny.map(function(c){return '<li><span>'+esc(c[0])+'</span><b>'+kc(c[1])+'</b></li>';}).join('')+b;});
+      var re2=new RegExp('("name": "'+rx(s.nazev.replace(/"/g,'\\"'))+'",[\\s\\S]*?"minPrice": )\\d+');
+      if(re2.test(txt)) txt=txt.replace(re2,function(m,a){return a+Math.min.apply(null,s.ceny.map(function(c){return c[1];}));});
+    });
+    return txt;
+  }
+  function b64enc(s){return btoa(unescape(encodeURIComponent(s)));}
+  function b64dec(s){return decodeURIComponent(escape(atob(s.replace(/\n/g,''))));}
+  async function gh(path,opt){
+    var r=await fetch('https://api.github.com/repos/'+OWNER+'/'+REPO+'/contents/'+path+(opt&&opt.method==='PUT'?'':'?ref='+BRANCH),Object.assign({headers:{Authorization:'Bearer '+tok.value.trim(),Accept:'application/vnd.github+json','X-GitHub-Api-Version':'2022-11-28'}},opt||{}));
+    if(!r.ok){var t='';try{t=(await r.json()).message||'';}catch(e){} throw new Error('GitHub '+r.status+(t?': '+t:''));}
+    return r.json();
+  }
+  async function saveFile(path,fn,msg){
+    var cur=await gh(path); var txt=b64dec(cur.content); var nw=fn(txt);
+    if(nw===txt) return false;
+    await gh(path,{method:'PUT',body:JSON.stringify({message:msg,content:b64enc(nw),sha:cur.sha,branch:BRANCH})});
+    return true;
+  }
+  document.getElementById('ceSave').addEventListener('click',async function(){
+    var list; try{list=clean();}catch(e){status(e.message,'err');return;}
+    var diff=list.filter(function(s,i){return JSON.stringify(s.ceny)!==JSON.stringify(orig[i].ceny);});
+    if(!diff.length){status('Nic se nezměnilo.');return;}
+    if(!tok.value.trim()){document.getElementById('ghBox').open=true;tok.focus();status('Vložte GitHub token (nebo použijte „Stáhnout data.js“).','err');return;}
+    try{ if(rem.checked) localStorage.setItem('thaimostGhToken',tok.value.trim()); else localStorage.removeItem('thaimostGhToken'); }catch(e){}
+    var btn=this; btn.disabled=true; status('Ukládám…');
+    try{
+      var msg='Ceník: '+diff.map(function(s){return s.nazev;}).join(', ')+' (z firma.html)';
+      await saveFile('assets/js/data.js',function(t){return patchData(t,diff);},msg);
+      await saveFile('index.html',function(t){return patchIndex(t,diff);},msg);
+      orig=JSON.parse(JSON.stringify(work)); render();
+      status('Uloženo na GitHub. Web se přegeneruje do 1–2 minut (obnovte stránku).','ok');
+    }catch(e){status('Uložení selhalo: '+e.message,'err');}
+    btn.disabled=false;
+  });
+  document.getElementById('ceDownload').addEventListener('click',async function(){
+    var list; try{list=clean();}catch(e){status(e.message,'err');return;}
+    try{
+      var txt=await (await fetch('assets/js/data.js',{cache:'no-store'})).text();
+      var nw=patchData(txt,list);
+      var a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([nw],{type:'text/javascript'})); a.download='data.js'; a.click();
+      status('data.js stažen – nahrajte ho do repa do assets/js/ (index.html se opraví při příštím uložení přes GitHub).');
+    }catch(e){status('Stažení selhalo: '+e.message,'err');}
+  });
+  render();
 })();
 </script>
 </body>
