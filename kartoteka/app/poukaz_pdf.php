@@ -22,9 +22,9 @@ const POUKAZ_ZAKLADNI_LINKA = 235.0;          // na které výšce (od horního 
 const POUKAZ_VELIKOST = 11.0;                 // největší a nejmenší velikost písma v políčku (pt)
 const POUKAZ_VELIKOST_MIN = 6.5;
 const POUKAZ_BARVA_TEXTU = [0.17, 0.12, 0.09]; // teak hnědá (#2b1e16) z nového návrhu
-/** QR s kódem v béžovém panelu vpravo od „MOST“: [x, y shora, strana] včetně bílého okraje (pt). */
+/** QR s kódem v rámečku ve spodním pásu: [x, y shora, strana] včetně bílého okraje (pt). */
 const POUKAZ_QR = [214.0, 147.0, 33.0];
-/** Kód poukazu bílým písmem na zeleném pruhu: konec textu zprava (x), základní linka od shora, velikost. */
+/** Kód poukazu bílým písmem na tmavém pruhu: konec textu zprava (x), základní linka od shora, velikost. */
 const POUKAZ_KOD = [518.0, 188.7, 6.8];
 
 function poukaz_dir(): string { return __DIR__ . '/poukaz'; }
