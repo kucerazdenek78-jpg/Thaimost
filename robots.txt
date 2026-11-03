@@ -1,4 +1,5 @@
 User-agent: *
 Allow: /
 Disallow: /salon.html
+Disallow: /firma.html
 Sitemap: https://www.thaimost.cz/sitemap.xml

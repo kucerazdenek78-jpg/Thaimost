@@ -1,0 +1,197 @@
+<!doctype html>
+<html lang="cs">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Firemní nastavení – Thai Most (interní)</title>
+<link rel="icon" href="assets/img/favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;0,700;1,500&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/css/style.css">
+<style>
+.fi-nav{position:sticky;top:0;z-index:5;background:rgba(248,242,233,.92);backdrop-filter:blur(8px);border-bottom:1px solid var(--line)}
+.fi-nav .wrap{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:12px 0}
+.fi-nav .logo{display:flex;align-items:center;gap:10px;text-decoration:none;color:var(--teak)}
+.fi-nav .logo svg{width:34px;height:23px;color:var(--gold)}
+.fi-nav .logo b{font-family:"Cormorant Garamond",serif;font-size:1.3rem;display:block;line-height:1}
+.fi-nav .logo span{font-size:.62rem;letter-spacing:.24em;text-transform:uppercase;color:var(--bark);font-weight:700}
+.fi-lock{min-height:calc(100vh - 70px);display:grid;place-items:center;padding:40px 0}
+.fi-lock form{background:var(--paper);border:1px solid var(--line);border-radius:var(--r);padding:36px 32px;max-width:400px;width:100%;box-shadow:var(--shadow);text-align:center}
+.fi-lock svg{width:36px;height:36px;color:var(--gold);margin-bottom:10px}
+.fi-lock h1{font-size:1.9rem;margin-bottom:6px}
+.fi-lock p{color:var(--muted);font-size:.92rem;margin-bottom:18px}
+.fi-lock input{width:100%;padding:14px;border:1.5px solid var(--line);border-radius:12px;font:inherit;font-size:1.3rem;text-align:center;letter-spacing:.4em;background:#fff;color:var(--ink)}
+.fi-lock input:focus{outline:none;border-color:var(--gold)}
+.fi-lock .btn{width:100%;margin-top:12px}
+.fi-lock .err{color:#a63f13;font-size:.85rem;margin-top:10px;min-height:1.2em;font-weight:600}
+.fi{display:none;padding:50px 0 80px}
+.fi.open{display:block}
+.fi h1{font-size:clamp(2rem,4vw,3rem);margin-bottom:8px}
+.fi .lead{margin-bottom:34px}
+.fi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:22px;margin-top:26px}
+.fi-card{background:var(--paper);border:1px solid var(--line);border-radius:var(--r);padding:26px}
+.fi-card h2{font-size:1.5rem;margin-bottom:6px}
+.fi-card .sub{font-size:.85rem;color:var(--muted);margin-bottom:16px}
+.fi-card ul{list-style:none}
+.fi-card li{padding:9px 0;border-top:1px solid var(--line);display:flex;justify-content:space-between;gap:12px;align-items:center;font-size:.92rem}
+.fi-card li:first-child{border-top:0}
+.fi-card li small{color:var(--muted);display:block;font-size:.78rem;margin-top:2px}
+.fi-card li a{text-decoration:none;font-weight:700;color:var(--jade);white-space:nowrap}
+.fi-card li a:hover{text-decoration:underline}
+.sw{display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:12px}
+.sw div{border-radius:12px;padding:14px 12px;font-size:.78rem;font-weight:700;border:1px solid var(--line)}
+.sw div span{display:block;font-weight:400;opacity:.8;font-family:ui-monospace,monospace;font-size:.72rem;margin-top:2px}
+.tpl{background:var(--sand);border-radius:12px;padding:14px;font-size:.88rem;line-height:1.6;margin-top:10px}
+.tpl b{display:block;margin-bottom:4px}
+.fi-section{margin-top:44px}
+.fi-section h2.h2{margin-bottom:10px}
+.hero-stat{display:flex;flex-wrap:wrap;gap:12px;margin-bottom:8px}
+.hero-stat a,.hero-stat span{background:var(--teak);color:var(--cream);border-radius:999px;padding:10px 18px;font-size:.85rem;font-weight:700;text-decoration:none}
+.hero-stat a:hover{background:var(--teak2)}
+.fi-top{display:flex;justify-content:space-between;align-items:flex-start;gap:20px;flex-wrap:wrap}
+.pk-wrap{max-width:560px;margin-top:12px}
+</style>
+</head>
+<body>
+<header class="fi-nav">
+  <div class="wrap">
+    <a href="index.html" class="logo"><svg viewBox="0 0 120 80" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="3"><path d="M60 70 C52 52 52 30 60 10 C68 30 68 52 60 70Z"/><path d="M60 70 C46 60 36 44 34 26 C48 32 58 48 60 70Z"/><path d="M60 70 C74 60 84 44 86 26 C72 32 62 48 60 70Z"/></g></svg><span><b>Thai Most</b><span>Firemní nastavení</span></span></a>
+    <div style="display:flex;gap:10px">
+      <button type="button" class="btn btn-ghost" id="fiOut" style="display:none;color:var(--teak)">Zamknout</button>
+      <a class="btn btn-ghost" style="color:var(--teak)" href="index.html">← Na web</a>
+    </div>
+  </div>
+</header>
+
+<section class="fi-lock" id="fiLock">
+  <form id="fiForm" autocomplete="off">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="10" width="16" height="11" rx="2.5"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/><circle cx="12" cy="15.5" r="1.3"/></svg>
+    <h1>Jen pro salon</h1>
+    <p>Firemní část webu: brand, reklamy, odkazy do systémů. Zadejte heslo.</p>
+    <input id="fiPin" type="password" inputmode="numeric" maxlength="12" placeholder="••••" aria-label="Heslo">
+    <button class="btn btn-dark" type="submit">Odemknout</button>
+    <div class="err" id="fiErr"></div>
+  </form>
+</section>
+
+<main class="fi" id="fiMain">
+  <div class="wrap">
+    <div class="fi-top">
+      <div>
+        <span class="eyebrow">Interní</span>
+        <h1>Firemní nastavení</h1>
+        <p class="lead">Jedno místo pro brand, reklamy a přístupy. Stránka není v menu ani ve vyhledávačích; odkaz je zámeček v patičce webu.</p>
+      </div>
+    </div>
+    <div class="hero-stat">
+      <a href="https://masage.dvere.app" target="_blank" rel="noopener">Kartotéka a rezervace → masage.dvere.app</a>
+      <a href="salon.html">Vystavit poukaz (web)</a>
+      <a href="https://www.google.com/maps?cid=13481975087391624487" target="_blank" rel="noopener">Google profil 4,8 ★</a>
+    </div>
+
+    <div class="fi-grid">
+      <div class="fi-card">
+        <h2>Systémy salonu</h2>
+        <div class="sub">Kam se přihlásit a co kde je</div>
+        <ul>
+          <li><div>Kartotéka, rezervace, poukazy, tablety<small>Synology NAS · zkušební provoz</small></div><a href="https://masage.dvere.app" target="_blank" rel="noopener">masage.dvere.app</a></li>
+          <li><div>Tento web – zdrojové soubory a GitHub Pages<small>repo kucerazdenek78-jpg/Thaimost</small></div><a href="https://github.com/kucerazdenek78-jpg/Thaimost" target="_blank" rel="noopener">GitHub</a></li>
+          <li><div>Vystavení poukazu bez kartotéky<small>evidence jen v prohlížeči</small></div><a href="salon.html">salon.html</a></li>
+          <li><div>Analýza vyhledávačů a reklam (11/2026)<small>dokument v Claude</small></div><a href="https://claude.ai/artifact/THKG5e2UggNZ4zi5CaaLWo" target="_blank" rel="noopener">Otevřít</a></li>
+        </ul>
+      </div>
+
+      <div class="fi-card">
+        <h2>Reklamy a profily</h2>
+        <div class="sub">Účty, které salon používá nebo má založit</div>
+        <ul>
+          <li><div>Google firemní profil<small>recenze, otevírací doba, fotky, příspěvky</small></div><a href="https://business.google.com/" target="_blank" rel="noopener">Spravovat</a></li>
+          <li><div>Odkaz pro zákazníky „Napsat recenzi“<small>QR na recepci a na tabletech</small></div><a href="https://search.google.com/local/writereview?placeid=ChIJu1881C0gCkcRJ82kUumYGbs" target="_blank" rel="noopener">Odkaz</a></li>
+          <li><div>Firmy.cz (Seznam)<small>zápis 13709537 – doplnit fotky, hodnocení</small></div><a href="https://www.firmy.cz/detail/13709537-thajske-masaze-most-most.html" target="_blank" rel="noopener">Zápis</a></li>
+          <li><div>Sklik (Seznam reklama)</div><a href="https://www.sklik.cz/" target="_blank" rel="noopener">Sklik</a></li>
+          <li><div>Google Ads</div><a href="https://ads.google.com/" target="_blank" rel="noopener">Google Ads</a></li>
+          <li><div>Meta Business (Facebook + Instagram)<small>facebook.com/thaimost</small></div><a href="https://business.facebook.com/" target="_blank" rel="noopener">Meta</a></li>
+          <li><div>Google Search Console / Analytics<small>nasadit po přesměrování domény</small></div><a href="https://search.google.com/search-console" target="_blank" rel="noopener">Console</a></li>
+        </ul>
+      </div>
+
+      <div class="fi-card">
+        <h2>Brand</h2>
+        <div class="sub">Barvy, písma, logo – používat všude stejně</div>
+        <div class="sw">
+          <div style="background:#2b1e16;color:#f8f2e9">Teak<span>#2b1e16</span></div>
+          <div style="background:#47321f;color:#f8f2e9">Teak světlý<span>#47321f</span></div>
+          <div style="background:#6b4d33;color:#f8f2e9">Kůra<span>#6b4d33</span></div>
+          <div style="background:#c69c5d;color:#2b1e16">Zlatá<span>#c69c5d</span></div>
+          <div style="background:#e6d0a6;color:#2b1e16">Zlatá světlá<span>#e6d0a6</span></div>
+          <div style="background:#f8f2e9;color:#2b1e16">Krém<span>#f8f2e9</span></div>
+          <div style="background:#efe4d3;color:#2b1e16">Písek<span>#efe4d3</span></div>
+          <div style="background:#3d6858;color:#f8f2e9">Nefrit<span>#3d6858</span></div>
+        </div>
+        <ul style="margin-top:16px">
+          <li><div>Nadpisy: <b>Cormorant Garamond</b> (500–700)<small>Text: Manrope (400–800)</small></div><a href="https://fonts.google.com/share?selection.family=Cormorant+Garamond:ital,wght@0,500;0,600;0,700;1,500|Manrope:wght@400..800" target="_blank" rel="noopener">Google Fonts</a></li>
+          <li><div>Logo – zlatý lotos + „Thai Most / Thajské masáže Most“<small>SVG v hlavičce webu, ikony 192/512 px</small></div><a href="assets/icons/icon-512.png" download>PNG 512</a></li>
+          <li><div>Favicon / ikona aplikace</div><a href="assets/img/favicon.svg" download>SVG</a></li>
+          <li><div>Fotky služeb (Magnific, styl salonu)<small>assets/img/ai/ – 21 fotek vč. párové masáže</small></div><a href="assets/img/ai/parova.jpg" target="_blank">Ukázka</a></li>
+          <li><div>Úvodní video (15 s, thajská hudba)</div><a href="assets/video/thaimost-uvod.mp4" target="_blank">MP4</a></li>
+        </ul>
+      </div>
+
+      <div class="fi-card">
+        <h2>Dárkový poukaz</h2>
+        <div class="sub">Nový návrh ve stylu webu, 210 × 100 mm</div>
+        <div class="pk-wrap"><img src="assets/img/poukaz-pozadi.jpg" alt="Dárkový poukaz Thai Most" style="border-radius:10px;box-shadow:var(--shadow)"></div>
+        <ul style="margin-top:14px">
+          <li><div>Podklad pro tisk a web<small>políčka se doplňují automaticky</small></div><a href="assets/img/poukaz-pozadi.jpg" download>JPG</a></li>
+          <li><div>Zdroj návrhu (HTML, upravitelný)</div><a href="assets/poukaz-navrh/poukaz-navrh.html" target="_blank">Otevřít</a></li>
+          <li><div>Původní návrh salonu (archiv)</div><a href="kartoteka/app/poukaz/darkovy-poukaz-original.pdf" target="_blank">PDF</a></li>
+        </ul>
+      </div>
+
+      <div class="fi-card">
+        <h2>Texty do reklam</h2>
+        <div class="sub">Hotové věty pro Google Ads, Sklik i Facebook</div>
+        <div class="tpl"><b>Vyhledávání (Google / Sklik)</b>Thajské masáže Most – od 790 Kč | 5 masérek, termíny i dnes | Vířivka a sauna pro dva<br>Rodilé Thajky, Wat Pho certifikace. Každá 6. masáž zdarma. SNP 2654/26, parkování u salonu.</div>
+        <div class="tpl"><b>Poukazy (listopad–prosinec)</b>Dárkový poukaz na thajskou masáž – PDF e-mailem do hodiny. 790 / 1 190 / 1 580 Kč nebo libovolná částka. Platí na všechny masáže i wellness.</div>
+        <div class="tpl"><b>Párová masáž + wellness</b>Večer pro dva: dvě masérky zároveň, pak privátní vířivka a sauna jen pro vás. Jediný salon v Mostě, kde to jde.</div>
+        <div class="tpl"><b>Klíčová slova</b>thajské masáže most · masáže most · thajská masáž most · wellness most · privátní wellness most · dárkový poukaz masáž · těhotenská masáž most · masáž zad most · párová masáž most<br><em>Vylučující:</em> kurz, práce, brigáda, erotické, tantra, praha, teplice, ústí, slevomat</div>
+      </div>
+
+      <div class="fi-card">
+        <h2>Co udělat dál</h2>
+        <div class="sub">Z analýzy 3. 11. 2026</div>
+        <ul>
+          <li><div>Google profil: otevírací doba, web thaimost.cz, kategorie, služby s cenami</div><span style="color:var(--muted);font-size:.8rem">hned</span></li>
+          <li><div>Přepsat odpověď na 1★ recenzi, odpovědět na neodpovězené</div><span style="color:var(--muted);font-size:.8rem">hned</span></li>
+          <li><div>20–30 stálých zákazníků požádat o hodnocení na Firmy.cz</div><span style="color:var(--muted);font-size:.8rem">tento týden</span></li>
+          <li><div>Číslo účtu pro poukazy do <code>assets/js/data.js</code> → <code>platba.cislo_uctu</code></div><span style="color:var(--muted);font-size:.8rem">před spuštěním</span></li>
+          <li><div>Přesměrovat doménu thaimost.cz na nový web, nahlásit do Search Console a Seznam Webmaster</div><span style="color:var(--muted);font-size:.8rem">spuštění</span></li>
+          <li><div>Spustit kampaně Google Ads + Sklik + Meta poukazy (rozpočet ~8 000 Kč/měs.)</div><span style="color:var(--muted);font-size:.8rem">listopad</span></li>
+        </ul>
+      </div>
+    </div>
+
+    <p class="small" style="margin-top:34px;color:var(--muted)">Pozn.: zámek je jen jednoduchá ochrana proti náhodným návštěvníkům (heslo se ověřuje v prohlížeči). Hesla, klíče ani čísla účtů sem nepatří – ty patří do kartotéky nebo správce hesel.</p>
+  </div>
+</main>
+
+<script>
+(function(){
+  var H='a29dc99a7700c4b86150bf9d2d1c79955b0bea378c732e25a214f84dc06c394f';
+  var lock=document.getElementById('fiLock'), main=document.getElementById('fiMain'), out=document.getElementById('fiOut');
+  function open(){lock.style.display='none';main.classList.add('open');out.style.display='';}
+  if(sessionStorage.getItem('fiOk')==='1') open();
+  async function sha(s){var b=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(s));return Array.from(new Uint8Array(b)).map(x=>x.toString(16).padStart(2,'0')).join('');}
+  document.getElementById('fiForm').addEventListener('submit',async function(e){
+    e.preventDefault();
+    var v=document.getElementById('fiPin').value.trim();
+    if(await sha(v)===H){sessionStorage.setItem('fiOk','1');open();}
+    else{document.getElementById('fiErr').textContent='Špatné heslo.';document.getElementById('fiPin').value='';document.getElementById('fiPin').focus();}
+  });
+  out.addEventListener('click',function(){sessionStorage.removeItem('fiOk');location.reload();});
+})();
+</script>
+</body>
+</html>

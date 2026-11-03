@@ -1,5 +1,5 @@
 /* Sdílené vykreslení dárkového poukazu (web i stránka pro salon).
-   Podklad je originální návrh salonu (assets/img/poukaz-pozadi.jpg, z PDF „Thai – Dárkový poukaz“); do prázdných políček
+   Podklad je návrh ve stylu webu (assets/img/poukaz-pozadi.jpg, zdroj assets/poukaz-navrh/poukaz-navrh.html; políčka na stejných místech jako originál salonu); do políček
    Jméno / Procedura / Platnost se doplní text, dole kód a QR. Rozměry jsou stejné jako v kartotéce
    (kartoteka/app/poukaz_pdf.php), polohy v bodech originálního PDF (595,276 × 283,465 pt). */
 (function () {
@@ -15,8 +15,8 @@
   const W = 595.276, H = 283.465;
   const POLE = { jmeno: [25.4, 169.9], procedura: [184.3, 329.3], platnost: [343.7, 488.2] };
   const ZAKLADNI_LINKA = 235.0, VELIKOST = 11, VELIKOST_MIN = 6.5, ODSAZENI = 5.5;
-  const KOD = { right: 518.0, top: 188.7, size: 6.8 };      // bílý kód na zeleném pruhu
-  const QR = { x: 214.0, y: 147.0, size: 33.0 };            // QR v béžovém panelu vpravo od „MOST“
+  const KOD = { right: 518.0, top: 188.7, size: 6.8 };      // zlatý kód na tmavém pruhu
+  const QR = { x: 214.0, y: 147.0, size: 33.0 };            // QR v rámečku ve spodním pásu
   // řádek s line-height:1 má základní linku 0,793 výšky písma pod horním okrajem (metriky Gelasio: ascent 1900, descent 700, 2048 j./em)
   const NAD_LINKOU = 0.793;
 

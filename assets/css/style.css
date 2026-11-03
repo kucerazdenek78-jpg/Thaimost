@@ -194,6 +194,10 @@ footer h4{color:var(--gold-l);font-size:.78rem;letter-spacing:.2em;text-transfor
 footer a{text-decoration:none}
 footer a:hover{color:#fff}
 .f-bottom{border-top:1px solid rgba(255,255,255,.12);padding-top:22px;display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap;font-size:.8rem}
+.f-links{display:inline-flex;align-items:center;gap:16px}
+.f-lock{display:inline-flex;opacity:.45;transition:.2s}
+.f-lock svg{width:14px;height:14px}
+.f-lock:hover{opacity:1}
 
 /* mobilní lišta */
 .callbar{display:none}

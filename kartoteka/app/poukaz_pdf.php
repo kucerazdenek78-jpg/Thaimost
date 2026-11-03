@@ -2,11 +2,12 @@
 declare(strict_types=1);
 
 /**
- * Dárkový poukaz salonu: originální návrh (app/poukaz/darkovy-poukaz-original.pdf) + vyplněná políčka
+ * Dárkový poukaz salonu: návrh ve stylu webu 11/2026 (app/poukaz/sablona.pdf = obrázek z assets/poukaz-navrh/poukaz-navrh.html;
+ * původní návrh salonu zůstává v app/poukaz/darkovy-poukaz-original.pdf) + vyplněná políčka
  * „Jméno“, „Procedura“, „Platnost“ a kód poukazu s QR.
  *
  * Jak se PDF vyrábí (bez PDF knihovny a bez rozšíření GD, na NAS běží holý php:8.3-cli):
- *  - app/poukaz/sablona.pdf je původní PDF jen přeuložené nástrojem qpdf (bez linearizace, klasická xref tabulka),
+ *  - app/poukaz/sablona.pdf je jednostránkové PDF s obrázkem návrhu (klasická xref tabulka, políčka na stejných místech jako v originálu),
  *  - k šabloně se připojí „přírůstková aktualizace“ PDF: písmo (podmnožina Gelasio, OFL), obsah stránky s texty
  *    a QR a nový objekt stránky; původní návrh se tím nijak nemění,
  *  - totéž (text + QR) umí poukaz_html() pro tisk z prohlížeče a e-mail zákazníkovi dostane PDF jako přílohu.
@@ -20,7 +21,7 @@ const POUKAZ_POLE_Y = [210.2, 238.9];         // horní a dolní okraj políček
 const POUKAZ_ZAKLADNI_LINKA = 235.0;          // na které výšce (od horního okraje) leží písmo ve vyplněném políčku
 const POUKAZ_VELIKOST = 11.0;                 // největší a nejmenší velikost písma v políčku (pt)
 const POUKAZ_VELIKOST_MIN = 6.5;
-const POUKAZ_BARVA_TEXTU = [0.38, 0.14, 0.04]; // tmavě hnědá, laděná k hnědé z návrhu
+const POUKAZ_BARVA_TEXTU = [0.17, 0.12, 0.09]; // teak hnědá (#2b1e16) z nového návrhu
 /** QR s kódem v béžovém panelu vpravo od „MOST“: [x, y shora, strana] včetně bílého okraje (pt). */
 const POUKAZ_QR = [214.0, 147.0, 33.0];
 /** Kód poukazu bílým písmem na zeleném pruhu: konec textu zprava (x), základní linka od shora, velikost. */
@@ -34,13 +35,13 @@ function poukaz_dir(): string { return __DIR__ . '/poukaz'; }
  * commit (adresa se nemění) a každý soubor se před uložením ověří podle SHA-256, takže nelze podstrčit jiný obsah.
  * Soubory, které už na disku jsou, se nestahují. Při změně podkladů se tady změní commit a součty.
  */
-const POUKAZ_ZDROJ = 'https://raw.githubusercontent.com/kucerazdenek78-jpg/thaimost/07a37223774302d23cad3f37d12396279f627ce7/kartoteka/';
+const POUKAZ_ZDROJ = 'https://raw.githubusercontent.com/kucerazdenek78-jpg/thaimost/87fb2e52df38989cb86631ddd983e9f7b539f0ba/kartoteka/';
 const POUKAZ_PODKLADY = [   // cesta v kartotéce => SHA-256
-    'app/poukaz/sablona.pdf' => '3cca0433bba07b83f97a5e76f325769d2a2a2512da78c9e3f7238c917c4207c5',
+    'app/poukaz/sablona.pdf' => '74f79afd49ef6e4d807f86b8be34393673c04a557a84f6d9439f10521aae42f8',
     'app/poukaz/pismo.ttf' => '795ff699ad2fdcfa5ce3585f35e0e8938b739d2cb30ae55961aeccd7fe514a19',
     'app/poukaz/pismo.json' => '5cf0f3b764a94b785a314744988e60a4f7a971dffb2c1a74411100cde768bbbb',
     'app/poukaz/darkovy-poukaz-original.pdf' => '2379a9a63d8d6f0dd0116bc4fecaccedf010f657e78d82d6aa531cf441abff6c',
-    'public/poukaz-pozadi.jpg' => '0ad6943bfd6834cc3bdca949f16c3c1d1fad0de53447c1164dd57bf59b437ec1',
+    'public/poukaz-pozadi.jpg' => 'd139ea3e221b33a3bdee86a4fff6f01d8cebb73c34842269d72815350858b88c',
     'app/qrcode.php' => '839337a00e1ab8be1916ab20702d724aa41cdd7991dd7fc8187ffbc602998b4e',   // knihovna QR (MIT)
 ];
 
