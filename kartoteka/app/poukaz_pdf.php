@@ -35,13 +35,13 @@ function poukaz_dir(): string { return __DIR__ . '/poukaz'; }
  * commit (adresa se nemění) a každý soubor se před uložením ověří podle SHA-256, takže nelze podstrčit jiný obsah.
  * Soubory, které už na disku jsou, se nestahují. Při změně podkladů se tady změní commit a součty.
  */
-const POUKAZ_ZDROJ = 'https://raw.githubusercontent.com/kucerazdenek78-jpg/thaimost/87fb2e52df38989cb86631ddd983e9f7b539f0ba/kartoteka/';
+const POUKAZ_ZDROJ = 'https://raw.githubusercontent.com/kucerazdenek78-jpg/thaimost/31c9ff038f99f7d6846ad45db8b104eac66ca186/kartoteka/';
 const POUKAZ_PODKLADY = [   // cesta v kartotéce => SHA-256
-    'app/poukaz/sablona.pdf' => '74f79afd49ef6e4d807f86b8be34393673c04a557a84f6d9439f10521aae42f8',
+    'app/poukaz/sablona.pdf' => '0d1a1fad1d00d6c60caef9ec234e306a12b213c93827b661eb60812c55100f18',
     'app/poukaz/pismo.ttf' => '795ff699ad2fdcfa5ce3585f35e0e8938b739d2cb30ae55961aeccd7fe514a19',
     'app/poukaz/pismo.json' => '5cf0f3b764a94b785a314744988e60a4f7a971dffb2c1a74411100cde768bbbb',
     'app/poukaz/darkovy-poukaz-original.pdf' => '2379a9a63d8d6f0dd0116bc4fecaccedf010f657e78d82d6aa531cf441abff6c',
-    'public/poukaz-pozadi.jpg' => 'd139ea3e221b33a3bdee86a4fff6f01d8cebb73c34842269d72815350858b88c',
+    'public/poukaz-pozadi.jpg' => '0d2c4fbee4ba18e640d69139ec1a3e228e6d45d751cdcc637a3df9f3cd905735',
     'app/qrcode.php' => '839337a00e1ab8be1916ab20702d724aa41cdd7991dd7fc8187ffbc602998b4e',   // knihovna QR (MIT)
 ];
 
