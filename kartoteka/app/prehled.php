@@ -82,6 +82,7 @@ function stranka_prehled(array $u): void
         $ok = $dnes === date('Y-m-d') ? prehled_okna($iv, $minOd, $minDo, $nejkratsi, $pm, $ted) : [];
         foreach ($ok as [$s, $mx]) $okna[] = [$s, $mx, $kl, $nazev];
         $sloupce[$kl] = ['nazev' => $nazev, 'duo' => count($tablety) > 1, 'well' => (bool)array_filter($tablety, fn($t) => !empty($t['wellness'])),
+            'tem' => (bool)array_filter($tablety, fn($t) => !empty($t['tematicka'])),
             'tablety' => $tablety, 'bloky' => $bloky, 'okna' => $ok, 'volno' => array_sum(array_column($ok, 1))];
     }
     usort($okna, fn($a, $b) => $a[0] <=> $b[0] ?: $b[1] <=> $a[1]);
@@ -113,6 +114,8 @@ function stranka_prehled(array $u): void
       .pb-blk .t{font-weight:700;margin-right:6px}.pb-blk .s{display:block;font-size:.85rem;color:var(--mut)}
       .pb-blk .st{float:right;font-size:.78rem;font-weight:600;margin-left:6px}.pb-blk .st.al{color:#fff;background:#d9262c;border-radius:6px;padding:0 6px}
       .pb-blk .st.mut{font-weight:500;color:var(--mut)}.pb-blk .st.varuj{color:#9a5b00}
+      .pb-blk .atm{display:inline-block;margin-left:6px;font-size:.78rem;font-weight:600;color:#5a4a1e;background:#f6edd3;border-radius:6px;padding:0 6px;vertical-align:1px}
+      .pb-blk .atm.mimo{color:#9a5b00;background:#fdecc8;border:1px dashed #d9a441}
       .pb-blk .grip{position:absolute;left:0;top:0;bottom:0;width:26px;display:flex;align-items:center;justify-content:center;cursor:grab;touch-action:none}
       .pb-blk .grip::before{content:"";width:12px;height:24px;background:radial-gradient(circle,#a89884 1.5px,transparent 2px) 0 0/6px 8px}
       .pb-blk button.mas{font:inherit;color:inherit;border:1px dashed #b9a98f;background:#faf6f0;border-radius:6px;padding:0 7px;cursor:pointer}
@@ -185,7 +188,7 @@ function stranka_prehled(array $u): void
           <div>
             <b><?= h(jmeno_z($r)) ?></b> · <a href="tel:<?= h($r['telefon']) ?>"><?= h(telefon_cz($r['telefon'])) ?></a>
             <?= stitky_html(zakaznik_stitky($z, zakaznik_statistika((int)$z['id']))) ?><br>
-            <?= h($r['sluzba'] . ' – ' . $r['var_popis']) ?> · <b>hodí se:</b> <?= h($r['preferovano'] ?: '—') ?>
+            <?= h($r['sluzba'] . ' – ' . $r['var_popis']) ?> · <b>hodí se:</b> <?= h($r['preferovano'] ?: '—') ?><?= ($r['atmosfera'] ?? '') !== '' ? ' · ' . atmosfera_html($r['atmosfera']) : '' ?>
             <?php if ($r['poznamka_zakaznik']): ?><br><span class="muted">„<?= h($r['poznamka_zakaznik']) ?>“</span><?php endif ?>
           </div>
           <a class="btn primary" href="/?r=rezervace&id=<?= $r['id'] ?>">Naplánovat</a>
@@ -232,9 +235,9 @@ function stranka_prehled(array $u): void
               elseif ($sz['stav'] === 'konec') { if ($trida === 'm-volno') $trida = 'm-konec'; $ted_ln[] = ['⌛ hodnocení · ' . $jm, (int)$sz['rezervace_id']]; }
               else { if ($trida === 'm-volno') $trida = 'm-cekani'; $ted_ln[] = ['📲 čeká na masérku · ' . $jm, (int)$sz['rezervace_id']]; }
           } ?>
-        <div class="pb-col" data-maserna="<?= h($kl) ?>" data-nazev="<?= h($c['nazev']) ?>" data-luzka="<?= count($c['tablety']) ?>" data-well="<?= $c['well'] ? 1 : 0 ?>">
+        <div class="pb-col" data-maserna="<?= h($kl) ?>" data-nazev="<?= h($c['nazev']) ?>" data-luzka="<?= count($c['tablety']) ?>" data-well="<?= $c['well'] ? 1 : 0 ?>" data-tem="<?= $c['tem'] ? 1 : 0 ?>">
           <div class="mist <?= $trida ?> pb-head">
-            <b><?= h($c['nazev']) ?><?= $c['duo'] ? ' (duo)' : '' ?><?= $c['well'] ? ' ♨' : '' ?></b>
+            <b><?= h($c['nazev']) ?><?= $c['duo'] ? ' (duo)' : '' ?><?= $c['well'] ? ' ♨' : '' ?><?= $c['tem'] ? ' <span title="Tematická masérna – projekce a hudba">✨</span>' : '' ?></b>
             <?php if ($ted_ln): foreach ($ted_ln as [$tx, $rid]): ?><a class="ln" href="/?r=rezervace&id=<?= $rid ?>#tablet"><?= h($tx) ?></a><?php endforeach;
             else: ?><span class="ln">volná</span><?php endif ?>
             <small><?= $c['volno'] ? 'dnes ještě volno cca ' . h(rtrim(rtrim(number_format($c['volno'] / 60, 1, ',', ''), '0'), ',')) . ' h' : ($ted < $minDo ? 'plno ✓' : '') ?></small>
@@ -279,9 +282,10 @@ function stranka_prehled(array $u): void
                     elseif ($nyni <= strtotime($r['zacatek']) + TABLET_POZDE_MIN * 60) $st = '<span class="st varuj">⏳ čeká na tablet</span>';
                 } ?>
                 <div class="pb-blk<?= $lze ? ' lze' : '' ?><?= $r['zdroj'] === 'nevesel' ? ' nevesel' : '' ?>" data-rid="<?= $rid ?>" data-od="<?= $od ?>" data-do="<?= $do ?>" data-lze="<?= $lze ? 1 : 0 ?>"
-                     data-par="<?= $par ? 1 : 0 ?>" data-well="<?= (int)$r['w'] ?>" data-jmeno="<?= h(jmeno_z($r)) ?>" data-cas="<?= date('H:i', strtotime($r['zacatek'])) ?>–<?= date('H:i', strtotime($r['konec'])) ?>">
+                     data-par="<?= $par ? 1 : 0 ?>" data-well="<?= (int)$r['w'] ?>" data-atm="<?= h((string)($r['atmosfera'] ?? '')) ?>" data-jmeno="<?= h(jmeno_z($r)) ?>" data-cas="<?= date('H:i', strtotime($r['zacatek'])) ?>–<?= date('H:i', strtotime($r['konec'])) ?>">
                   <?php if ($lze): ?><span class="grip" title="Chyťte a přetáhněte do jiné masérny"></span><?php endif ?>
                   <?= $st ?><span class="t"><?= date('H:i', strtotime($r['zacatek'])) ?>–<?= date('H:i', strtotime($r['konec'])) ?></span><a class="n" draggable="false" href="/?r=rezervace&id=<?= $rid ?>"><b><?= h(jmeno_z($r)) ?></b></a>
+                  <?php if (($r['atmosfera'] ?? '') !== ''): ?><span class="atm<?= $c['tem'] ? '' : ' mimo' ?>" title="<?= $c['tem'] ? 'Zvolená atmosféra tematické masérny' : 'Zákazník si vybral atmosféru, ale masáž není v tematické masérně' ?>"><?= atmosfera_html($r['atmosfera']) ?></span><?php endif ?>
                   <span class="s"><?= h($r['sluzba'] . ' ' . $r['var_popis']) ?> · <?php
                       if ($mas === '') echo (int)$r['var_maserky'] === 0 ? '<i>bez masérky</i>' : '<i>masérka zatím nepřidělena</i>';
                       elseif ($lze && (int)$r['var_maserky'] > 0) echo '<button type="button" class="mas" title="Změnit masérku">👤 ' . h($mas) . ($masNavrh ? ' <i>(návrh)</i>' : '') . '</button>';
@@ -397,9 +401,11 @@ function stranka_prehled(array $u): void
         if (blk.dataset.well === '1' && document.querySelector('.pb-col[data-well="1"]') && col.dataset.well !== '1') return { typ: 'nelze', text: '✖ Whirlpool a sauna patří do wellness masérny.' };
         const od = +blk.dataset.od, dd = +blk.dataset.do;
         const st = [...col.querySelectorAll('.pb-blk[data-od]')].filter(b => +b.dataset.od < dd && +b.dataset.do > od);
-        if (!st.length) return { typ: 'ok', text: 'Přesunout do: ' + col.dataset.nazev };
+        // atmosféra mimo tematickou masérnu: jde to, ale recepce to vidí (zákazník si ji vybral)
+        const atmVaruj = blk.dataset.atm && col.dataset.tem !== '1' ? ' ⚠ zákazník si vybral atmosféru – mimo tematickou masérnu nebude' : '';
+        if (!st.length) return { typ: 'ok', text: 'Přesunout do: ' + col.dataset.nazev + atmVaruj };
         if (st.some(b => b.dataset.lze !== '1')) return { typ: 'nelze', text: '✖ V té masérně v tu dobu masáž běží nebo už proběhla.', st };
-        return { typ: 'prohod', text: '⇄ Prohodí se s: ' + st.map(b => b.dataset.jmeno + ' (' + b.dataset.cas + ')').join(', '), st };
+        return { typ: 'prohod', text: '⇄ Prohodí se s: ' + st.map(b => b.dataset.jmeno + ' (' + b.dataset.cas + ')').join(', ') + atmVaruj, st };
       }
       const zrusZvyrazneni = () => document.querySelectorAll('.pb-col.cil,.pb-col.cil-ne,.pb-blk.prohodi').forEach(x => x.classList.remove('cil', 'cil-ne', 'prohodi'));
 

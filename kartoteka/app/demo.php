@@ -49,9 +49,9 @@ function demo_nahrat(): string
         // ---------- masérny (jen pokud žádné nejsou – zůstanou i po smazání vzoru, kvůli tabletům) ----------
         $noveMistnosti = 0;
         if (!qv('SELECT COUNT(*) FROM mistnosti')) {
-            // 2× jednolůžková + 1× dvoulůžková (i wellness) = 4 lůžka, na každém lůžku jeden tablet
+            // 2× jednolůžková (Masérna 2 = tematická: projekce + hudba) + 1× dvoulůžková (i wellness) = 4 lůžka, na každém lůžku jeden tablet
             foreach ([['Masérna 1', ''], ['Masérna 2', ''], ['Dvoulůžková – lůžko A', 'Dvoulůžková'], ['Dvoulůžková – lůžko B', 'Dvoulůžková']] as $i => [$n, $sk]) {
-                q('INSERT INTO mistnosti(nazev,token,poradi,skupina,wellness) VALUES(?,?,?,?,?)', [$n, bin2hex(random_bytes(16)), $i + 1, $sk, $sk ? 1 : 0]);
+                q('INSERT INTO mistnosti(nazev,token,poradi,skupina,wellness,tematicka) VALUES(?,?,?,?,?,?)', [$n, bin2hex(random_bytes(16)), $i + 1, $sk, $sk ? 1 : 0, $n === 'Masérna 2' ? 1 : 0]);
                 $noveMistnosti++;
             }
             q("INSERT INTO nastaveni(klic,hodnota) VALUES('mistnosti_nastaveny','1') ON CONFLICT(klic) DO UPDATE SET hodnota='1'");

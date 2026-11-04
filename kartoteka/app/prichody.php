@@ -66,7 +66,9 @@ function prichody_navrh(array $rez): array
             if ($par && count($tablety) < 2) continue;
             $kand[] = $kl;
         }
-        usort($kand, fn($a, $b) => $par ? 0 : (count($skupiny[$a]) <=> count($skupiny[$b])));
+        $tem = fn(string $kl) => (int)(bool)array_filter($skupiny[$kl], fn($t) => !empty($t['tematicka']));
+        $atm = (string)($r['atmosfera'] ?? '') !== '';
+        usort($kand, fn($a, $b) => (($atm ? -1 : 1) * ($tem($a) <=> $tem($b))) ?: ($par ? 0 : (count($skupiny[$a]) <=> count($skupiny[$b]))));
         $kl = $kand[0] ?? null;
         $m1 = (int)$r['maserka_id'] ?: null; $m2 = (int)$r['maserka2_id'] ?: null;
         $pozn = '';
@@ -169,8 +171,8 @@ function masterny_den(string $d, array $skupiny, bool $fixuj = false): array
         WHERE r.zacatek >= ? AND r.zacatek < ? AND r.stav IN ('potvrzeno','probehlo') ORDER BY r.zacatek, r.id",
         [$d, $dalsi])->fetchAll();
     $tabletSkup = [];   // id tabletu => klíč masérny
-    $wellSk = [];
-    foreach ($skupiny as $kl => $tablety) foreach ($tablety as $t) { $tabletSkup[(int)$t['id']] = $kl; if ($t['wellness']) $wellSk[$kl] = true; }
+    $wellSk = []; $temSk = [];
+    foreach ($skupiny as $kl => $tablety) foreach ($tablety as $t) { $tabletSkup[(int)$t['id']] = $kl; if ($t['wellness']) $wellSk[$kl] = true; if (!empty($t['tematicka'])) $temSk[$kl] = true; }
     $fix = [];          // rezervace_id => klíč masérny (z tabletu)
     foreach (q("SELECT rezervace_id, mistnost_id FROM sezeni WHERE stav<>'zruseno' AND rezervace_id IN (SELECT id FROM rezervace WHERE zacatek >= ? AND zacatek < ?) ORDER BY id", [$d, $dalsi])->fetchAll() as $x)
         if (isset($tabletSkup[(int)$x['mistnost_id']])) $fix[(int)$x['rezervace_id']] = $tabletSkup[(int)$x['mistnost_id']];
@@ -207,7 +209,10 @@ function masterny_den(string $d, array $skupiny, bool $fixuj = false): array
         $kand = array_keys($skupiny);
         if ($r['w']) { $w = array_values(array_filter($kand, fn($k) => isset($wellSk[$k]))); if ($w) $kand = $w; }
         if ($par) $kand = array_values(array_filter($kand, fn($k) => count($skupiny[$k]) >= 2));
-        usort($kand, fn($x, $y) => ($par || $r['w']) ? 0 : count($skupiny[$x]) <=> count($skupiny[$y]));
+        // atmosféra → tematická masérna první; bez atmosféry → tematická až jako poslední (ať zůstane volná pro ty, kdo si ji vybrali)
+        $atm = (string)($r['atmosfera'] ?? '') !== '';
+        usort($kand, fn($x, $y) => (($atm ? -1 : 1) * ((int)isset($temSk[$x]) <=> (int)isset($temSk[$y])))
+            ?: (($par || $r['w']) ? 0 : count($skupiny[$x]) <=> count($skupiny[$y])));
         $vybrana = null;
         foreach ($kand as $kl) if ($volno($kl, $a, $b)) { $vybrana = $kl; break; }
         if ($vybrana === null) { $out[''][] = $r + ['zdroj' => 'nevesel']; continue; }
@@ -234,7 +239,7 @@ function kalendar_masterny(string $d): void
     $minz = fn($dt) => (int)date('G', strtotime($dt)) * 60 + (int)date('i', strtotime($dt));
     $prev = date('Y-m-d', strtotime("$d -1 day")); $next = date('Y-m-d', strtotime("$d +1 day"));
     $sloupce = [];
-    foreach ($skupiny as $kl => $t) $sloupce[$kl] = (trim($t[0]['skupina']) !== '' ? $t[0]['skupina'] : $t[0]['nazev']) . (count($t) > 1 ? ' (duo)' : '') . (isset($t[0]['wellness']) && $t[0]['wellness'] ? ' ♨' : '');
+    foreach ($skupiny as $kl => $t) $sloupce[$kl] = (trim($t[0]['skupina']) !== '' ? $t[0]['skupina'] : $t[0]['nazev']) . (count($t) > 1 ? ' (duo)' : '') . (isset($t[0]['wellness']) && $t[0]['wellness'] ? ' ♨' : '') . (!empty($t[0]['tematicka']) ? ' ✨' : '');
     if (!empty($plan['']) ) $sloupce[''] = '⚠ Nevešlo se';
     hlavicka('Kalendář masérn', 'kalendar'); ?>
     <div class="cal-nav">
@@ -276,7 +281,7 @@ function kalendar_masterny(string $d): void
             <a class="blk s-<?= h($r['stav']) ?><?= $r['zdroj'] === 'nevesel' ? ' konfl' : '' ?>" href="/?r=rezervace&id=<?= $r['id'] ?>"
                style="top:<?= $top ?>px;height:<?= $hgt ?>px;left:3px;width:calc(100% - 6px);border-color:#7a5ea8;<?= $r['zdroj'] === 'navrh' ? 'opacity:.75;border-style:dashed' : '' ?>">
               <b><?= $r['zdroj'] === 'tablet' ? '📲 ' : '' ?><?= date('H:i', strtotime($r['zacatek'])) ?>–<?= date('H:i', strtotime($r['konec'])) ?></b> <?= h(jmeno_z($r)) ?><br>
-              <span><?= h($r['sluzba'] . ' ' . $r['var_popis']) ?></span><br>
+              <span><?= h($r['sluzba'] . ' ' . $r['var_popis']) ?><?= ($r['atmosfera'] ?? '') !== '' ? ' · ' . atmosfera_html($r['atmosfera']) : '' ?></span><br>
               <span><?= $mas !== '' ? '👤 <b>' . h($mas) . '</b>' . ($masNavrh ? ' <i>(návrh)</i>' : '') : ((int)$r['var_maserky'] === 0 ? '<i>bez masérky (wellness)</i>' : '<i>masérka zatím nepřidělena</i>') ?></span>
             </a>
           <?php endforeach ?>

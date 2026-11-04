@@ -26,7 +26,7 @@ function q(string $sql, array $p = []): PDOStatement
 function q1(string $sql, array $p = []): ?array { $r = q($sql, $p)->fetch(); return $r ?: null; }
 function qv(string $sql, array $p = []) { $r = q($sql, $p)->fetchColumn(); return $r === false ? null : $r; }
 
-const DB_VERZE = 13;
+const DB_VERZE = 14;
 
 /** Migrace běží v jedné transakci a po získání zámku se verze ověří znovu (souběžné první požadavky). */
 function migrate(PDO $pdo): void
@@ -48,6 +48,7 @@ function migrate(PDO $pdo): void
         if ($ver < 11) migrate_v11($pdo);
         if ($ver < 12) migrate_v12($pdo);
         if ($ver < 13) migrate_v13($pdo);
+        if ($ver < 14) migrate_v14($pdo);
         $pdo->exec('PRAGMA user_version = ' . DB_VERZE);
         $pdo->exec('COMMIT');
     } catch (Throwable $e) {
@@ -162,6 +163,22 @@ function migrate_v1(PDO $pdo): void
     $sm = $pdo->prepare('INSERT INTO maserky(jmeno,poradi,barva) VALUES(?,?,?)');
     $barvy = ['#b07a3a', '#5b8a72', '#7a5ea8', '#c0605a', '#3f7fae'];
     for ($i = 1; $i <= 5; $i++) $sm->execute(["Masérka $i", $i, $barvy[$i - 1]]);
+}
+
+/**
+ * v14: tematická masérna (projekce na zeď + vlastní hudba; zákazník si vybere jednu ze 4 atmosfér – viz ATMOSFERY v lib.php).
+ * mistnosti.tematicka = masérna je tematická (platí pro všechna její lůžka, nastavuje se v Tým → Masérny),
+ * rezervace.atmosfera = zvolená atmosféra (klíč z ATMOSFERY, prázdné = bez / nezáleží). Masérna 2 se označí rovnou.
+ */
+function migrate_v14(PDO $pdo): void
+{
+    $pdo->exec(<<<SQL
+    ALTER TABLE mistnosti ADD COLUMN tematicka INTEGER NOT NULL DEFAULT 0;
+    ALTER TABLE rezervace ADD COLUMN atmosfera TEXT NOT NULL DEFAULT '';
+    UPDATE mistnosti SET tematicka=1 WHERE LOWER(TRIM(nazev)) IN ('masérna 2', 'maserna 2') OR LOWER(TRIM(skupina)) IN ('masérna 2', 'maserna 2');
+    SQL);
+    $pdo->prepare("INSERT INTO ai_pravidla(kod,typ,text,autor,schvalil) VALUES(?,?,?,'výchozí','výchozí')")
+        ->execute(['R-09', 'tvrde', 'Masérna 2 je tematická: projekce na zeď a hudba podle atmosféry (prales, pláž, vodopád, chrám), kterou si zákazník vybere při objednání. Rezervace se zvolenou atmosférou patří do tematické masérny; ostatní se do ní dávají, až když jsou jiné masérny plné.']);
 }
 
 /**

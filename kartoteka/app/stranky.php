@@ -130,7 +130,7 @@ function stranka_dnes(array $u): void
           <div>
             <b><?= h(jmeno_z($r)) ?></b> · <a href="tel:<?= h($r['telefon']) ?>"><?= h(telefon_cz($r['telefon'])) ?></a>
             <?= stitky_html(zakaznik_stitky($z, zakaznik_statistika((int)$z['id']))) ?><br>
-            <?= h($r['sluzba'] . ' – ' . $r['var_popis']) ?> · <b>hodí se:</b> <?= h($r['preferovano'] ?: '—') ?>
+            <?= h($r['sluzba'] . ' – ' . $r['var_popis']) ?> · <b>hodí se:</b> <?= h($r['preferovano'] ?: '—') ?><?= ($r['atmosfera'] ?? '') !== '' ? ' · ' . atmosfera_html($r['atmosfera']) : '' ?>
             <?php if ($r['poznamka_zakaznik']): ?><br><span class="muted">„<?= h($r['poznamka_zakaznik']) ?>“</span><?php endif ?>
             <br><span class="muted small">přišlo <?= h(datum_cz($r['vytvoreno'])) ?></span>
           </div>
@@ -390,6 +390,9 @@ function rez_uloz(array $p, ?array $puvodni, bool $potvrdit): array
     $mKonec = $mKon ?? $kon;
     $platba = array_key_exists((string)($p['platba'] ?? ''), PLATBY) ? (string)$p['platba'] : '';
     $cena = ($p['cena'] ?? '') !== '' ? (int)$p['cena'] : (int)$var['cena'];
+    // atmosféra tematické masérny: jen známý klíč; u úpravy bez pole ve formuláři zůstane původní
+    $atm = array_key_exists('atmosfera', $p) ? (isset(ATMOSFERY[(string)$p['atmosfera']]) ? (string)$p['atmosfera'] : '') : (string)($puvodni['atmosfera'] ?? '');
+    if ($atm !== '' && (int)$var['wellness_mistnost'] === 1) return ['Wellness (whirlpool, sauna) probíhá ve wellness masérně – atmosféru tematické masérny u něj nejde zvolit.', []];
 
     if ($pocet >= 2 && (!$mas || !$mas2) && empty($p['presto'])) return [$var['popis'] . ' potřebuje dvě masérky – vyberte obě (nebo zaškrtněte „Přesto uložit“).', []];
     $kol = [];
@@ -431,15 +434,17 @@ function rez_uloz(array $p, ?array $puvodni, bool $potvrdit): array
     if ($potvrdit) $stav = 'potvrzeno';
 
     if ($puvodni) {
-        q('UPDATE rezervace SET varianta_id=?, maserka_id=?, maserka2_id=?, masaz_konec=?, zacatek=?, konec=?, stav=?, platba=?, cena=?, zmeneno=?, zmenil=? WHERE id=?',
-            [$var['id'], $mas, $mas2, $mKon, $zac, $kon, $stav, $platba, $cena, nyni(), kdo(), $puvodni['id']]);
+        q('UPDATE rezervace SET varianta_id=?, maserka_id=?, maserka2_id=?, masaz_konec=?, zacatek=?, konec=?, stav=?, platba=?, cena=?, atmosfera=?, zmeneno=?, zmenil=? WHERE id=?',
+            [$var['id'], $mas, $mas2, $mKon, $zac, $kon, $stav, $platba, $cena, $atm, nyni(), kdo(), $puvodni['id']]);
         $rid = (int)$puvodni['id'];
+        // změna atmosféry = rezervace se má znovu zařadit do masérny (tematická ↔ ostatní)
+        if ($atm !== (string)($puvodni['atmosfera'] ?? '') && (string)($puvodni['maserna'] ?? '') !== '') q("UPDATE rezervace SET maserna='' WHERE id=?", [$rid]);
         zapis_log('rezervace_uprava', "#$rid $zac");
     } else {
-        q("INSERT INTO rezervace(zakaznik_id,varianta_id,maserka_id,maserka2_id,masaz_konec,zacatek,konec,stav,zdroj,platba,cena,poznamka_zakaznik,zmenil)
-           VALUES(?,?,?,?,?,?,?,'potvrzeno',?,?,?,?,?)",
+        q("INSERT INTO rezervace(zakaznik_id,varianta_id,maserka_id,maserka2_id,masaz_konec,zacatek,konec,stav,zdroj,platba,cena,atmosfera,poznamka_zakaznik,zmenil)
+           VALUES(?,?,?,?,?,?,?,'potvrzeno',?,?,?,?,?,?)",
             [$zid, $var['id'], $mas, $mas2, $mKon, $zac, $kon, in_array($p['zdroj'] ?? '', ['telefon', 'osobne'], true) ? $p['zdroj'] : 'recepce',
-             $platba, $cena, trim($p['poznamka'] ?? ''), kdo()]);
+             $platba, $cena, $atm, trim($p['poznamka'] ?? ''), kdo()]);
         $rid = (int)db()->lastInsertId();
         zapis_log('rezervace_nova', "#$rid $zac");
     }
@@ -506,6 +511,10 @@ function rez_formular(array $v, bool $novy, string $tlacitko, int $rezId = 0): v
         <label>Cena (Kč)<input type="number" name="cena" value="<?= h($v['cena'] ?? '') ?>" placeholder="podle ceníku"></label>
       </div>
       <div id="obs" class="obs" aria-live="polite"></div>
+      <?php if (tematicka_maserna_je()): ?>
+      <label id="latm">✨ Atmosféra (tematická masérna) <span class="muted small">– projekce na zeď a hudba; s atmosférou se masáž plánuje do tematické masérny</span>
+        <select name="atmosfera"><?= moznosti(['' => '— bez atmosféry / nezáleží —'] + array_map(fn($a) => $a['ikona'] . ' ' . $a['nazev'] . ' – ' . $a['popis'], ATMOSFERY), (string)($v['atmosfera'] ?? '')) ?></select></label>
+      <?php endif ?>
       <?php if ($novy): ?><label>Poznámka<input name="poznamka" value="<?= h($v['poznamka'] ?? '') ?>"></label><?php endif ?>
       <label class="check"><input type="checkbox" name="poslat_email" value="1" <?= !empty($v['poslat_email']) ? 'checked' : '' ?>> Poslat zákazníkovi potvrzení e-mailem (když má e-mail)</label>
     </fieldset>
@@ -761,7 +770,7 @@ function stranka_rezervace(array $u): void
         'datum' => $r['zacatek'] ? substr($r['zacatek'], 0, 10) : date('Y-m-d'),
         'cas' => $r['zacatek'] ? substr($r['zacatek'], 11, 5) : '',
         'delka' => $r['zacatek'] && $r['konec'] ? (strtotime($r['konec']) - strtotime($r['zacatek'])) / 60 : '',
-        'platba' => $r['platba'], 'cena' => $r['cena'], 'poslat_email' => $zadost ? 1 : 0,
+        'platba' => $r['platba'], 'cena' => $r['cena'], 'poslat_email' => $zadost ? 1 : 0, 'atmosfera' => $r['atmosfera'] ?? '',
     ];
 
     // návrh nového termínu z „Volné termíny“ (přesun existující rezervace): předvyplní formulář, uloží se až tlačítkem
@@ -785,6 +794,7 @@ function stranka_rezervace(array $u): void
             <dt>Služba</dt><dd><?= h(($r['sluzba'] ?? '—') . ' – ' . ($r['var_popis'] ?? '')) ?></dd>
             <?php if ($r['zacatek']): ?><dt>Kdy</dt><dd><?= h(datum_cz($r['zacatek'])) ?>–<?= date('H:i', strtotime($r['konec'])) ?></dd><?php endif ?>
             <?php if ($r['preferovano']): ?><dt>Hodí se mu</dt><dd><?= h($r['preferovano']) ?></dd><?php endif ?>
+            <?php if (($r['atmosfera'] ?? '') !== ''): ?><dt>Atmosféra</dt><dd><?= atmosfera_html($r['atmosfera']) ?> <span class="muted small">(tematická masérna<?= tematicka_maserna_je() ? '' : ' – <b class="warn">žádná není nastavená, Tým → Masérny</b>' ?>)</span></dd><?php endif ?>
             <?php if ($r['poznamka_zakaznik']): ?><dt>Poznámka</dt><dd><?= nl2br(h($r['poznamka_zakaznik'])) ?></dd><?php endif ?>
             <dt>Masérka</dt><dd><?= h(($r['maserka'] ?? '—') . ($r['maserka2'] ? ' + ' . $r['maserka2'] : '')) ?><?= $r['masaz_konec'] ? ' <span class="muted small">(masáž do ' . h(date('H:i', strtotime($r['masaz_konec']))) . ', pak bez masérek)</span>' : '' ?></dd>
             <dt>Platba</dt><dd><?= h(PLATBY[$r['platba']] ?? '') ?> · <?= kc($r['cena']) ?></dd>

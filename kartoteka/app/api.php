@@ -75,20 +75,25 @@ function api_zajem(): void
     $okno = in_array($d['okno'] ?? '', ['dopoledne', 'odpoledne', 'vecer', 'kdykoli'], true) ? $d['okno'] : 'kdykoli';
     $oknoTxt = ['dopoledne' => 'dopoledne', 'odpoledne' => 'odpoledne', 'vecer' => 'večer', 'kdykoli' => 'kdykoli'][$okno];
     $pref = trim(($den ? datum_cz($den, false) . ', ' : '') . $oknoTxt);
+    // atmosféra tematické masérny (prales, pláž, vodopád, chrám) – jen známý klíč, u wellness se ignoruje
+    $atm = isset(ATMOSFERY[(string)($d['atmosfera'] ?? '')]) && (int)$v['wellness_mistnost'] !== 1 ? (string)$d['atmosfera'] : '';
+    $atmTxt = $atm !== '' ? ATMOSFERY[$atm]['nazev'] : '';
 
     $zid = zakaznik_najdi_nebo_zaloz($tel, $jmeno, $prijmeni, $email, 'web');
     q("UPDATE zakaznici SET gdpr_souhlas=COALESCE(gdpr_souhlas, ?) WHERE id=?", [nyni(), $zid]);
-    q("INSERT INTO rezervace(zakaznik_id,varianta_id,stav,zdroj,preferovano,poznamka_zakaznik,cena)
-       VALUES(?,?,'zadost','web',?,?,?)", [$zid, $var, $pref, $d['poznamka'] ?? '', $v['cena']]);
+    q("INSERT INTO rezervace(zakaznik_id,varianta_id,stav,zdroj,preferovano,poznamka_zakaznik,cena,atmosfera)
+       VALUES(?,?,'zadost','web',?,?,?,?)", [$zid, $var, $pref, $d['poznamka'] ?? '', $v['cena'], $atm]);
     $rid = (int)db()->lastInsertId();
 
     $kdo = "$jmeno $prijmeni, " . telefon_cz($tel) . ($email ? ", $email" : '');
     posli_email(cfg()['email_salon'], "Nová žádost o termín – $jmeno $prijmeni",
         "Nová žádost z webu:\n\n$kdo\n$v[nazev] – $v[popis]\nKdy by se hodilo: $pref\n"
+        . ($atmTxt !== '' ? "Atmosféra (tematická masérna): $atmTxt\n" : '')
         . (($d['poznamka'] ?? '') !== '' ? "Poznámka: $d[poznamka]\n" : '')
         . "\nVyřídit: " . rtrim(cfg()['url'], '/') . "/?r=rezervace&id=$rid\n");
     if ($email) posli_email($email, 'Thai Most – přijali jsme vaši žádost o termín',
-        "Dobrý den,\n\nděkujeme za zájem o $v[nazev] ($v[popis]). Kdy by se vám hodilo: $pref.\n\n"
+        "Dobrý den,\n\nděkujeme za zájem o $v[nazev] ($v[popis]). Kdy by se vám hodilo: $pref.\n"
+        . ($atmTxt !== '' ? "Atmosféra v tematické masérně: $atmTxt.\n" : '') . "\n"
         . "Termín je potvrzený až ve chvíli, kdy se vám ozveme. Na recepci vám zavoláme nebo napíšeme co nejdřív.\n\n"
         . "Thajské masáže Most\n+420 778 429 329\n");
 

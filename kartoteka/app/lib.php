@@ -170,6 +170,26 @@ const PLATBY = [
 ];
 const TLAK = ['' => '—', 'jemne' => 'jemně', 'stredne' => 'středně', 'silne' => 'silně'];
 
+/** Atmosféry tematické masérny (projekce na zeď + hudba). Klíč se ukládá k rezervaci (rezervace.atmosfera) a chodí i z webu. */
+const ATMOSFERY = [
+    'prales'  => ['nazev' => 'Prales',  'en' => 'Rainforest', 'ikona' => '🌿', 'popis' => 'mlha, zeleň a zpěv ptáků'],
+    'plaz'    => ['nazev' => 'Pláž',    'en' => 'Beach',      'ikona' => '🏝', 'popis' => 'šum moře při západu slunce'],
+    'vodopad' => ['nazev' => 'Vodopád', 'en' => 'Waterfall',  'ikona' => '💧', 'popis' => 'tekoucí voda a klid'],
+    'chram'   => ['nazev' => 'Chrám',   'en' => 'Temple',     'ikona' => '🪷', 'popis' => 'lotosy, svíčky a večerní klid'],
+];
+/** Krátký štítek atmosféry („🌿 Prales“), prázdný pro neznámý klíč. */
+function atmosfera_html(?string $klic, bool $en = false): string
+{
+    $a = ATMOSFERY[(string)$klic] ?? null;
+    return $a ? $a['ikona'] . ' ' . h($en ? $a['en'] : $a['nazev']) : '';
+}
+/** Existuje aspoň jedna tematická masérna? (jinak se výběr atmosféry nikde nenabízí) */
+function tematicka_maserna_je(): bool
+{
+    static $je = null;
+    return $je ??= (bool)qv('SELECT 1 FROM mistnosti WHERE aktivni=1 AND tematicka=1 LIMIT 1');
+}
+
 /** Proběhlo se nastaví samo jen tam, kde masérka masáž spustila na tabletu (START) – to je důkaz, že klient přišel.
  *  Ostatní potvrzené termíny, které už skončily, zůstanou „ke kontrole“ v přehledu Dnes, aby se nepřišel
  *  zapomenutý klient nepočítal jako návštěva (a nedostal razítko do bonusu). */

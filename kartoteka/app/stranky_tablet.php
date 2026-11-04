@@ -190,6 +190,11 @@ function sezeni_payload(array $m, ?array $s): array
             'masaz_en' => $v ? trim((MASAZ_EN[$v['kod']] ?? $v['nazev']) . ($v['popis'] ? ' – ' . strtr($v['popis'], VARIANTA_EN) : '')) : 'Massage',
         ]);
         $out['foto'] = $v ? masaz_foto((string)$v['kod']) : '';
+        // atmosféra tematické masérny (projekce + hudba): masérka ji před masáží zapne
+        $atm = ATMOSFERY[(string)($r['atmosfera'] ?? '')] ?? null;
+        $out['atmosfera'] = $atm ? $atm['ikona'] . ' ' . $atm['nazev'] : '';
+        $out['atmosfera_en'] = $atm ? $atm['ikona'] . ' ' . $atm['en'] : '';
+        $out['tematicka'] = (bool)($m['tematicka'] ?? 0);
     }
     if ($s['stav'] === 'cekani' && $s['potvrzeno']) {
         $out['tlak'] = $z['pref_tlak'] ? (TLAK[$z['pref_tlak']] ?? '') : '';
@@ -322,6 +327,7 @@ h1{font-size:5.5vmin;margin:0;font-weight:500}h2{font-size:3.6vmin;margin:0;font
 .card .v{font-size:4.4vmin;font-weight:500;margin-top:.4vmin}
 .card.wide{grid-column:1/-1}.card .t{font-size:3vmin;white-space:pre-wrap}
 .warn{background:#4b2420;border:.4vmin solid var(--bad)}.warn .k{color:#ffb4a8}.warn .v{color:#fff;font-size:4vmin}
+.card.atm{background:#3a2e14;border:.4vmin solid #e2b765}.card.atm .k{color:#f3d58a}.card.atm .v{color:#fff}
 .ring{position:relative;width:64vmin;height:64vmin}.ring svg{position:absolute;inset:0;transform:rotate(-90deg)}
 .ring .in{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center}
 .stars{display:flex;gap:2.4vmin}.stars button{background:none;border:0;font-size:12vmin;padding:0;line-height:1;opacity:.6;transition:transform .15s,opacity .15s;font-family:'Noto Color Emoji','Apple Color Emoji','Segoe UI Emoji',sans-serif}.stars button.on{opacity:1;transform:scale(1.3)}
@@ -385,10 +391,10 @@ function spayd(){const sp=S.spropitne;return 'SPD*1.0*ACC:'+sp.iban+(tip?'*AM:'+
    Podržením tlačítka vpravo nahoře se celá obrazovka přepne do češtiny, po pustení zpět do angličtiny. */
 const TX={
  en:{ready:'Room ready',next:'Waiting for the next massage',on_duty:'Therapist on duty',check:'Please check that this is you.',yes:n=>'Yes, I am '+n,no:'That is not me',
-  notified:'Reception has been notified. Please wait – they will send the booking again.',cust:'Customer',mas:'Massage',warn:'⚠ Caution – health and restrictions',pref:'Customer preferences',press:'Pressure',notes:'Notes',
+  notified:'Reception has been notified. Please wait – they will send the booking again.',cust:'Customer',mas:'Massage',atm:'✨ Atmosphere – start the projection and music',atm_none:'✨ Thematic room – no atmosphere chosen',warn:'⚠ Caution – health and restrictions',pref:'Customer preferences',press:'Pressure',notes:'Notes',
   now:'Now',start:'▶ Start massage',left:'remaining',endsat:'ends at',early:'End early: hold here for 2 s',cz:'Czech original – no English text entered',lg:'Hold = česky'},
  cs:{ready:'Masérna je připravena',next:'Čekáme na další masáž',on_duty:'Dnes zde masíruje',check:'Zkontrolujte, že jde o vás.',yes:n=>'Ano, jsem '+n,no:'Nejsem to já',
-  notified:'Recepce byla upozorněna. Počkejte prosím, pošle masáž znovu.',cust:'Zákazník',mas:'Masáž',warn:'⚠ Pozor – zdraví a omezení',pref:'Preference zákazníka',press:'Tlak',notes:'Poznámky',
+  notified:'Recepce byla upozorněna. Počkejte prosím, pošle masáž znovu.',cust:'Zákazník',mas:'Masáž',atm:'✨ Atmosféra – zapněte projekci a hudbu',atm_none:'✨ Tematická masérna – bez zvolené atmosféry',warn:'⚠ Pozor – zdraví a omezení',pref:'Preference zákazníka',press:'Tlak',notes:'Poznámky',
   now:'Teď',start:'▶ Zahájit masáž',left:'zbývá',endsat:'konec v',early:'Ukončit dřív: podržte tady 2 s',cz:'',lg:'Česky'}
 };
 const tx=()=>TX[hold?'cs':'en'];
@@ -414,12 +420,13 @@ function render(){
     const pozn=hold?(S.poznamky||[]):(S.poznamky_en?[S.poznamky_en]:(S.poznamky||[])), poznCz=!hold&&!S.poznamky_en&&pozn.length>0;
     h='<div class="grid fade"><div class="card"><div class="k">'+X.cust+'</div><div class="v">'+esc(S.prijmeni)+'</div></div>'
      +'<div class="card"><div class="k">'+X.mas+'</div><div class="v">'+esc(masaz)+(/min/.test(masaz)?'':' · '+S.minuty+' min')+'</div></div>'
+     +(S.atmosfera?'<div class="card wide atm"><div class="k">'+X.atm+'</div><div class="v">'+esc(hold?S.atmosfera:(S.atmosfera_en||S.atmosfera))+'</div></div>':(S.tematicka?'<div class="card wide"><div class="k">'+X.atm_none+'</div></div>':''))
      +(uz.t?'<div class="card warn wide"><div class="k">'+X.warn+tag(uz.cz)+'</div><div class="v">'+esc(uz.t)+'</div></div>':'')
      +((tlak||pf.t)?'<div class="card wide"><div class="k">'+X.pref+tag(pf.cz)+'</div><div class="t">'+(tlak?X.press+': <b>'+esc(tlak)+'</b>\n':'')+esc(pf.t)+'</div></div>':'')
      +(pozn.length?'<div class="card wide"><div class="k">'+X.notes+tag(poznCz)+'</div><div class="t">'+pozn.map(esc).join('\n')+'</div></div>':'')
      +'</div><div class="row"><div class="mut small">'+X.now+' <b id="cl2"></b></div><button class="btn ok" id="b3">'+X.start+'</button></div>';
   }else if(S.stav==='bezi'){
-    h='<div class="mut small fade">'+esc(S.prijmeni)+' · '+esc(masaz)+'</div><div class="ring fade"><svg viewBox="0 0 100 100"><circle cx="50" cy="50" r="46" fill="none" stroke="#264743" stroke-width="2"/><circle id="pr" cx="50" cy="50" r="46" fill="none" stroke="#e2b765" stroke-width="2.4" stroke-linecap="round" stroke-dasharray="289" stroke-dashoffset="0"/></svg>'
+    h='<div class="mut small fade">'+esc(S.prijmeni)+' · '+esc(masaz)+(S.atmosfera?' · '+esc(hold?S.atmosfera:(S.atmosfera_en||S.atmosfera)):'')+'</div><div class="ring fade"><svg viewBox="0 0 100 100"><circle cx="50" cy="50" r="46" fill="none" stroke="#264743" stroke-width="2"/><circle id="pr" cx="50" cy="50" r="46" fill="none" stroke="#e2b765" stroke-width="2.4" stroke-linecap="round" stroke-dasharray="289" stroke-dashoffset="0"/></svg>'
      +'<div class="in"><div class="mut small">'+X.left+'</div><div class="huge" id="cd"></div><div class="mut small" style="margin-top:1.6vmin">'+X.endsat+' <b>'+hhmm(S.konec*1000)+'</b> · '+X.now.toLowerCase()+' <span id="cl2"></span></div></div></div>'
      +'<div class="mut small" id="pre" style="opacity:.35">'+X.early+'</div>';
   }else if(S.stav==='konec'){
@@ -483,11 +490,11 @@ function stranka_masterny(array $u): void
             if ($n === '') flash('Zadejte název masérny.', 'err');
             else { q('INSERT INTO mistnosti(nazev,token,poradi) VALUES(?,?,?)', [$n, bin2hex(random_bytes(16)), (int)qv('SELECT COALESCE(MAX(poradi),0)+1 FROM mistnosti')]); flash('Masérna přidána.'); }
         } elseif ($akce === 'ulozit' && $id) {
-            q('UPDATE mistnosti SET nazev=?, aktivni=?, skupina=?, wellness=? WHERE id=?', [trim($_POST['nazev'] ?? '') ?: 'Masérna', !empty($_POST['aktivni']) ? 1 : 0,
-                trim($_POST['skupina'] ?? ''), !empty($_POST['wellness']) ? 1 : 0, $id]);
-            // wellness platí pro celou masérnu – sjednotit u všech jejích lůžek
+            q('UPDATE mistnosti SET nazev=?, aktivni=?, skupina=?, wellness=?, tematicka=? WHERE id=?', [trim($_POST['nazev'] ?? '') ?: 'Masérna', !empty($_POST['aktivni']) ? 1 : 0,
+                trim($_POST['skupina'] ?? ''), !empty($_POST['wellness']) ? 1 : 0, !empty($_POST['tematicka']) ? 1 : 0, $id]);
+            // wellness a tematická platí pro celou masérnu – sjednotit u všech jejích lůžek
             $sk = trim($_POST['skupina'] ?? '');
-            if ($sk !== '') q('UPDATE mistnosti SET wellness=? WHERE LOWER(TRIM(skupina))=LOWER(?)', [!empty($_POST['wellness']) ? 1 : 0, $sk]);
+            if ($sk !== '') q('UPDATE mistnosti SET wellness=?, tematicka=? WHERE LOWER(TRIM(skupina))=LOWER(?)', [!empty($_POST['wellness']) ? 1 : 0, !empty($_POST['tematicka']) ? 1 : 0, $sk]);
             q("INSERT INTO nastaveni(klic,hodnota) VALUES('mistnosti_nastaveny','1') ON CONFLICT(klic) DO UPDATE SET hodnota='1'");
             flash('Uloženo.');
         } elseif ($akce === 'token' && $id) {
@@ -526,7 +533,7 @@ function stranka_masterny(array $u): void
                 . ($s['neni_ona'] ? ' <b class="warn">masérka hlásí, že to není ona</b>' : '');
         } ?>
         <tr<?= $m['aktivni'] ? '' : ' class="muted"' ?>>
-          <td><b><?= h($m['nazev']) ?></b><?= $m['aktivni'] ? '' : ' <span class="tag">neaktivní</span>' ?><br><span class="muted small"><?= trim($m['skupina']) !== '' ? 'masérna ' . h($m['skupina']) : 'samostatná masérna' ?><?= $m['wellness'] ? ' · wellness' : '' ?></span></td>
+          <td><b><?= h($m['nazev']) ?></b><?= $m['aktivni'] ? '' : ' <span class="tag">neaktivní</span>' ?><br><span class="muted small"><?= trim($m['skupina']) !== '' ? 'masérna ' . h($m['skupina']) : 'samostatná masérna' ?><?= $m['wellness'] ? ' · wellness' : '' ?><?= $m['tematicka'] ? ' · ✨ tematická' : '' ?></span></td>
           <td><?= $info ?></td>
           <td><?= $on ? '🟢 online' : ($m['posledni_spojeni'] ? '⚪ naposledy ' . h(substr($m['posledni_spojeni'], 5, 11)) : '⚪ nikdy nepřipojen') ?></td>
           <td><input readonly value="<?= h(mistnost_url($m)) ?>" onclick="this.select()">
@@ -540,6 +547,7 @@ function stranka_masterny(array $u): void
             <label>Název<input name="nazev" value="<?= h($m['nazev']) ?>"></label>
             <label>Masérna (místnost) <span class="muted small">– u dvoulůžkové napište u obou tabletů stejný název, např. „Dvoulůžková“; u jednolůžkové nechte prázdné</span><input name="skupina" value="<?= h($m['skupina']) ?>" list="skupiny"></label>
             <label class="check"><input type="checkbox" name="wellness" value="1" <?= $m['wellness'] ? 'checked' : '' ?>> Masérna slouží i pro wellness (whirlpool, sauna, rituály) – zabere všechna její lůžka</label>
+            <label class="check"><input type="checkbox" name="tematicka" value="1" <?= $m['tematicka'] ? 'checked' : '' ?>> ✨ Tematická masérna (projekce na zeď a hudba: <?= h(implode(', ', array_map(fn($a) => $a['nazev'], ATMOSFERY))) ?>) – u rezervace se vybírá atmosféra, rezervace s atmosférou se plánují sem</label>
             <label class="check"><input type="checkbox" name="aktivni" value="1" <?= $m['aktivni'] ? 'checked' : '' ?>> Aktivní</label>
             <button class="btn primary">Uložit</button>
           </form>
