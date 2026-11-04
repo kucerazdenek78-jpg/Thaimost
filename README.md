@@ -27,6 +27,18 @@ Texty a ceny jsou převzaté z původního thaimost.cz (stav 6. 10. 2026).
 ## Úvodní video
 - `assets/video/thaimost-uvod.mp4` (15 s, 16:9, smyčka, s thajskou hudbou) vyrobené v Magnific (Seedance 2.0 Mini), poster `thaimost-uvod-poster.jpg`. Autoplay běží potichu, zvuk zapne tlačítko „Zvuk“ vpravo dole v úvodu.
 
+## Jazyky webu: čeština, angličtina, němčina (11/2026)
+Veřejný web (`index.html`) je i anglicky (`/en/`) a německy (`/de/`). Zdrojem je vždy **česká** stránka (`index.html` + `assets/js/data.js`); anglická a německá stránka se z ní **generují**, nepíšou se ručně. `salon.html`, `firma.html` a kartotéka zůstávají česky.
+- `tools/i18n/en.json`, `de.json` – slovníky {český text → překlad}. Překlady vznikly přes DeepL (bezplatný účet, pokyn „Formality“ se neuplatní). Kde byl český text pro překladač nejednoznačný (např. „salon“, „termín“), jsou upřesňující vstupy v `tools/i18n/vstup.json` (do slovníku jde překlad, ne tento vstup).
+- `tools/i18n.py` (potřebuje `pip install beautifulsoup4`):
+  - `python3 tools/i18n.py check` – kolik textů chybí a zda v překladech nechybí čísla, HTML značky a zástupné {…};
+  - `python3 tools/i18n.py todo --size 50` – vypíše nepřeložené texty do dávek `tools/i18n/davka-N.json` (+ `davka-N.vstup.json` pro překladač) po 50 (limit DeepL);
+  - `python3 tools/i18n.py merge en|de preklady.json davka-N.json` – přidá přeložené dávky do slovníku;
+  - `python3 tools/i18n.py build` – vygeneruje `en/index.html`, `de/index.html` a `assets/i18n/en.js`, `de.js`.
+- **Po každé změně českého textu** (index.html, data.js) spusťte `check`; nové věty přeložte (`todo` → překladač → `merge`) a spusťte `build`, jinak se na `/en/` a `/de/` ukáže česky (nic se nerozbije). Samotné **ceny** se po změně v `firma.html` ve všech jazycích přepíšou za běhu z `data.js`; statické ceny v `/en/` a `/de/` (pro vyhledávače) se obnoví až po `build`.
+- Za běhu skripty používají `assets/js/i18n.js`: `T("český text")` vrací překlad podle `<html lang>`. Údaje pro salon (e-mail s objednávkou, odesílaná data do kartotéky) jsou vždy česky; k poznámce se připíše „[English]“ / „[Deutsch]“. Ceny se v en/de píšou jako CZK. Náhled poukazu zůstává česky (poukaz vystavuje salon česky).
+- Mapa webu (`sitemap.xml`) a `<link rel="alternate" hreflang>` propojují všechny tři jazyky; přepínač CS / EN / DE je v hlavičce.
+
 ## Co je potřeba doplnit / rozhodnout
 - **Číslo účtu** pro platbu poukazů převodem – v `data.js` → `platba.cislo_uctu`. Dokud je prázdné, nabízí se jen platba v salonu. Po doplnění se zákazníkovi zobrazí QR platba s VS = číslo objednávky.
 - **Platnost poukazů** – na webu se neuvádí (původní web ji neuvádí). V `salon.html` se volí při vystavení.

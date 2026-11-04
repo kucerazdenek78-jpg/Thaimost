@@ -3,7 +3,9 @@
    Jméno / Procedura / Platnost se doplní text, dole kód a QR. Rozměry jsou stejné jako v kartotéce
    (kartoteka/app/poukaz_pdf.php), polohy v bodech originálního PDF (595,276 × 283,465 pt). */
 (function () {
-  const kc = n => Number(n).toLocaleString("cs-CZ") + " Kč";
+  /* kc = cena v jazyce stránky (Kč / CZK); kcCs = vždy česky – poukaz vystavuje salon česky, náhled mu odpovídá */
+  const kcCs = n => Number(n).toLocaleString("cs-CZ") + " Kč";
+  const kc = n => (window.T ? window.T.money(n) : kcCs(n));
   const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 
   function qrSvg(text, size) {
@@ -27,13 +29,13 @@
   function texty(d) {
     const procedura = d.typ === "sluzba" && d.sluzba
       ? d.sluzba + (d.varianta ? " (" + d.varianta + ")" : "")
-      : (+d.hodnota > 0 ? "Hodnota " + kc(d.hodnota) : "");
+      : (+d.hodnota > 0 ? "Hodnota " + kcCs(d.hodnota) : "");
     return { jmeno: (d.komu || "").trim(), procedura, platnost: d.platnost ? "do " + d.platnost : "" };
   }
 
   function render(d) {
     const t = texty(d);
-    let h = `<div class="pk"><img src="assets/img/poukaz-pozadi.jpg" alt="Dárkový poukaz Thajské masáže Most">`;
+    let h = `<div class="pk"><img src="${window.T ? window.T.root : ""}assets/img/poukaz-pozadi.jpg" alt="${esc(window.T ? window.T("Dárkový poukaz Thajské masáže Most") : "Dárkový poukaz Thajské masáže Most")}">`;
     for (const k of Object.keys(POLE)) {
       if (!t[k]) continue;
       const [x0, x1] = POLE[k], max = x1 - x0 - 2 * ODSAZENI;
@@ -84,5 +86,5 @@
     return "CZ" + String(98 - r).padStart(2, "0") + bban;
   }
 
-  window.Voucher = { render, mount, fit, qrSvg, spd, kc, esc, ibanZUctu };
+  window.Voucher = { render, mount, fit, qrSvg, spd, kc, kcCs, esc, ibanZUctu };
 })();

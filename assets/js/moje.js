@@ -13,12 +13,17 @@
     err.textContent = ""; vys.innerHTML = "";
   }));
 
+  const T = window.T || (s => s);
   const DNY = ["neděle", "pondělí", "úterý", "středa", "čtvrtek", "pátek", "sobota"];
   function termin(t) {
     const d = new Date(t.replace(" ", "T"));
     if (isNaN(d)) return "";
     const p = n => String(n).padStart(2, "0");
-    return `${DNY[d.getDay()]} ${d.getDate()}. ${d.getMonth() + 1}. ${d.getFullYear()} v ${d.getHours()}:${p(d.getMinutes())}`;
+    const cas = `${d.getHours()}:${p(d.getMinutes())}`;
+    const den = T.lang && T.lang !== "cs"
+      ? d.toLocaleDateString(T.loc, { weekday: "long", day: "numeric", month: "long", year: "numeric" })   /* měsíc slovy: 10/11 by cizinec četl různě */
+      : `${DNY[d.getDay()]} ${d.getDate()}. ${d.getMonth() + 1}. ${d.getFullYear()}`;
+    return T("{den} v {cas}", { den, cas });
   }
   function stamps(r) {
     let h = "";
@@ -37,18 +42,18 @@
     err.textContent = ""; vys.innerHTML = "";
     const data = mod === "karta" ? { karta: $("#mKarta").value } : { telefon: $("#mTel").value, prijmeni: $("#mPrij").value };
     if (mod === "karta" ? data.karta.trim().length < 10 : (data.telefon.replace(/\D/g, "").length < 9 || data.prijmeni.replace(/[^\p{L}]/gu, "").length < 3)) {
-      err.textContent = mod === "karta" ? "Zadejte kód z karty (10 znaků)." : "Zadejte telefon a první tři písmena příjmení.";
+      err.textContent = mod === "karta" ? T("Zadejte kód z karty (10 znaků).") : T("Zadejte telefon a první tři písmena příjmení.");
       return;
     }
     const btn = f.querySelector(".btn"); btn.disabled = true;
     try {
       const r = await window.ThaiApi.post("/api/moje", data);
-      if (!r.ok) { err.textContent = r.chyba || "Nepodařilo se ověřit."; return; }
+      if (!r.ok) { err.textContent = r.chyba ? T(r.chyba) : T("Nepodařilo se ověřit."); return; }
       vys.innerHTML = `<div class="m-stamps">${stamps(r)}</div>
-        <p><b>${r.razitka} / ${r.po}</b> razítek${r.zdarma > 0 ? ` · <b>🎉 máte nárok na masáž zdarma${r.zdarma > 1 ? " (" + r.zdarma + "×)" : ""}</b>` : ""}</p>
-        <p>${r.termin ? "Nejbližší termín: <b>" + termin(r.termin) + "</b>" : "Zatím nemáte domluvený žádný termín."}</p>`;
+        <p>${T("<b>{razitka} / {po}</b> razítek", { razitka: r.razitka, po: r.po })}${r.zdarma > 0 ? ` · <b>🎉 ${T("máte nárok na masáž zdarma")}${r.zdarma > 1 ? " (" + r.zdarma + "×)" : ""}</b>` : ""}</p>
+        <p>${r.termin ? T("Nejbližší termín: <b>{termin}</b>", { termin: termin(r.termin) }) : T("Zatím nemáte domluvený žádný termín.")}</p>`;
     } catch (x) {
-      err.textContent = "Teď se nepodařilo spojit se salonem. Zkuste to později nebo zavolejte.";
+      err.textContent = T("Teď se nepodařilo spojit se salonem. Zkuste to později nebo zavolejte.");
     } finally { btn.disabled = false; }
   });
 })();
