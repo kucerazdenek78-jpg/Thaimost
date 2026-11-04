@@ -450,6 +450,7 @@
 <ul class="menu" id="menu">
 <li><a href="#o-nas">About us</a></li>
 <li><a href="#sluzby">Price List</a></li>
+<li><a href="#atmosfera">Atmospheres</a></li>
 <li><a href="#recenze">Customer reviews</a></li>
 <li><a href="#bonus">Loyalty scheme</a></li>
 <li><a href="#poukazy">Gift vouchers</a></li>
@@ -528,6 +529,11 @@
 <a href="#poukazy">Give a gift voucher for two →</a>
 </article>
 <article class="why-card reveal">
+<b>Massage with an atmosphere</b>
+<p>A themed treatment room with a wall projection and its own music: rainforest, beach, waterfall or temple – you choose when booking.</p>
+<a href="#atmosfera">Choose an atmosphere →</a>
+</article>
+<article class="why-card reveal">
 <b>Wellness just for you</b>
 <p>Private hot tub and sauna from 400 CZK – either on their own or as the finishing touch to an evening couples’ massage.</p>
 <a href="#sluzby">Whirlpool and sauna →</a>
@@ -548,6 +554,31 @@
 <a href="#kontakt">Where to find us →</a>
 </article>
 </div>
+</div>
+</section>
+<section class="atmo" id="atmosfera">
+<div class="wrap">
+<div class="atmo-head reveal">
+<div>
+<span class="eyebrow">New · themed treatment room</span>
+<h2 class="h2">Choose the atmosphere of your massage</h2>
+<p class="lead">One of our treatment rooms is now themed: a projection plays on the wall and music plays to match what you choose. Rainforest, beach, waterfall or a Thai temple – the first impression as you walk in sets the mood before the massage even begins.</p>
+</div>
+<a class="btn btn-gold" href="#objednat">Book with an atmosphere</a>
+</div>
+<div class="atmo-video reveal">
+<video aria-label="A preview of the four atmospheres of the themed treatment room" id="atmoVideo" loop="" muted="" playsinline="" poster="../assets/video/tematicka-maserna-poster.jpg" preload="none">
+<source src="../assets/video/tematicka-maserna.mp4" type="video/mp4"/>
+</video>
+<button aria-label="Turn on the video sound" aria-pressed="false" class="hero-sound" id="atmoSound" type="button"><svg fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewbox="0 0 24 24"><path d="M11 5 6 9H2v6h4l5 4z"></path><path class="s-on" d="M15.5 8.5a5 5 0 0 1 0 7M19 5a9 9 0 0 1 0 14"></path><path class="s-off" d="M22 9l-6 6M16 9l6 6"></path></svg><span>Sound</span></button>
+</div>
+<div class="atmo-grid">
+<a class="atmo-card reveal" data-atm="prales" href="#objednat"><img alt="Rainforest – atmosphere of the themed treatment room" height="672" loading="lazy" src="../assets/img/atmosfera/atm-prales.jpg" width="1200"/><div><b>Rainforest</b><span>mist, greenery and birdsong</span></div></a>
+<a class="atmo-card reveal" data-atm="plaz" href="#objednat"><img alt="Beach – atmosphere of the themed treatment room" height="672" loading="lazy" src="../assets/img/atmosfera/atm-plaz.jpg" width="1200"/><div><b>Beach</b><span>the sound of the sea at sunset</span></div></a>
+<a class="atmo-card reveal" data-atm="vodopad" href="#objednat"><img alt="Waterfall – atmosphere of the themed treatment room" height="672" loading="lazy" src="../assets/img/atmosfera/atm-vodopad.jpg" width="1200"/><div><b>Waterfall</b><span>flowing water and calm</span></div></a>
+<a class="atmo-card reveal" data-atm="chram" href="#objednat"><img alt="Temple – atmosphere of the themed treatment room" height="672" loading="lazy" src="../assets/img/atmosfera/atm-chram.jpg" width="1200"/><div><b>Temple</b><span>lotus flowers, candles and evening calm</span></div></a>
+</div>
+<p class="atmo-note reveal">You choose the atmosphere when booking (online or at reception). It applies to massages in the themed treatment room – not to the whirlpool and sauna. Your therapist turns on the projection and music before the massage; all you do is lie down.</p>
 </div>
 </section>
 <section class="reviews" id="recenze">
@@ -744,6 +775,8 @@
 <div class="field"><label for="bOkno">Time of day</label>
 <select id="bOkno"><option value="kdykoli">at any time</option><option value="dopoledne">morning (9 am–12 noon)</option><option value="odpoledne">afternoon (12 noon–5 pm)</option><option value="vecer">evening (5–8 pm)</option></select></div>
 </div>
+<div class="field"><label for="bAtm">Atmosphere in the themed treatment room <span class="hint">(projection and music, <a href="#atmosfera">what is it</a>)</span></label>
+<select id="bAtm"><option value="">no preference / classic treatment room</option><option value="prales">🌿 Rainforest – mist, greenery and birdsong</option><option value="plaz">🏝 Beach – the sound of the sea at sunset</option><option value="vodopad">💧 Waterfall – flowing water and calm</option><option value="chram">🪷 Temple – lotus flowers, candles and evening calm</option></select></div>
 </div>
 <div class="step">
 <div class="step-h"><i>2</i>Contact</div>

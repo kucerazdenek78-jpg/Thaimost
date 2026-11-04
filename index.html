@@ -404,6 +404,7 @@
     <ul class="menu" id="menu">
       <li><a href="#o-nas">O nás</a></li>
       <li><a href="#sluzby">Služby a ceník</a></li>
+      <li><a href="#atmosfera">Atmosféry</a></li>
       <li><a href="#recenze">Recenze</a></li>
       <li><a href="#bonus">Bonus program</a></li>
       <li><a href="#poukazy">Dárkové poukazy</a></li>
@@ -486,6 +487,11 @@
         <a href="#poukazy">Darovat poukaz pro dva →</a>
       </article>
       <article class="why-card reveal">
+        <b>Masáž s atmosférou</b>
+        <p>Tematická masérna s projekcí na zeď a vlastní hudbou: prales, pláž, vodopád nebo chrám – vyberete si při objednání.</p>
+        <a href="#atmosfera">Vybrat atmosféru →</a>
+      </article>
+      <article class="why-card reveal">
         <b>Wellness jen pro vás</b>
         <p>Privátní vířivka a sauna od 400 Kč – samostatně, nebo jako zakončení párové masáže večer.</p>
         <a href="#sluzby">Whirlpool a sauna →</a>
@@ -506,6 +512,32 @@
         <a href="#kontakt">Kde nás najdete →</a>
       </article>
     </div>
+  </div>
+</section>
+
+<section id="atmosfera" class="atmo">
+  <div class="wrap">
+    <div class="atmo-head reveal">
+      <div>
+        <span class="eyebrow">Novinka · tematická masérna</span>
+        <h2 class="h2">Vyberte si atmosféru své masáže</h2>
+        <p class="lead">Jedna z našich masérn je teď tematická: na zdi běží projekce a hraje hudba podle toho, co si vyberete. Prales, pláž, vodopád, nebo thajský chrám – první dojem po vstupu vás naladí ještě dřív, než masáž začne.</p>
+      </div>
+      <a class="btn btn-gold" href="#objednat">Objednat s atmosférou</a>
+    </div>
+    <div class="atmo-video reveal">
+      <video id="atmoVideo" muted loop playsinline preload="none" poster="assets/video/tematicka-maserna-poster.jpg" aria-label="Ukázka čtyř atmosfér tematické masérny">
+        <source src="assets/video/tematicka-maserna.mp4" type="video/mp4">
+      </video>
+      <button type="button" class="hero-sound" id="atmoSound" aria-pressed="false" aria-label="Zapnout zvuk videa"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5 6 9H2v6h4l5 4z"/><path class="s-on" d="M15.5 8.5a5 5 0 0 1 0 7M19 5a9 9 0 0 1 0 14"/><path class="s-off" d="M22 9l-6 6M16 9l6 6"/></svg><span>Zvuk</span></button>
+    </div>
+    <div class="atmo-grid">
+      <a class="atmo-card reveal" href="#objednat" data-atm="prales"><img src="assets/img/atmosfera/atm-prales.jpg" alt="Prales – atmosféra tematické masérny" loading="lazy" width="1200" height="672"><div><b>Prales</b><span>mlha, zeleň a zpěv ptáků</span></div></a>
+      <a class="atmo-card reveal" href="#objednat" data-atm="plaz"><img src="assets/img/atmosfera/atm-plaz.jpg" alt="Pláž – atmosféra tematické masérny" loading="lazy" width="1200" height="672"><div><b>Pláž</b><span>šum moře při západu slunce</span></div></a>
+      <a class="atmo-card reveal" href="#objednat" data-atm="vodopad"><img src="assets/img/atmosfera/atm-vodopad.jpg" alt="Vodopád – atmosféra tematické masérny" loading="lazy" width="1200" height="672"><div><b>Vodopád</b><span>tekoucí voda a klid</span></div></a>
+      <a class="atmo-card reveal" href="#objednat" data-atm="chram"><img src="assets/img/atmosfera/atm-chram.jpg" alt="Chrám – atmosféra tematické masérny" loading="lazy" width="1200" height="672"><div><b>Chrám</b><span>lotosy, svíčky a večerní klid</span></div></a>
+    </div>
+    <p class="atmo-note reveal">Atmosféru si vyberete při objednání (online i na recepci). Platí pro masáže v tematické masérně – ne pro whirlpool a saunu. Projekci i hudbu masérka před masáží zapne, vy jen ležíte.</p>
   </div>
 </section>
 
@@ -711,6 +743,8 @@
             <div class="field"><label for="bOkno">Část dne</label>
               <select id="bOkno"><option value="kdykoli">kdykoli</option><option value="dopoledne">dopoledne (9–12)</option><option value="odpoledne">odpoledne (12–17)</option><option value="vecer">večer (17–20)</option></select></div>
           </div>
+          <div class="field"><label for="bAtm">Atmosféra v tematické masérně <span class="hint">(projekce a hudba, <a href="#atmosfera">co to je</a>)</span></label>
+            <select id="bAtm"><option value="">nezáleží / klasická masérna</option><option value="prales">🌿 Prales – mlha, zeleň a zpěv ptáků</option><option value="plaz">🏝 Pláž – šum moře při západu slunce</option><option value="vodopad">💧 Vodopád – tekoucí voda a klid</option><option value="chram">🪷 Chrám – lotosy, svíčky a večerní klid</option></select></div>
         </div>
         <div class="step">
           <div class="step-h"><i>2</i>Kontakt</div>

@@ -450,6 +450,7 @@
 <ul class="menu" id="menu">
 <li><a href="#o-nas">Über uns</a></li>
 <li><a href="#sluzby">Preisliste</a></li>
+<li><a href="#atmosfera">Atmosphären</a></li>
 <li><a href="#recenze">Kundenbewertungen</a></li>
 <li><a href="#bonus">Bonusprogramm</a></li>
 <li><a href="#poukazy">Geschenkgutscheine</a></li>
@@ -528,6 +529,11 @@
 <a href="#poukazy">Einen Gutschein für zwei Personen verschenken →</a>
 </article>
 <article class="why-card reveal">
+<b>Massage mit Atmosphäre</b>
+<p>Ein Themen-Massageraum mit Wandprojektion und eigener Musik: Regenwald, Strand, Wasserfall oder Tempel – Sie wählen bei der Buchung.</p>
+<a href="#atmosfera">Atmosphäre wählen →</a>
+</article>
+<article class="why-card reveal">
 <b>Wellness nur für Sie</b>
 <p>Privater Whirlpool und Sauna ab 400 CZK – einzeln oder als Abschluss einer Paarmassage am Abend.</p>
 <a href="#sluzby">Whirlpool und Sauna →</a>
@@ -548,6 +554,31 @@
 <a href="#kontakt">Wo Sie uns finden →</a>
 </article>
 </div>
+</div>
+</section>
+<section class="atmo" id="atmosfera">
+<div class="wrap">
+<div class="atmo-head reveal">
+<div>
+<span class="eyebrow">Neu · Themen-Massageraum</span>
+<h2 class="h2">Wählen Sie die Atmosphäre Ihrer Massage</h2>
+<p class="lead">Einer unserer Massageräume ist jetzt thematisch gestaltet: An der Wand läuft eine Projektion und es spielt Musik – passend zu dem, was Sie wählen. Regenwald, Strand, Wasserfall oder ein thailändischer Tempel – der erste Eindruck beim Eintreten stimmt Sie ein, noch bevor die Massage beginnt.</p>
+</div>
+<a class="btn btn-gold" href="#objednat">Mit Atmosphäre buchen</a>
+</div>
+<div class="atmo-video reveal">
+<video aria-label="Vorschau der vier Atmosphären des Themen-Massageraums" id="atmoVideo" loop="" muted="" playsinline="" poster="../assets/video/tematicka-maserna-poster.jpg" preload="none">
+<source src="../assets/video/tematicka-maserna.mp4" type="video/mp4"/>
+</video>
+<button aria-label="Videoton einschalten" aria-pressed="false" class="hero-sound" id="atmoSound" type="button"><svg fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewbox="0 0 24 24"><path d="M11 5 6 9H2v6h4l5 4z"></path><path class="s-on" d="M15.5 8.5a5 5 0 0 1 0 7M19 5a9 9 0 0 1 0 14"></path><path class="s-off" d="M22 9l-6 6M16 9l6 6"></path></svg><span>Ton</span></button>
+</div>
+<div class="atmo-grid">
+<a class="atmo-card reveal" data-atm="prales" href="#objednat"><img alt="Regenwald – Atmosphäre des Themen-Massageraums" height="672" loading="lazy" src="../assets/img/atmosfera/atm-prales.jpg" width="1200"/><div><b>Regenwald</b><span>Nebel, Grün und Vogelgesang</span></div></a>
+<a class="atmo-card reveal" data-atm="plaz" href="#objednat"><img alt="Strand – Atmosphäre des Themen-Massageraums" height="672" loading="lazy" src="../assets/img/atmosfera/atm-plaz.jpg" width="1200"/><div><b>Strand</b><span>Meeresrauschen bei Sonnenuntergang</span></div></a>
+<a class="atmo-card reveal" data-atm="vodopad" href="#objednat"><img alt="Wasserfall – Atmosphäre des Themen-Massageraums" height="672" loading="lazy" src="../assets/img/atmosfera/atm-vodopad.jpg" width="1200"/><div><b>Wasserfall</b><span>fließendes Wasser und Ruhe</span></div></a>
+<a class="atmo-card reveal" data-atm="chram" href="#objednat"><img alt="Tempel – Atmosphäre des Themen-Massageraums" height="672" loading="lazy" src="../assets/img/atmosfera/atm-chram.jpg" width="1200"/><div><b>Tempel</b><span>Lotusblüten, Kerzen und Abendruhe</span></div></a>
+</div>
+<p class="atmo-note reveal">Die Atmosphäre wählen Sie bei der Buchung (online oder an der Rezeption). Sie gilt für Massagen im Themen-Massageraum – nicht für Whirlpool und Sauna. Projektion und Musik schaltet die Masseurin vor der Massage ein, Sie liegen nur.</p>
 </div>
 </section>
 <section class="reviews" id="recenze">
@@ -744,6 +775,8 @@
 <div class="field"><label for="bOkno">Tageszeit</label>
 <select id="bOkno"><option value="kdykoli">jederzeit</option><option value="dopoledne">vormittags (9–12 Uhr)</option><option value="odpoledne">nachmittags (12–17 Uhr)</option><option value="vecer">abends (17–20 Uhr)</option></select></div>
 </div>
+<div class="field"><label for="bAtm">Atmosphäre im Themen-Massageraum <span class="hint">(Projektion und Musik, <a href="#atmosfera">was ist das</a>)</span></label>
+<select id="bAtm"><option value="">egal / klassischer Massageraum</option><option value="prales">🌿 Regenwald – Nebel, Grün und Vogelgesang</option><option value="plaz">🏝 Strand – Meeresrauschen bei Sonnenuntergang</option><option value="vodopad">💧 Wasserfall – fließendes Wasser und Ruhe</option><option value="chram">🪷 Tempel – Lotusblüten, Kerzen und Abendruhe</option></select></div>
 </div>
 <div class="step">
 <div class="step-h"><i>2</i>Kontakt</div>

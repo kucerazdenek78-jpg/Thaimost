@@ -263,7 +263,7 @@
     const done = $("#bDone");
     const hotovo = html => { done.innerHTML = html; done.style.display = "block"; done.scrollIntoView({ behavior: "smooth", block: "start" }); };
     window.ThaiApi.post("/api/zajem", {
-      varianta_id: sel.value, den: den.value, okno: $("#bOkno").value,
+      varianta_id: sel.value, den: den.value, okno: $("#bOkno").value, atmosfera: ($("#bAtm") || {}).value || "",
       jmeno: $("#bJmeno").value.trim(), prijmeni: $("#bPrijmeni").value.trim(), telefon: $("#bTel").value.trim(),
       email: $("#bMail").value.trim(), poznamka: ($("#bPozn").value.trim() + (JAZYK ? " [" + JAZYK + "]" : "")).trim(), gdpr: 1, web: $("#bWeb").value
     }).then(r => {
@@ -291,5 +291,25 @@
     b.setAttribute('aria-pressed',on?'true':'false');
     b.setAttribute('aria-label',on?T('Vypnout zvuk videa'):T('Zapnout zvuk videa'));
     b.querySelector('span').textContent=on?T('Ztišit'):T('Zvuk');
+  });
+})();
+
+/* Tematická masérna: video se spustí, až je vidět; klepnutí na atmosféru ji předvyplní v objednávce */
+(function(){
+  var v=document.getElementById('atmoVideo'), b=document.getElementById('atmoSound'), sel=document.getElementById('bAtm');
+  if(v){
+    var T=window.T;
+    if('IntersectionObserver' in window){
+      new IntersectionObserver(function(es){es.forEach(function(e){ if(e.isIntersecting){ v.play().catch(function(){}); } else { v.pause(); } });},{threshold:.35}).observe(v);
+    } else { v.play().catch(function(){}); }
+    if(b) b.addEventListener('click',function(){
+      var on=v.muted; v.muted=!on; if(on){v.volume=0.6; v.play().catch(function(){});}
+      b.setAttribute('aria-pressed',on?'true':'false');
+      b.setAttribute('aria-label',on?T('Vypnout zvuk videa'):T('Zapnout zvuk videa'));
+      b.querySelector('span').textContent=on?T('Ztišit'):T('Zvuk');
+    });
+  }
+  if(sel) document.querySelectorAll('.atmo-card[data-atm]').forEach(function(a){
+    a.addEventListener('click',function(){ sel.value=a.dataset.atm; });
   });
 })();
