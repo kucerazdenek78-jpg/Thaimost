@@ -43,6 +43,10 @@ foreach (['nahrat' => 'demo_nahrat', 'smazat' => 'demo_smazat', 'obnovit' => fn(
     }
 }
 
+// Aktualizace souborů z GitHubu přes soubor data/aktualizace.json (viz app/aktualizace.php)
+require $root . '/app/aktualizace.php';
+aktualizace_spust();
+
 $r = preg_replace('~[^a-z_]~', '', $_GET['r'] ?? 'dnes');
 if ($r === 'login') { stranka_login(); exit; }
 if ($r === 'ical') { stranka_ical(); }   // kalendářový odkaz chráněný tokenem, bez přihlášení
