@@ -1,6 +1,6 @@
 <?php
 // Aktualizace souborů kartotéky z GitHubu přes soubor (když nejde terminál kontejneru), stejně jako vzorová data:
-// do data/ se nahraje aktualizace.json  {"commit": "<sha commitu>", "soubory": {"app/lib.php": "<sha256 souboru>", …}}
+// do data/ (nebo nasazeni-tmp/) se nahraje aktualizace.json  {"commit": "<sha commitu>", "soubory": {"app/lib.php": "<sha256 souboru>", …}}
 // Při nejbližším načtení stránky se všechny soubory stáhnou z raw.githubusercontent.com (pevný commit), ověří se
 // jejich SHA-256 a teprve když sedí VŠECHNY, zapíší se (staré verze do nasazeni-tmp/zaloha-<datum>/). Výsledek je
 // v data/aktualizace-vysledek.txt, soubor aktualizace.json se smaže. Soubor může vložit jen ten, kdo má přístup k NAS.
@@ -9,8 +9,10 @@ const AKTUALIZACE_REPO = 'kucerazdenek78-jpg/Thaimost';
 
 function aktualizace_spust(): void
 {
+    // zadání může ležet v data/ (File Station) nebo v nasazeni-tmp/ (složka přístupná přes MCP připojení k NASu)
     $dir = dirname(cfg()['db_path']);
     $f = "$dir/aktualizace.json";
+    if (!is_file($f)) { $dir = dirname(__DIR__) . '/nasazeni-tmp'; $f = "$dir/aktualizace.json"; }
     if (!is_file($f)) return;
     $zadani = json_decode((string)file_get_contents($f), true);
     if (!@unlink($f)) return;   // nejde smazat = nespouštět (jinak by běželo pořád dokola)
