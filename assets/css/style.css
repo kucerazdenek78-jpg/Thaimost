@@ -95,7 +95,7 @@ html:not([lang="cs"]) .nav .btn{display:none}      /* v en/de je â€žRezervovatâ€
 .sv{background:var(--cream);border:1px solid var(--line);border-radius:var(--r);overflow:hidden;display:flex;flex-direction:column;transition:.3s}
 .sv:hover{transform:translateY(-4px);box-shadow:var(--shadow)}
 .sv-img{aspect-ratio:16/10;background:linear-gradient(135deg,var(--sand),#e2d2bb);position:relative;overflow:hidden}
-.sv-img img{width:100%;height:100%;object-fit:cover}
+.sv-img img{width:100%;height:100%;object-fit:cover;position:relative;z-index:1}
 .sv-img .ph{position:absolute;inset:0;display:grid;place-items:center;color:var(--gold)}
 .sv-img .ph svg{width:90px}
 .sv-tag{position:absolute;top:14px;left:14px;background:var(--teak);color:var(--gold-l);font-size:.72rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;padding:6px 12px;border-radius:999px}
