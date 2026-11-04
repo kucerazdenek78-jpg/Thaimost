@@ -12,6 +12,17 @@
   burger.addEventListener("click", () => { const o = menu.classList.toggle("open"); burger.setAttribute("aria-expanded", o); });
   menu.addEventListener("click", e => { if (e.target.tagName === "A") menu.classList.remove("open"); });
 
+  /* výběr jazyka */
+  const lb = $("#langBtn"), lm = $("#langMenu");
+  if (lb && lm) {
+    const cur = lm.querySelector("a[aria-current]");
+    if (cur) { lb.querySelector("img").src = cur.querySelector("img").src; lb.querySelector("span").textContent = cur.getAttribute("hreflang").toUpperCase(); }
+    const close = () => { lm.classList.remove("open"); lb.setAttribute("aria-expanded", "false"); };
+    lb.addEventListener("click", e => { e.stopPropagation(); const o = lm.classList.toggle("open"); lb.setAttribute("aria-expanded", o); });
+    document.addEventListener("click", e => { if (!lm.contains(e.target)) close(); });
+    document.addEventListener("keydown", e => { if (e.key === "Escape") close(); });
+  }
+
   /* video – když se nenačte, zůstane gradient */
   const vid = document.querySelector(".hero video");
   if (vid) vid.addEventListener("error", () => vid.remove(), true);

@@ -45,10 +45,16 @@ header.nav{position:sticky;top:0;z-index:50;background:rgba(248,242,233,.88);bac
 .burger{display:none;width:44px;height:44px;border:0;background:none;cursor:pointer;color:var(--teak)}
 .burger svg{width:26px;height:26px}
 /* přepínač jazyka (CS / EN / DE) */
-.lang{display:flex;align-items:center;gap:2px;margin-left:auto;font-size:.78rem;font-weight:700;letter-spacing:.06em}
-.lang a{padding:7px 8px;border-radius:8px;text-decoration:none;color:var(--muted);transition:.2s}
-.lang a:hover{color:var(--teak)}
-.lang a[aria-current]{color:var(--teak);background:rgba(198,156,93,.22)}
+.lang{position:relative;margin-left:auto;font-size:.8rem;font-weight:700;letter-spacing:.04em}
+.lang-btn{display:inline-flex;align-items:center;gap:7px;padding:8px 10px;border:1px solid var(--line);border-radius:999px;background:var(--paper);color:var(--teak);font:inherit;font-weight:700;cursor:pointer;min-height:40px}
+.lang-btn img,.lang-menu img{width:18px;height:18px;border-radius:50%;box-shadow:0 0 0 1px rgba(43,30,22,.15)}
+.lang-btn svg{width:14px;height:14px;transition:.2s}
+.lang-btn[aria-expanded="true"] svg{transform:rotate(180deg)}
+.lang-menu{position:absolute;right:0;top:calc(100% + 8px);min-width:160px;list-style:none;background:var(--paper);border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow);padding:6px;display:none;z-index:30}
+.lang-menu.open{display:block}
+.lang-menu a{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:10px;text-decoration:none;color:var(--ink);font-weight:600;letter-spacing:0;min-height:44px}
+.lang-menu a:hover{background:var(--sand)}
+.lang-menu a[aria-current]{color:var(--teak);background:rgba(198,156,93,.22)}
 html:not([lang="cs"]) .nav .btn{display:none}      /* v en/de je „Rezervovat“ i v menu; delší texty by se do hlavičky nevešly */
 @media (max-width:1439px){.nav .btn{display:none}}  /* tlačítko je shodné s položkou menu „Objednat se“; přepínač jazyka potřebuje místo */
 @media (max-width:1240px){                          /* s přepínačem jazyka se menu na užších displejích skládá do tlačítka dřív */
@@ -285,7 +291,7 @@ footer a:hover{color:#fff}
 }
 @media (max-width:560px){
   .nav-in{gap:10px}
-  .lang a{padding:7px 6px}
+  .lang-btn span{display:none}.lang-btn{padding:8px 9px}
   .v-form{padding:22px}
   .row2,.seg{grid-template-columns:1fr}
   .hero-facts{gap:22px}

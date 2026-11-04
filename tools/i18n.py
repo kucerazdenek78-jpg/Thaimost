@@ -392,6 +392,11 @@ def build_page(lang, d, missing):
             a["aria-current"] = "true"
         elif a.has_attr("aria-current"):
             del a["aria-current"]
+    btn = nav.select_one(".lang-btn")
+    cur = nav.select_one("a[aria-current]")
+    if btn and cur:
+        btn.find("img")["src"] = cur.find("img")["src"]
+        btn.find("span").string = lang.upper()
     # poznámka u recenzí (v české verzi skrytá)
     for n in soup.select("p.rv-note"):
         del n["hidden"]
