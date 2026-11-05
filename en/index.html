@@ -476,7 +476,8 @@
 <video aria-hidden="true" autoplay="" id="heroVideo" loop="" muted="" playsinline="" poster="../assets/video/thaimost-uvod-poster.jpg" preload="metadata">
 <source src="../assets/video/thaimost-uvod.mp4" type="video/mp4"/>
 </video>
-<button aria-label="Turn on the video sound" aria-pressed="false" class="hero-sound" id="heroSound" type="button"><svg fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewbox="0 0 24 24"><path d="M11 5 6 9H2v6h4l5 4z"></path><path class="s-on" d="M15.5 8.5a5 5 0 0 1 0 7M19 5a9 9 0 0 1 0 14"></path><path class="s-off" d="M22 9l-6 6M16 9l6 6"></path></svg><span>Sound</span></button>
+<audio id="bgMusic" loop="" preload="auto" src="../assets/audio/thaimost-hudba.mp3"></audio>
+<button aria-label="Turn off the music" aria-pressed="false" class="hero-sound" id="heroSound" type="button"><svg fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewbox="0 0 24 24"><path d="M11 5 6 9H2v6h4l5 4z"></path><path class="s-on" d="M15.5 8.5a5 5 0 0 1 0 7M19 5a9 9 0 0 1 0 14"></path><path class="s-off" d="M22 9l-6 6M16 9l6 6"></path></svg><span>Music</span></button>
 <div class="wrap hero-in">
 <span class="eyebrow">Thai Most · since 2004</span>
 <h1>Thai massages <em>Most</em></h1>
@@ -875,6 +876,13 @@
 <div class="f-bottom"><span>© <span id="rok"></span> Thai Massages Most · Company Registration Number 87149931</span><span class="f-links"><a href="../salon.html">For the salon</a><a aria-label="Company settings" class="f-lock" href="../firma.html" title="Company settings"><svg fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewbox="0 0 24 24"><rect height="11" rx="2.5" width="16" x="4" y="10"></rect><path d="M8 10V7a4 4 0 0 1 8 0v3"></path></svg></a></span></div>
 </div>
 </footer>
+<div class="gift-float" id="giftFloat">
+<a aria-label="Gift voucher for any amount – a Christmas gift idea" class="gift-card" href="#poukazy">
+<span aria-hidden="true" class="gift-bow"><svg fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" viewbox="0 0 24 24"><rect height="13" rx="1.5" width="18" x="3" y="8"></rect><path d="M12 8v13M3 12h18M12 8c-1.5-3-5-4-6-2s2 2 6 2zM12 8c1.5-3 5-4 6-2s-2 2-6 2z"></path></svg></span>
+<span class="gift-txt"><small>Christmas gift</small><b>Gift voucher</b><span>for any amount</span></span>
+</a>
+<button aria-label="Hide the voucher offer" class="gift-x" id="giftX" type="button">×</button>
+</div>
 <div class="callbar">
 <a class="btn btn-gold" href="tel:+420778429329">Call</a>
 <a class="btn btn-ghost" href="https://wa.me/420778429329" rel="noopener" style="color:#f8f2e9" target="_blank">WhatsApp</a>

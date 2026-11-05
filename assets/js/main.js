@@ -281,17 +281,62 @@
   });
 })();
 
-/* Zvuk úvodního videa (autoplay jde jen potichu, zvuk zapne návštěvník) */
+/* Hudba na pozadí: hraje sama hned po načtení, pokud to prohlížeč dovolí; jinak se spustí při prvním
+   klepnutí, kliknutí nebo stisku klávesy (prohlížeče zvuk bez akce návštěvníka blokují). Tlačítko Hudba ji vypne / zapne,
+   volba se pamatuje. Úvodní video je bez zvuku. */
 (function(){
-  var v=document.getElementById('heroVideo'), b=document.getElementById('heroSound');
-  if(!v||!b) return;
-  var T=window.T;
-  b.addEventListener('click',function(){
-    var on=v.muted; v.muted=!on; if(on){v.volume=0.6;}
+  var a=document.getElementById('bgMusic'), b=document.getElementById('heroSound');
+  if(!a||!b) return;
+  var T=window.T, KEY='tmHudba', VOL=0.35, fadeT=null;
+  function vypnuto(){ try{ return localStorage.getItem(KEY)==='0'; }catch(e){ return false; } }
+  function uloz(v){ try{ localStorage.setItem(KEY,v); }catch(e){} }
+  function stav(on){
     b.setAttribute('aria-pressed',on?'true':'false');
-    b.setAttribute('aria-label',on?T('Vypnout zvuk videa'):T('Zapnout zvuk videa'));
-    b.querySelector('span').textContent=on?T('Ztišit'):T('Zvuk');
+    b.setAttribute('aria-label',on?T('Vypnout hudbu'):T('Zapnout hudbu'));
+  }
+  function fade(to,done){
+    clearInterval(fadeT);
+    fadeT=setInterval(function(){
+      var v=a.volume+(to>a.volume?0.03:-0.05);
+      if((to>a.volume&&v>=to)||(to<=a.volume&&v<=to)){ a.volume=Math.max(0,Math.min(1,to)); clearInterval(fadeT); if(done)done(); }
+      else a.volume=Math.max(0,Math.min(1,v));
+    },80);
+  }
+  function hraj(){
+    a.volume=0; var p=a.play();
+    if(p&&p.then) return p.then(function(){ stav(true); fade(VOL); odpoj(); }, function(){ stav(false); });
+    stav(true); fade(VOL); odpoj(); return Promise.resolve();
+  }
+  function zastav(){ fade(0,function(){ a.pause(); }); stav(false); }
+  var udalosti=['pointerdown','touchend','keydown','click'];
+  function prvni(e){ if(e&&e.target&&e.target.closest&&e.target.closest('#heroSound')) return; if(!vypnuto()&&a.paused) hraj(); }
+  function odpoj(){ udalosti.forEach(function(u){ document.removeEventListener(u,prvni,true); }); }
+  stav(false);
+  if(!vypnuto()){
+    hraj();
+    udalosti.forEach(function(u){ document.addEventListener(u,prvni,true); });
+  }
+  b.addEventListener('click',function(){
+    if(a.paused){ uloz('1'); hraj(); } else { uloz('0'); zastav(); }
   });
+  // při zapnutí zvuku videa atmosfér hudbu ztlumit, skrytá karta prohlížeče = pauza
+  window.tmHudbaPauza=function(){ if(!a.paused){ zastav(); } };
+  document.addEventListener('visibilitychange',function(){
+    if(document.hidden){ if(!a.paused){ a.pause(); a.dataset.skryto='1'; } }
+    else if(a.dataset.skryto){ delete a.dataset.skryto; a.play().catch(function(){}); }
+  });
+})();
+
+/* Plovoucí dárkový poukaz (vánoční nabídka): po klepnutí na × se do konce návštěvy skryje */
+(function(){
+  var g=document.getElementById('giftFloat'), x=document.getElementById('giftX');
+  if(!g||!x) return;
+  try{ if(sessionStorage.getItem('tmPoukazSkryt')==='1'){ g.remove(); return; } }catch(e){}
+  setTimeout(function(){ g.classList.add('on'); },1200);
+  x.addEventListener('click',function(){ g.classList.remove('on'); try{ sessionStorage.setItem('tmPoukazSkryt','1'); }catch(e){} setTimeout(function(){ g.remove(); },400); });
+  // u sekce poukazů samotné ho schovat, ať nepřekáží
+  var sec=document.getElementById('poukazy');
+  if(sec&&'IntersectionObserver' in window) new IntersectionObserver(function(es){ es.forEach(function(e){ g.classList.toggle('pryc',e.isIntersecting); }); },{threshold:.15}).observe(sec);
 })();
 
 /* Tematická masérna: video se spustí, až je vidět; klepnutí na atmosféru ji předvyplní v objednávce */
@@ -303,7 +348,7 @@
       new IntersectionObserver(function(es){es.forEach(function(e){ if(e.isIntersecting){ v.play().catch(function(){}); } else { v.pause(); } });},{threshold:.35}).observe(v);
     } else { v.play().catch(function(){}); }
     if(b) b.addEventListener('click',function(){
-      var on=v.muted; v.muted=!on; if(on){v.volume=0.6; v.play().catch(function(){});}
+      var on=v.muted; v.muted=!on; if(on){v.volume=0.6; v.play().catch(function(){}); if(window.tmHudbaPauza) window.tmHudbaPauza();}
       b.setAttribute('aria-pressed',on?'true':'false');
       b.setAttribute('aria-label',on?T('Vypnout zvuk videa'):T('Zapnout zvuk videa'));
       b.querySelector('span').textContent=on?T('Ztišit'):T('Zvuk');

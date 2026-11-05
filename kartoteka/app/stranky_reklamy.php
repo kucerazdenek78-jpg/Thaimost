@@ -9,10 +9,10 @@ function reklamy_seznam(): array
     $w = REKLAMY_WEB;
     return [
         [
-            'nazev' => 'Reel – Dárkové poukazy (svíčky)', 'typ' => 'video', 'format' => '9:16 · 1080×1920 · 12 s',
+            'nazev' => 'Reel – Dárkové poukazy (svíčky, ručníky, hudba Chrám)', 'typ' => 'video', 'format' => '9:16 · 1080×1920 · 15 s',
             'kde' => 'Facebook a Instagram Reels, Stories', 'pridano' => '5. 11. 2026',
             'soubor' => $w . 'assets/reklamy/poukaz-reel-9x16.mp4', 'nahled' => $w . 'assets/reklamy/poukaz-reel-9x16.jpg',
-            'pozn' => 'Video je bez hudby. Hudbu přidejte při zveřejnění z knihovny Facebooku nebo Instagramu (tam má licenci).',
+            'pozn' => 'Hudba je naše vlastní z Magnificu (téma Chrám), stejná jako na webu.',
             'texty' => ['Hlavní text' => reklamy_text_poukaz(), 'Nadpis' => 'Dárkový poukaz na libovolnou částku',
                         'Popis' => 'Thajské masáže Most · od roku 2004', 'Tlačítko' => 'Zavolat (778 429 329)'],
         ],
@@ -30,13 +30,14 @@ function reklamy_seznam(): array
             'pozn' => 'Cena „od 790 Kč“ odpovídá ceníku na webu k 5. 11. 2026. Při změně ceníku obrázek upravit.',
         ],
         [
-            'nazev' => 'Canva – Dárkový poukaz (foto se svíčkami)', 'typ' => 'odkaz', 'format' => '9:16 · Stories',
-            'kde' => 'Stories, úprava a stažení v Canvě', 'pridano' => '7. 10. 2026',
-            'odkaz' => 'https://canva.link/6p3xdez40g7ow5k', 'odkaz_text' => 'Otevřít v Canvě',
-            'pozn' => 'Návrh je v Canvě (účet Zdeněk). Stáhnout jako PNG: Sdílet → Stáhnout.',
+            'nazev' => 'Stories – Dárkový poukaz (foto se svíčkami)', 'typ' => 'obrazek', 'format' => '9:16 · 1080×1920',
+            'kde' => 'Facebook a Instagram Stories', 'pridano' => '7. 10. 2026',
+            'odkaz' => 'https://canva.link/6p3xdez40g7ow5k', 'odkaz_text' => 'Upravit v Canvě',
+            'soubor' => $w . 'assets/reklamy/poukaz-stories-1080x1920.jpg',
+            'pozn' => 'Obrázek je stejný jako v reelu. Úpravy dělejte v Canvě (účet Zdeněk) a pak nahraďte i reel.',
         ],
         [
-            'nazev' => 'Úvodní video webu', 'typ' => 'video', 'format' => '16:9 · 15 s',
+            'nazev' => 'Úvodní video webu', 'typ' => 'video', 'format' => '16:9 · 15 s · bez zvuku',
             'kde' => 'Web (úvod), Facebook příspěvek', 'pridano' => '3. 11. 2026',
             'soubor' => $w . 'assets/video/thaimost-uvod.mp4', 'nahled' => $w . 'assets/video/thaimost-uvod-poster.jpg',
         ],

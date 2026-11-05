@@ -280,6 +280,24 @@ footer a:hover{color:#fff}
 .hero-sound{position:absolute;right:18px;bottom:18px;z-index:3;display:inline-flex;align-items:center;gap:8px;padding:9px 14px;border-radius:999px;border:1px solid rgba(255,255,255,.35);background:rgba(28,19,13,.45);color:#fff;font:600 .8rem/1 "Manrope",sans-serif;cursor:pointer;backdrop-filter:blur(6px)}
 .hero-sound svg{width:18px;height:18px}
 .hero-sound .s-on{display:none}
+/* Plovoucí dárkový poukaz */
+.gift-float{position:fixed;left:22px;bottom:22px;z-index:55;opacity:0;transform:translateY(30px);pointer-events:none;transition:opacity .5s,transform .5s}
+.gift-float.on{opacity:1;transform:none;pointer-events:auto}
+.gift-float.on.pryc{opacity:0;transform:translateY(30px);pointer-events:none}
+.gift-card{display:flex;align-items:center;gap:12px;padding:12px 18px 12px 12px;border-radius:14px;text-decoration:none;color:#f8f2e9;
+  background:linear-gradient(135deg,#3a281b,#1f150e);border:1px solid var(--gold);box-shadow:0 14px 34px -12px rgba(28,19,13,.65),0 0 0 4px rgba(198,156,93,.14);
+  animation:giftVisi 4.5s ease-in-out infinite;transform-origin:50% 0}
+.gift-card:hover{border-color:var(--gold-l);box-shadow:0 18px 40px -12px rgba(28,19,13,.75),0 0 0 6px rgba(198,156,93,.22)}
+.gift-bow{flex:none;width:46px;height:46px;border-radius:10px;background:var(--gold);color:#1c130d;display:grid;place-items:center}
+.gift-bow svg{width:28px;height:28px}
+.gift-txt{display:flex;flex-direction:column;line-height:1.15}
+.gift-txt small{font:600 .68rem/1.2 "Manrope",sans-serif;letter-spacing:.14em;text-transform:uppercase;color:var(--gold-l)}
+.gift-txt b{font-family:"Cormorant Garamond",serif;font-size:1.35rem;font-weight:600;margin:2px 0}
+.gift-txt span{font-size:.8rem;color:#d9ccbc}
+.gift-x{position:absolute;top:-10px;right:-10px;width:26px;height:26px;border-radius:50%;border:1px solid var(--gold);background:#1f150e;color:#f8f2e9;font:600 16px/1 sans-serif;cursor:pointer;display:grid;place-items:center;padding:0}
+.gift-x:hover{background:var(--gold);color:#1c130d}
+@keyframes giftVisi{0%,100%{transform:translateY(0) rotate(-1.2deg)}50%{transform:translateY(-7px) rotate(1.2deg)}}
+@media (prefers-reduced-motion:reduce){.gift-card{animation:none}}
 .hero-sound[aria-pressed="true"] .s-on{display:block}
 .hero-sound[aria-pressed="true"] .s-off{display:none}
 /* FAQ */
@@ -309,6 +327,10 @@ footer a:hover{color:#fff}
   .f-grid{grid-template-columns:1fr}
   .callbar{display:flex;position:fixed;bottom:0;left:0;right:0;z-index:60;background:var(--teak);padding:10px 12px calc(10px + env(safe-area-inset-bottom));gap:10px}
   .callbar a{flex:1;padding:12px}
+  .gift-float{left:12px;bottom:calc(78px + env(safe-area-inset-bottom))}
+  .gift-card{padding:9px 14px 9px 9px;gap:10px}
+  .gift-bow{width:38px;height:38px}
+  .gift-txt b{font-size:1.15rem}
   body{padding-bottom:72px}
 }
 @media (max-width:560px){
