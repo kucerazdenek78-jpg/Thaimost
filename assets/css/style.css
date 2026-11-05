@@ -55,14 +55,14 @@ header.nav{position:sticky;top:0;z-index:50;background:rgba(248,242,233,.88);bac
 .lang-menu a{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:10px;text-decoration:none;color:var(--ink);font-weight:600;letter-spacing:0;min-height:44px}
 .lang-menu a:hover{background:var(--sand)}
 .lang-menu a[aria-current]{color:var(--teak);background:rgba(198,156,93,.22)}
-html:not([lang="cs"]) .nav .btn{display:none}      /* v en/de je „Rezervovat“ i v menu; delší texty by se do hlavičky nevešly */
-@media (max-width:1439px){.nav .btn{display:none}}  /* tlačítko je shodné s položkou menu „Objednat se“; přepínač jazyka potřebuje místo */
+/* „Objednat se“ je v hlavičce jen jednou – tlačítko vpravo (v menu není), proto zůstává vidět ve všech jazycích i šířkách */
+@media (max-width:1439px){.nav .btn{padding:10px 14px;font-size:.88rem}}
+@media (max-width:480px){.nav .btn{padding:10px;gap:0}.nav .btn svg{margin:0}.nav .btn{font-size:0}.nav .btn svg{width:20px;height:20px}}
 @media (max-width:1240px){                          /* s přepínačem jazyka se menu na užších displejích skládá do tlačítka dřív */
   .menu{position:fixed;inset:72px 0 auto 0;flex-direction:column;gap:0;background:var(--cream);border-bottom:1px solid var(--line);padding:8px 16px 20px;display:none}
   .menu.open{display:flex}
   .menu a{display:block;padding:14px 4px;border-bottom:1px solid var(--line)}
   .burger{display:block}
-  .nav .btn{display:none}
 }
 .rv-note{margin-top:16px;font-size:.82rem;color:var(--muted)}
 
@@ -302,7 +302,6 @@ footer a:hover{color:#fff}
   .menu.open{display:flex}
   .menu a{display:block;padding:14px 4px;border-bottom:1px solid var(--line)}
   .burger{display:block}
-  .nav .btn{display:none}
   .about,.bonus-in,.v-wrap,.contact-grid{grid-template-columns:1fr;gap:40px}
   .about>*,.bonus-in>*,.v-wrap>*,.contact-grid>*{min-width:0}
   .about-img .badge{right:12px}
