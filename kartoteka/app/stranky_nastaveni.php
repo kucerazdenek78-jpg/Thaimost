@@ -1,8 +1,11 @@
 <?php
 // Nastavení: masérky, ceník, prahy štítků, uživatelé, fronta e-mailů.
 
+require_once __DIR__ . '/stranky_reklamy.php';
+
 function stranka_nastaveni(array $u): void
 {
+    if (($_GET['sekce'] ?? '') === 'reklamy') { stranka_reklamy($u); return; }
     if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $akce = $_POST['akce'] ?? '';
         if ($akce === 'nastaveni') {
@@ -84,6 +87,10 @@ function stranka_nastaveni(array $u): void
           <button class="btn primary">Uložit</button>
         </form>
 
+        <section class="card" id="reklamy"><h2>📣 Reklamní materiály</h2>
+          <p style="margin-top:0">Hotové reklamy na Facebook a Instagram: obrázky, reely a texty ke stažení a zkopírování.</p>
+          <p><a class="btn primary" href="/?r=nastaveni&amp;sekce=reklamy">Otevřít reklamní materiály</a></p>
+        </section>
         <section class="card" id="tym"><h2>Tým</h2>
           <p class="muted small">Správa lidí a provozu na jednom místě.</p>
           <p><a class="btn primary" href="/?r=tym">👥 Tým – masérky</a> <a class="btn" href="/?r=recepcni">🧾 Recepční</a> <a class="btn" href="/?r=smeny">🗓 Směny</a>
