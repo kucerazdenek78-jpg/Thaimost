@@ -242,3 +242,12 @@ details.rozbal>summary h3{display:inline;margin:0}.posta-ucet details.rozbal{mar
 .platba-navrh{display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:space-between;background:#eef5f0;border:1px solid #cfe3d6;border-radius:10px;padding:8px 10px;margin:10px 0}
 .platba-rucne{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0}.platba-rucne select{flex:1;min-width:220px}
 .platba-text{white-space:pre-wrap;font-size:.8rem;max-height:240px;overflow:auto;background:#faf6f0;padding:8px;border-radius:8px}
+/* Formulář rezervace: masérny v přehledu obsazenosti, první volný termín */
+.obs-vyber{align-items:end}.obs-prvni{display:flex;flex-direction:column;gap:4px;grid-column:span 2}.obs-prvni .btn{align-self:flex-start}
+.obs-sek{font-size:.75rem;text-transform:uppercase;letter-spacing:.08em;color:#7a6a5c;margin:8px 0 2px;font-weight:700}
+.obs-r.ms .obs-n{background:#efe6d8}.obs-r.ms.on .obs-n{background:#e3d1b2}
+.obs-r.off{opacity:.45}.obs-r.off .obs-n,.obs-r.off .obs-bar{cursor:not-allowed}
+.obs-r.pozadi{opacity:.55}
+.obs-bar i.v.auto{background:rgba(198,156,93,.3);outline-style:dashed}
+.chip.on{background:#6b4a2b;color:#fff;border-color:#6b4a2b}
+@media (max-width:760px){.obs-prvni{grid-column:auto}}
