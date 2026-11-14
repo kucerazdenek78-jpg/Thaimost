@@ -380,6 +380,8 @@ function rez_uloz(array $p, ?array $puvodni, bool $potvrdit): array
         return ['Zadejte datum a čas.', []];
     $delka = (int)($p['delka'] ?? 0) ?: ((int)$var['minuty'] ?: 60);
     $zac = $p['datum'] . ' ' . $p['cas'] . ':00';
+    $otevreno = nastaveni('oteviraci_od', '09:00');
+    if ($p['cas'] < $otevreno && empty($p['presto'])) return ["První masáž začíná v $otevreno (Nastavení → Otevřeno od). Zvolte pozdější čas, nebo zaškrtněte „Přesto uložit“.", []];
     $kon = date('Y-m-d H:i:s', strtotime($zac) + $delka * 60);
     $pocet = (int)$var['maserky'];          // 0 = bez masérky (whirlpool), 1, 2 = párová
     $mas = $pocet >= 1 ? ((int)($p['maserka_id'] ?? 0) ?: null) : null;
@@ -1040,7 +1042,7 @@ function den_obs_data(string $d, int $delka, int $mdelka, int $mimo, bool $welln
     $okna = [];
     foreach (q('SELECT id FROM maserky WHERE aktivni=1')->fetchAll(PDO::FETCH_COLUMN) as $mid) {
         $okna[(int)$mid] = maserka_okna((int)$mid, $d);
-        foreach ($okna[(int)$mid] as [$a, $b]) { $minOd = min($minOd, $a); $minDo = max($minDo, $b); }   // přesčas mimo otevírací dobu
+        foreach ($okna[(int)$mid] as [$a, $b]) $minDo = max($minDo, $b);   // přesčas po zavírací době prodlouží den; začíná se vždy v otevírací době (první masáž v 9:00)
     }
     $zavreno = $minDo;   // zavírací doba (bez wellness po ní)
     $rez = q("SELECT r.id, r.maserka_id, r.maserka2_id, r.zacatek, r.konec, COALESCE(r.masaz_konec, r.konec) AS m_konec, z.jmeno, z.prijmeni FROM rezervace r JOIN zakaznici z ON z.id=r.zakaznik_id
