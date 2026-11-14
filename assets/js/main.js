@@ -339,6 +339,16 @@
   if(sec&&'IntersectionObserver' in window) new IntersectionObserver(function(es){ es.forEach(function(e){ g.classList.toggle('pryc',e.isIntersecting); }); },{threshold:.15}).observe(sec);
 })();
 
+/* Tematická masérna: zapíná/vypíná se v kartotéce (Správa → Nastavení); web se zeptá /api/stav a při vypnutí skryje sekci, kartu i výběr v objednávce.
+   Poslední známý stav si pamatuje v prohlížeči, aby po vypnutí sekce při dalším načtení neprobliknula. */
+(function(){
+  var H=document.documentElement, K='tm_tematicka';
+  try{ if(localStorage.getItem(K)==='0') H.classList.add('tm-off'); }catch(e){}
+  function nastav(on){ H.classList.toggle('tm-off',!on); try{ localStorage.setItem(K,on?'1':'0'); }catch(e){}
+    var sel=document.getElementById('bAtm'); if(!on&&sel) sel.value=''; }
+  if(window.ThaiApi&&ThaiApi.get) ThaiApi.get('/api/stav').then(function(r){ if(r&&r.ok&&typeof r.tematicka==='boolean') nastav(r.tematicka); }).catch(function(){});
+})();
+
 /* Tematická masérna: video se spustí, až je vidět; klepnutí na atmosféru ji předvyplní v objednávce */
 (function(){
   var v=document.getElementById('atmoVideo'), b=document.getElementById('atmoSound'), sel=document.getElementById('bAtm');

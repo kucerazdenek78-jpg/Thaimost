@@ -240,7 +240,9 @@ footer a:hover{color:#fff}
 .why-grid>.why-card:nth-child(3n+1):last-child{grid-column:1/-1}
 @media (max-width:900px){.why-grid>.why-card:nth-child(3n+1):last-child{grid-column:auto}}
 
-/* tematická masérna – atmosféry */
+/* tematická masérna – atmosféry (vypíná se v kartotéce: Správa → Nastavení → Tematická masérna na webu; web pak dostane třídu tm-off) */
+html.tm-off #atmosfera,html.tm-off .why-atmo,html.tm-off #fAtm{display:none}
+html.tm-off .why-grid>.why-card:nth-child(3n+1):last-child{grid-column:auto}
 .atmo{background:var(--teak);color:var(--cream);position:relative;overflow:hidden}
 .atmo::before{content:"";position:absolute;inset:0;background:radial-gradient(900px 500px at 15% 0%,rgba(198,156,93,.25),transparent 60%);pointer-events:none}
 .atmo .wrap{position:relative}

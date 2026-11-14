@@ -39,7 +39,7 @@ function api_route(string $cesta): void
     $m = $_SERVER['REQUEST_METHOD'];
 
     if ($cesta === '/api/stav' && $m === 'GET') {
-        api_odpoved(['ok' => true, 'rezim' => nastaveni('rezim_webu', 'zajem')]);
+        api_odpoved(['ok' => true, 'rezim' => nastaveni('rezim_webu', 'zajem'), 'tematicka' => (string)nastaveni('tematicka_web', '1') === '1' && tematicka_maserna_je()]);
     }
 
     if ($cesta === '/api/sluzby' && $m === 'GET') {
@@ -76,7 +76,7 @@ function api_zajem(): void
     $oknoTxt = ['dopoledne' => 'dopoledne', 'odpoledne' => 'odpoledne', 'vecer' => 'večer', 'kdykoli' => 'kdykoli'][$okno];
     $pref = trim(($den ? datum_cz($den, false) . ', ' : '') . $oknoTxt);
     // atmosféra tematické masérny (prales, pláž, vodopád, chrám) – jen známý klíč, u wellness se ignoruje
-    $atm = isset(ATMOSFERY[(string)($d['atmosfera'] ?? '')]) && (int)$v['wellness_mistnost'] !== 1 ? (string)$d['atmosfera'] : '';
+    $atm = isset(ATMOSFERY[(string)($d['atmosfera'] ?? '')]) && (int)$v['wellness_mistnost'] !== 1 && (string)nastaveni('tematicka_web', '1') === '1' ? (string)$d['atmosfera'] : '';
     $atmTxt = $atm !== '' ? ATMOSFERY[$atm]['nazev'] : '';
 
     $zid = zakaznik_najdi_nebo_zaloz($tel, $jmeno, $prijmeni, $email, 'web');

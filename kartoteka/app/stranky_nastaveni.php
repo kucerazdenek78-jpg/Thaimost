@@ -9,7 +9,7 @@ function stranka_nastaveni(array $u): void
     if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $akce = $_POST['akce'] ?? '';
         if ($akce === 'nastaveni') {
-            foreach (['rezim_webu', 'oteviraci_od', 'oteviraci_do', 'prestavka_min', 'tablet_predstih_min', 'prah_staly_navstev', 'prah_spici_dni', 'prah_nespolehlivy', 'bonus_po', 'bonus_pocita_poukaz'] as $k)
+            foreach (['rezim_webu', 'tematicka_web', 'oteviraci_od', 'oteviraci_do', 'prestavka_min', 'tablet_predstih_min', 'prah_staly_navstev', 'prah_spici_dni', 'prah_nespolehlivy', 'bonus_po', 'bonus_pocita_poukaz'] as $k)
                 if (isset($_POST[$k])) q('INSERT INTO nastaveni(klic,hodnota) VALUES(?,?) ON CONFLICT(klic) DO UPDATE SET hodnota=excluded.hodnota', [$k, trim($_POST[$k])]);
             flash('Nastavení uloženo.');
         } elseif ($akce === 'maserky') {
@@ -64,6 +64,8 @@ function stranka_nastaveni(array $u): void
           <?= csrf_pole() ?><input type="hidden" name="akce" value="nastaveni">
           <h2>Web a provoz</h2>
           <label>Rezervační formulář na webu<select name="rezim_webu"><?= moznosti(['zajem' => 'Zájem – zákazník napíše, kdy by se hodilo, recepce domluví', 'terminy' => 'Volné termíny – zákazník vidí volné časy (zatím nepoužívat)'], $n['rezim_webu']) ?></select></label>
+          <label>✨ Tematická masérna na webu<select name="tematicka_web"><?= moznosti(['1' => 'Zapnuto – web ukazuje sekci s atmosférami a výběr atmosféry v objednávce', '0' => 'Vypnuto – na webu se o tematické masérně nic nezobrazí (v kartotéce zůstává)'], (string)($n['tematicka_web'] ?? '1')) ?></select>
+            <span class="muted small">Projeví se do pár vteřin bez zásahu do webu (web se ptá kartotéky). Platí pro češtinu, angličtinu i němčinu.</span></label>
           <div class="grid3">
             <label>Otevřeno od<input type="time" name="oteviraci_od" value="<?= h($n['oteviraci_od']) ?>"></label>
             <label>do<input type="time" name="oteviraci_do" value="<?= h($n['oteviraci_do']) ?>"></label>

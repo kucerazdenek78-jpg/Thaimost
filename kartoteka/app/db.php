@@ -137,6 +137,7 @@ function migrate_v1(PDO $pdo): void
     // Výchozí nastavení
     $def = [
         'rezim_webu' => 'zajem',          // zajem | terminy (terminy zatím nepoužito)
+        'tematicka_web' => '1',           // 1 = web ukazuje tematickou masérnu (sekce + výběr atmosféry), 0 = skryto
         'oteviraci_od' => '09:00',
         'oteviraci_do' => '20:00',
         'prestavka_min' => '10',          // minut na výměnu mezi dvěma masážemi (masérka i masérna); 0 = bez přestávky
