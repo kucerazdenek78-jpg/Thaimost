@@ -86,11 +86,11 @@ function api_zajem(): void
     $rid = (int)db()->lastInsertId();
 
     $kdo = "$jmeno $prijmeni, " . telefon_cz($tel) . ($email ? ", $email" : '');
-    posli_email(cfg()['email_salon'], "Nová žádost o termín – $jmeno $prijmeni",
-        "Nová žádost z webu:\n\n$kdo\n$v[nazev] – $v[popis]\nKdy by se hodilo: $pref\n"
+    $txtSalon = "Nová žádost z webu:\n\n$kdo\n$v[nazev] – $v[popis]\nKdy by se hodilo: $pref\n"
         . ($atmTxt !== '' ? "Atmosféra (tematická masérna): $atmTxt\n" : '')
         . (($d['poznamka'] ?? '') !== '' ? "Poznámka: $d[poznamka]\n" : '')
-        . "\nVyřídit: " . rtrim(cfg()['url'], '/') . "/?r=rezervace&id=$rid\n");
+        . "\nVyřídit: " . rtrim(cfg()['url'], '/') . "/?r=rezervace&id=$rid\n";
+    foreach (posta_upozorneni() as $adr) posli_email($adr, "Nová žádost o termín – $jmeno $prijmeni", $txtSalon, null, 'interni');
     if ($email) posli_email($email, 'Thai Most – přijali jsme vaši žádost o termín',
         "Dobrý den,\n\nděkujeme za zájem o $v[nazev] ($v[popis]). Kdy by se vám hodilo: $pref.\n"
         . ($atmTxt !== '' ? "Atmosféra v tematické masérně: $atmTxt.\n" : '') . "\n"
@@ -124,12 +124,13 @@ function api_poukaz(): void
     $pid = (int)db()->lastInsertId();
 
     $popis = ($d['sluzba'] ?? '') !== '' ? $d['sluzba'] : kc($hodnota);
-    posli_email(cfg()['email_salon'], "Objednávka poukazu – $jmeno ($popis)",
+    $txtPoukaz = ["Objednávka poukazu – $jmeno ($popis)",
         "Nová objednávka dárkového poukazu z webu" . ($cislo ? " ($cislo)" : '') . ":\n\n"
         . "Poukaz: $popis, hodnota " . kc($hodnota) . "\nObjednal: $jmeno, " . telefon_cz($tel) . ($email ? ", $email" : '') . "\n"
         . "Převzetí: " . ($d['prevzeti'] ?? '') . "\nPlatba: " . ($d['platba'] ?? '') . "\n"
         . (($d['poznamka'] ?? '') !== '' ? "Poznámka: $d[poznamka]\n" : '')
-        . "\nKód v kartotéce: $kod\n" . rtrim(cfg()['url'], '/') . "/?r=poukaz&id=$pid\n");
+        . "\nKód v kartotéce: $kod\n" . rtrim(cfg()['url'], '/') . "/?r=poukaz&id=$pid\n"];
+    foreach (posta_upozorneni() as $adr) posli_email($adr, $txtPoukaz[0], $txtPoukaz[1], null, 'interni');
 
     // Kód poukazu zákazníkovi nevracíme – platí až po zaplacení a vydání v salonu.
     api_odpoved(['ok' => true]);

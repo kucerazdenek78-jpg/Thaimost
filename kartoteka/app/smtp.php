@@ -58,9 +58,10 @@ function smtp_sestav(array $c, string $from, string $to, string $subject, string
         "To: <$to>",
         'Subject: ' . $enc($subject),
         'Date: ' . date('r'),
-        'Message-ID: <' . bin2hex(random_bytes(8)) . '@masage.dvere.app>',
+        'Message-ID: <' . bin2hex(random_bytes(8)) . '@' . (substr(strrchr($from, '@') ?: '@masage.dvere.app', 1)) . '>',
         'MIME-Version: 1.0',
     ];
+    if (!empty($c['reply_to']) && filter_var($c['reply_to'], FILTER_VALIDATE_EMAIL)) $headers[] = 'Reply-To: <' . $c['reply_to'] . '>';
     if ($priloha && $priloha['obsah'] !== '') {
         $headers[] = "Content-Type: multipart/mixed; boundary=\"$hranice\"";
         $msg = implode("\r\n", $headers) . "\r\n\r\n"

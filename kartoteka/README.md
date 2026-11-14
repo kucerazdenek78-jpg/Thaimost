@@ -24,7 +24,7 @@ kartoteka/
 
 ## Nasazení na Synology
 1. Složku `kartoteka/` nahrát na NAS, např. `/volume1/docker/masaze/`.
-2. `cp config.example.php config.php` a doplnit: e‑mail salonu, SMTP, povolené originy webu.
+2. `cp config.example.php config.php` a doplnit povolené originy webu. E‑maily (účty, hesla, adresy pro upozornění) se nastavují v aplikaci: **Správa → Pošta** (`smtp` a `email_salon` v config.php platí jen do prvního uložení v aplikaci).
 3. V `docker-compose.yml` doplnit název Docker sítě, ve které běží `cloudflared` (Container Manager → Síť). Kontejner `masaze` musí být ve stejné síti – tunel ho hledá jako `http://masaze:3000`.
 4. Container Manager → Projekt → vytvořit z `docker-compose.yml` → spustit.
 5. Založit prvního uživatele (terminál kontejneru, nebo SSH na NAS):
@@ -87,3 +87,12 @@ Výchozí nastavení: whirlpool a sauna = 0 masérek, wellness masérna; balíč
 - Formulář u párové ukáže druhou masérku, nabídne čas **na konec směny** (masáž končí se zavírací dobou, whirlpool a sauna běží po zavírací době s recepční) a kontroluje obě masérky.
 - Kalendář: párová je u obou masérek jen na dobu masáže (👥), ve sloupci *Wellness masérna* na celou dobu; osa se prodlouží přes zavírací dobu.
 - Dnes: tlačítko **📲👥 Dvoulůžková – obě lůžka** pošle masáž na oba tablety (každé lůžko svou masérku); na tabletu se odpočítává jen masáž (60 min).
+
+## Pošta (Správa → Pošta)
+- Dva účty: **Komunikace se zákazníky** (potvrzení termínů, odpovědi na žádosti, poukazy e‑mailem) a **Ostatní komunikace** (upozornění pro salon, objednávky poukazů, předčasně ukončené masáže, směny masérkám). Ostatní může jet „stejným účtem jako zákazníci“ (výchozí).
+- Předvolby serverů: Seznam (Email Profi i @seznam.cz) `smtp.seznam.cz:465`, `imap.seznam.cz:993`; Gmail `smtp.gmail.com:465`, `imap.gmail.com:993` (heslo aplikace). SMTP: port 465 = SSL, jiný port = STARTTLS.
+- Nastavení a hesla jsou v tabulce `posta_nast` (DB v15), mění je jen admin; vidí vedoucí i admin. Každý e‑mail ve frontě má `emaily.ucet`.
+- Hlídání: stav účtu (🟢 funguje / 🔴 poslední odeslání selhalo / 🟡 nevyzkoušeno / ⚪ nenastaveno), počty za 30 dní, poslední chyba, zkušební e‑mail, opětovné odeslání fronty.
+- Schránka: přes IMAP jen čte (EXAMINE + BODY.PEEK – zprávy zůstanou nepřečtené) počet nepřečtených a posledních 10; obnovuje se při otevření stránky, když je stav starší než 10 min.
+- DNS: při otevření stránky kontrola domény odesílatele – MX, SPF (jen jeden, u Seznamu `include:spf.seznam.cz`), DKIM Seznamu (`szn1–3._domainkey` CNAME → seznam.cz; zástupný `*.domena` se nepočítá), DMARC. Když kartotéka nedosáhne na DNS, nic nehlásí jako chybějící.
+- Adresy pro upozornění: tamtéž (víc adres čárkou).

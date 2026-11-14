@@ -98,7 +98,7 @@ function prichody_panel(): void {}
 function vedouci_emaily(): array
 {
     $e = q("SELECT email FROM uzivatele WHERE role='hlavni' AND aktivni=1 AND email<>''")->fetchAll(PDO::FETCH_COLUMN);
-    $e[] = (string)(cfg()['email_salon'] ?? '');
+    $e = array_merge($e, posta_upozorneni());
     return array_values(array_unique(array_filter($e)));
 }
 
@@ -121,7 +121,7 @@ function masaz_ukoncit_recepce(int $rezId, string $duvod, bool $pocitat): ?strin
     $text = "Masáž byla předčasně ukončena z recepce.\n\nZákazník: " . jmeno_z($r) . ' (' . telefon_cz($r['telefon']) . ")\nMasáž: " . trim(($r['sluzba'] ?? '') . ' ' . ($r['var_popis'] ?? ''))
         . "\nTermín: " . datum_cz($r['zacatek']) . "\nMasérna / tablet: $kde\nMasérka: " . ($r['maserka'] ?? '—') . ($r['maserka2'] ? ' + ' . $r['maserka2'] : '')
         . "\nUkončil(a): " . kdo() . "\n\nDůvod: $duvod\n\n" . ($pocitat ? 'Počítá se jako proběhlá.' : 'Nepočítá se jako proběhlá (do razítek ani statistik).') . "\n";
-    foreach (vedouci_emaily() as $adr) posli_email($adr, 'Thai Most – předčasně ukončená masáž (' . jmeno_z($r) . ')', $text);
+    foreach (vedouci_emaily() as $adr) posli_email($adr, 'Thai Most – předčasně ukončená masáž (' . jmeno_z($r) . ')', $text, null, 'interni');
     return null;
 }
 

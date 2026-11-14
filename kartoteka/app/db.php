@@ -26,7 +26,7 @@ function q(string $sql, array $p = []): PDOStatement
 function q1(string $sql, array $p = []): ?array { $r = q($sql, $p)->fetch(); return $r ?: null; }
 function qv(string $sql, array $p = []) { $r = q($sql, $p)->fetchColumn(); return $r === false ? null : $r; }
 
-const DB_VERZE = 14;
+const DB_VERZE = 15;
 
 /** Migrace běží v jedné transakci a po získání zámku se verze ověří znovu (souběžné první požadavky). */
 function migrate(PDO $pdo): void
@@ -49,6 +49,7 @@ function migrate(PDO $pdo): void
         if ($ver < 12) migrate_v12($pdo);
         if ($ver < 13) migrate_v13($pdo);
         if ($ver < 14) migrate_v14($pdo);
+        if ($ver < 15) migrate_v15($pdo);
         $pdo->exec('PRAGMA user_version = ' . DB_VERZE);
         $pdo->exec('COMMIT');
     } catch (Throwable $e) {
@@ -171,6 +172,18 @@ function migrate_v1(PDO $pdo): void
  * mistnosti.tematicka = masérna je tematická (platí pro všechna její lůžka, nastavuje se v Tým → Masérny),
  * rezervace.atmosfera = zvolená atmosféra (klíč z ATMOSFERY, prázdné = bez / nezáleží). Masérna 2 se označí rovnou.
  */
+/**
+ * v15: pošta nastavitelná v aplikaci (Správa → Pošta). posta_nast = účty a hesla (odděleně od „nastaveni“, stejně jako google_nast);
+ * emaily.ucet = kterým účtem se e-mail posílá: zakaznici (komunikace se zákazníky) / interni (ostatní – upozornění, směny).
+ */
+function migrate_v15(PDO $pdo): void
+{
+    $pdo->exec(<<<SQL
+    CREATE TABLE posta_nast (klic TEXT PRIMARY KEY, hodnota TEXT NOT NULL);
+    ALTER TABLE emaily ADD COLUMN ucet TEXT NOT NULL DEFAULT 'zakaznici';
+    SQL);
+}
+
 function migrate_v14(PDO $pdo): void
 {
     $pdo->exec(<<<SQL

@@ -46,7 +46,6 @@ function stranka_nastaveni(array $u): void
     $maserky = q('SELECT * FROM maserky ORDER BY poradi')->fetchAll();
     $cenik = q('SELECT v.*, s.nazev FROM varianty v JOIN sluzby s ON s.id=v.sluzba_id ORDER BY s.poradi, v.poradi')->fetchAll();
     $uziv = q('SELECT id,login,jmeno,role,aktivni FROM uzivatele ORDER BY login')->fetchAll();
-    $smtp = !empty(cfg()['smtp']['host']);
 
     hlavicka('Nastavení', 'nastaveni'); ?>
     <h1>Nastavení</h1>
@@ -121,11 +120,12 @@ function stranka_nastaveni(array $u): void
       </div>
       <div>
         <?php demo_karta($u) ?>
+        <?php [$postaProblem, $postaTxt] = posta_souhrn(); ?>
         <section class="card side">
-          <h3>E-maily</h3>
-          <p class="small"><?= $smtp ? 'SMTP nastaveno: ' . h(cfg()['smtp']['host']) : '<b class="warn">SMTP není nastaveno</b> – e-maily se jen ukládají do fronty.' ?><br>
-          Upozornění chodí na <b><?= h(cfg()['email_salon']) ?></b> (config.php).</p>
-          <form method="post" class="inline"><?= csrf_pole() ?><input type="hidden" name="akce" value="odeslat_emaily"><button class="btn">Odeslat frontu</button> <a class="btn" href="/?r=emaily">Zobrazit frontu</a></form>
+          <h3>✉️ Pošta <?= $postaProblem ? '<b class="cnt">' . $postaProblem . '</b>' : '' ?></h3>
+          <p class="small"><?php foreach ($postaTxt as $t): ?><?= h($t) ?><br><?php endforeach ?>
+          Upozornění chodí na <b><?= h(implode(', ', posta_upozorneni()) ?: '— nenastaveno —') ?></b>.</p>
+          <p><a class="btn primary" href="/?r=posta">Nastavit a hlídat poštu</a> <a class="btn" href="/?r=emaily">Fronta</a></p>
         </section>
         <section class="card side">
           <h3>Uživatelé <a class="small" href="/?r=uzivatele">správa →</a></h3>
@@ -147,14 +147,20 @@ function stranka_nastaveni(array $u): void
 
 function stranka_emaily(array $u): void
 {
-    $rows = q('SELECT * FROM emaily ORDER BY id DESC LIMIT 100')->fetchAll();
+    $uc = isset(POSTA_UCTY[$_GET['ucet'] ?? '']) ? $_GET['ucet'] : '';
+    $rows = $uc ? q('SELECT * FROM emaily WHERE ucet=? ORDER BY id DESC LIMIT 100', [$uc])->fetchAll()
+                : q('SELECT * FROM emaily ORDER BY id DESC LIMIT 100')->fetchAll();
+    $stavy = ['ceka' => '⏳ čeká', 'odeslano' => '✅ odesláno', 'chyba' => '❌ chyba'];
     hlavicka('E-maily', 'nastaveni'); ?>
+    <p class="muted small"><a href="/?r=posta">← Pošta</a></p>
     <h1>Fronta e-mailů</h1>
+    <p><a class="chip<?= $uc === '' ? ' on' : '' ?>" href="/?r=emaily">Vše</a>
+      <?php foreach (POSTA_UCTY as $k => $x): ?><a class="chip<?= $uc === $k ? ' on' : '' ?>" href="/?r=emaily&amp;ucet=<?= h($k) ?>"><?= h($x[0]) ?></a> <?php endforeach ?></p>
     <table class="tbl">
-      <tr><th>Kdy</th><th>Komu</th><th>Předmět</th><th>Stav</th></tr>
+      <tr><th>Kdy</th><th>Účet</th><th>Komu</th><th>Předmět</th><th>Stav</th></tr>
       <?php foreach ($rows as $e): ?>
-        <tr><td class="small"><?= h(datum_cz($e['vytvoreno'])) ?></td><td><?= h($e['komu']) ?></td><td><?= h($e['predmet']) ?><details><summary class="muted small">text</summary><pre><?= h($e['text']) ?></pre></details></td>
-            <td><?= h($e['stav']) ?><?= $e['chyba'] ? '<br><span class="warn small">' . h($e['chyba']) . '</span>' : '' ?></td></tr>
+        <tr><td class="small"><?= h(datum_cz($e['vytvoreno'])) ?></td><td class="small"><?= h(POSTA_UCTY[$e['ucet']][0] ?? $e['ucet']) ?></td><td><?= h($e['komu']) ?></td><td><?= h($e['predmet']) ?><details><summary class="muted small">text</summary><pre><?= h($e['text']) ?></pre></details></td>
+            <td><?= h($stavy[$e['stav']] ?? $e['stav']) ?><?= $e['odeslano'] ? '<br><span class="muted small">' . h(datum_cz($e['odeslano'])) . '</span>' : '' ?><?= $e['chyba'] ? '<br><span class="warn small">' . h($e['chyba']) . '</span>' : '' ?></td></tr>
       <?php endforeach ?>
     </table>
     <?php paticka();

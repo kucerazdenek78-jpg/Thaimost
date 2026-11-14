@@ -493,7 +493,7 @@ function smeny_posli_uzivateli(array $x, string $od, string $do): string
     $txt .= "\nV příloze je kalendář (.ics) – otevřením se směny přidají do vašeho kalendáře, změněné se přepíšou.\n"
           . "Trvalé napojení kalendáře (aktualizuje se samo): " . ical_url(ical_token_pro((int)$x['id'])) . "\n\nThai Most\n";
     posli_email($x['email'], 'Thai Most – směny ' . date('j. n.', strtotime($od)) . '–' . date('j. n.', strtotime($do)), $txt,
-        ['nazev' => 'smeny.ics', 'mime' => 'text/calendar; method=PUBLISH', 'obsah' => ics_smeny($rows, 'Thai Most – směny', false)]);
+        ['nazev' => 'smeny.ics', 'mime' => 'text/calendar; method=PUBLISH', 'obsah' => ics_smeny($rows, 'Thai Most – směny', false)], 'interni');
     q("UPDATE smeny SET odeslano=? WHERE uzivatel_id=? AND datum BETWEEN ? AND ? AND stav IN ('schvaleno','zruseno')", [nyni(), $x['id'], $od, $do]);
     return '';
 }

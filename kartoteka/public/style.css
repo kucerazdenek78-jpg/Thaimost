@@ -220,3 +220,16 @@ body.app textarea{font-size:16px}
   .volba span{padding:13px 20px;font-size:1.05rem}
   summary{min-height:44px}
 }
+/* Pošta (Správa → Pošta) */
+a.chip{text-decoration:none;color:inherit;display:inline-block}.chip.on{background:#6b4a2b;color:#fff;border-color:#6b4a2b}
+.posta-stav{font-size:.8rem;font-weight:600;padding:3px 10px;border-radius:999px;background:#eee;vertical-align:middle;margin-left:6px;white-space:nowrap}
+.posta-ok{background:#e3efe8;color:#2f5446}.posta-chyba{background:#f6e1db;color:#a3321f}.posta-nevyzkouseno{background:#fff3d6;color:#7a5a12}.posta-nenastaveno{background:#eee;color:#666}
+.posta-grid{display:grid;grid-template-columns:1fr 1fr;gap:18px}@media(max-width:760px){.posta-grid{grid-template-columns:1fr}.posta-stav{display:inline-block;margin:6px 0 0}}
+.posta-grid h3{margin:.2em 0 .4em}
+.posta-zpravy{list-style:none;padding:0;margin:6px 0;max-height:280px;overflow:auto;border:1px solid #e6dccd;border-radius:10px}
+.posta-zpravy li{padding:7px 10px;border-bottom:1px solid #f0e8dc;word-break:break-word}.posta-zpravy li:last-child{border-bottom:0}
+.posta-test{display:flex;flex-wrap:wrap;gap:6px}.posta-test input{flex:1;min-width:200px}
+.posta-akce{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0}
+.posta-ucet .tbl code{word-break:break-all;white-space:normal}
+label.chk{display:flex;gap:8px;align-items:center}
+details.rozbal>summary h3{display:inline;margin:0}.posta-ucet details.rozbal{margin-top:14px;border-top:1px solid #eee3d4;padding-top:10px}

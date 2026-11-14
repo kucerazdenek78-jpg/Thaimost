@@ -350,12 +350,18 @@ const STAVY_POUKAZU = [
 ];
 
 // ---------- E-maily ----------
-/** Zařadí e-mail do fronty a (je-li nastaven SMTP) hned ho odešle. Vrací číslo ve frontě, 0 = neplatná adresa. */
-function posli_email(string $komu, string $predmet, string $text, ?array $priloha = null): int
+require_once __DIR__ . '/posta.php';
+
+/**
+ * Zařadí e-mail do fronty a (je-li účet nastavený) hned ho odešle. Vrací číslo ve frontě, 0 = neplatná adresa.
+ * $ucet: 'zakaznici' = komunikace se zákazníky, 'interni' = ostatní (upozornění pro salon, směny…). Účty: Správa → Pošta.
+ */
+function posli_email(string $komu, string $predmet, string $text, ?array $priloha = null, string $ucet = 'zakaznici'): int
 {
     if (!filter_var($komu, FILTER_VALIDATE_EMAIL)) return 0;
-    q('INSERT INTO emaily(komu,predmet,text,priloha_nazev,priloha_mime,priloha_obsah) VALUES(?,?,?,?,?,?)',
-        [$komu, $predmet, $text, $priloha['nazev'] ?? '', $priloha['mime'] ?? '', $priloha['obsah'] ?? '']);
+    if (!isset(POSTA_UCTY[$ucet])) $ucet = 'zakaznici';
+    q('INSERT INTO emaily(komu,predmet,text,priloha_nazev,priloha_mime,priloha_obsah,ucet) VALUES(?,?,?,?,?,?,?)',
+        [$komu, $predmet, $text, $priloha['nazev'] ?? '', $priloha['mime'] ?? '', $priloha['obsah'] ?? '', $ucet]);
     $id = (int)db()->lastInsertId();
     odesli_frontu($id);
     return $id;
@@ -363,12 +369,13 @@ function posli_email(string $komu, string $predmet, string $text, ?array $priloh
 
 function odesli_frontu(?int $jenId = null): void
 {
-    $smtp = cfg()['smtp'] ?? [];
-    if (empty($smtp['host'])) return; // bez SMTP jen uloženo
-    require_once __DIR__ . '/smtp.php';
     $rows = $jenId ? q("SELECT * FROM emaily WHERE id=? AND stav<>'odeslano'", [$jenId])->fetchAll()
                    : q("SELECT * FROM emaily WHERE stav<>'odeslano' ORDER BY id LIMIT 20")->fetchAll();
+    if (!$rows) return;
+    require_once __DIR__ . '/smtp.php';
     foreach ($rows as $e) {
+        $smtp = posta_ucet($e['ucet'] ?? 'zakaznici');
+        if ($smtp['host'] === '') continue; // účet nenastavený – e-mail čeká ve frontě
         try {
             smtp_send($smtp, $e['komu'], $e['predmet'], $e['text'],
                 $e['priloha_obsah'] !== '' ? ['nazev' => $e['priloha_nazev'], 'mime' => $e['priloha_mime'], 'obsah' => $e['priloha_obsah']] : null);
