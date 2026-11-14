@@ -200,6 +200,77 @@ function mime_rozloz(string $raw): array
     return ['hlavicky' => $h, 'text' => trim($telo), 'html' => $html];
 }
 
+// ---------- Nastavení schránky plateb ----------
+
+/** Akce nastavení schránky plateb (ze stránky Pošta i Platby). Vrací true, když akci zpracovala. */
+function platby_akce_nastaveni(string $akce, bool $admin): bool
+{
+    if ($akce === 'platby_ulozit' && $admin) {
+        foreach (['user', 'imap_host', 'imap_port', 'webmail', 'odesilatel'] as $p) {
+            $v = trim((string)($_POST[$p] ?? ''));
+            if ($p === 'imap_port') $v = $v === '' ? '' : (string)max(1, min(65535, (int)$v));
+            if ($p === 'webmail' && $v !== '' && !preg_match('~^https://~', $v)) $v = '';
+            if ($p === 'odesilatel') $v = implode(', ', array_filter(preg_split('~[\s,;]+~', strtolower($v)) ?: [], 'strlen'));
+            posta_uloz("platby.$p", $v);
+        }
+        if (trim((string)($_POST['pass'] ?? '')) !== '') posta_uloz('platby.pass', trim((string)$_POST['pass']));
+        if (!empty($_POST['smazat_heslo'])) posta_uloz('platby.pass', '');
+        posta_uloz('platby.auto', !empty($_POST['auto']) ? '1' : '0');
+        zapis_log('posta_nastaveni', 'platby');
+        flash('💳 Platby: uloženo.');
+        return true;
+    }
+    if ($akce === 'platby_nacist') {
+        $r = platby_nacti();
+        $r['ok'] ? flash('Schránka plateb v pořádku' . ($r['nove'] ? ", nových avíz: $r[nove]." : '.')) : flash($r['chyba'], 'err');
+        return true;
+    }
+    return false;
+}
+
+/** Karta se stavem a nastavením schránky plateb (na stránce Pošta i Platby). */
+function platby_karta(bool $admin, bool $naPlatbach, bool $otevrit = false): void
+{
+    $pc = platby_ucet(); $pst = json_decode(posta_n('platby.stav'), true) ?: []; ?>
+    <section class="card posta-ucet" id="platby">
+      <h2><?= $naPlatbach ? '⚙️ Nastavení plateb' : '💳 Platby – avíza z banky' ?> <span class="posta-stav posta-<?= !platby_nastaveno() ? 'nenastaveno' : (empty($pst) ? 'nevyzkouseno' : (!empty($pst['ok']) ? 'ok' : 'chyba')) ?>"><?= !platby_nastaveno() ? '⚪ Nenastaveno' : (empty($pst) ? '🟡 Zatím nenačteno' : (!empty($pst['ok']) ? '🟢 Schránka se čte' : '🔴 Schránku se nepodařilo přečíst')) ?></span></h2>
+      <p class="muted small" style="margin-top:0">Samostatná adresa (např. platby@thaimost.cz), kterou zadáte v internetovém bankovnictví pro zasílání avíz o příchozích platbách. Kartotéka z avíz vezme částku a VS a navrhne, ke kterému objednanému poukazu platba patří. <?= $naPlatbach ? '' : 'Výsledek: <a href="/?r=nastaveni&amp;sekce=platby">Správa → Platby</a>.' ?></p>
+      <?php if (platby_nastaveno()): ?>
+        <p class="small">Schránka <b><?= h($pc['user']) ?></b><?= $pc['odesilatel'] ? ' · bere jen avíza od <b>' . h($pc['odesilatel']) . '</b>' : ' · <span class="warn">adresa banky není vyplněná</span>' ?> · automatické potvrzení: <b><?= $pc['auto'] === '1' ? 'zapnuto' : 'vypnuto' ?></b>
+          <?php if ($pst): ?><br><span class="muted">Naposledy <?= h(datum_cz($pst['cas'] ?? null)) ?><?= empty($pst['ok']) ? '</span> <span class="warn">❗ ' . h($pst['chyba'] ?? '') : '' ?></span><?php endif ?>
+          · ke spárování: <a href="/?r=nastaveni&amp;sekce=platby"><b><?= platby_ke_sparovani() ?></b></a></p>
+        <div class="posta-akce"><form method="post" class="inline"><?= csrf_pole() ?><input type="hidden" name="akce" value="platby_nacist"><button class="btn">Zkontrolovat schránku teď</button></form>
+          <?php if ($pc['webmail']): ?><a class="btn" href="<?= h($pc['webmail']) ?>" target="_blank" rel="noopener">Otevřít poštu ↗</a><?php endif ?></div>
+      <?php endif ?>
+      <?php if ($admin): ?>
+      <details class="rozbal"<?= platby_nastaveno() && !$otevrit ? '' : ' open' ?>><summary><h3>Nastavit schránku pro platby</h3></summary>
+        <form method="post" class="platby-form" data-presety='<?= h(json_encode(POSTA_PRESETY, JSON_UNESCAPED_UNICODE)) ?>'>
+          <?= csrf_pole() ?><input type="hidden" name="akce" value="platby_ulozit">
+          <label>Poskytovatel (vyplní server)<select class="posta-preset"><option value="">— vlastní / ponechat —</option><?php foreach (POSTA_PRESETY as $k => $p): ?><option value="<?= h($k) ?>"><?= h($p[0]) ?></option><?php endforeach ?></select></label>
+          <div class="grid3">
+            <label>E-mailová adresa (přihlášení)<input type="email" name="user" value="<?= h($pc['user']) ?>" placeholder="platby@thaimost.cz" autocomplete="off" inputmode="email" autocapitalize="off"></label>
+            <label>Heslo<input type="password" name="pass" value="" placeholder="<?= $pc['pass'] !== '' ? '•••••••• uloženo – prázdné = beze změny' : 'heslo ke schránce' ?>" autocomplete="new-password"></label>
+            <label>Webová pošta <span class="muted small">(odkaz)</span><input type="url" name="webmail" value="<?= h($pc['webmail']) ?>" placeholder="https://email.seznam.cz"></label>
+            <label>IMAP server<input name="imap_host" value="<?= h($pc['imap_host']) ?>" placeholder="imap.seznam.cz" autocapitalize="off"></label>
+            <label>IMAP port <span class="muted small">(SSL)</span><input type="number" name="imap_port" value="<?= h((string)$pc['imap_port']) ?>"></label>
+          </div>
+          <label>Avíza chodí od <span class="muted small">(adresa, ze které banka avíza posílá – najdete ji v prvním avízu; víc adres čárkou, celá doména jako „@banka.cz“)</span><input name="odesilatel" value="<?= h($pc['odesilatel']) ?>" autocapitalize="off"></label>
+          <label class="chk"><input type="checkbox" name="auto" value="1" <?= $pc['auto'] === '1' ? 'checked' : '' ?>> Automaticky označit poukaz jako zaplacený, když avízo přišlo z adresy banky výše a sedí VS i částka (jinak se jen navrhne a potvrdí ručně)</label>
+          <?php if ($pc['pass'] !== ''): ?><label class="chk"><input type="checkbox" name="smazat_heslo" value="1"> Smazat uložené heslo</label><?php endif ?>
+          <button class="btn primary">Uložit</button>
+        </form>
+      </details>
+      <?php endif ?>
+    </section>
+    <script>
+    document.querySelectorAll('.platby-form').forEach(function (f) {
+      var pr = JSON.parse(f.dataset.presety), sel = f.querySelector('.posta-preset');
+      sel.addEventListener('change', function () { var p = pr[sel.value]; if (!p) return; f.imap_host.value = p[3]; f.imap_port.value = p[4]; if (!f.webmail.value) f.webmail.value = p[5]; });
+    });
+    </script>
+<?php
+}
+
 // ---------- Stránka Správa → Platby (/?r=nastaveni&sekce=platby) ----------
 
 function stranka_platby(array $u): void
@@ -207,7 +278,8 @@ function stranka_platby(array $u): void
     if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $akce = $_POST['akce'] ?? '';
         $id = (int)($_POST['id'] ?? 0);
-        if ($akce === 'nacist') {
+        if (platby_akce_nastaveni($akce, je_admin($u))) {
+        } elseif ($akce === 'nacist') {
             $r = platby_nacti();
             $r['ok'] ? flash($r['nove'] ? "Načteno nových avíz: $r[nove]." : 'Žádná nová avíza.') : flash($r['chyba'], 'err');
         } elseif ($akce === 'potvrdit') {
@@ -245,7 +317,7 @@ function stranka_platby(array $u): void
     <div class="cal-nav"><h1>💳 Platby</h1>
       <form method="post" class="inline"><?= csrf_pole() ?><input type="hidden" name="akce" value="nacist"><button class="btn primary"<?= platby_nastaveno() ? '' : ' disabled' ?>>Načíst avíza teď</button></form></div>
     <?php if (!platby_nastaveno()): ?>
-      <p class="flash warn">Schránka pro platby zatím není nastavená. Nastavíte ji v <a href="/?r=nastaveni&amp;sekce=posta#platby">Správa → Pošta → 💳 Platby</a> (adresa, na kterou banka posílá avíza o příchozích platbách).</p>
+      <p class="flash warn">Schránka pro platby zatím není nastavená<?= je_admin($u) ? ' – vyplňte ji níže v Nastavení plateb' : ' – nastaví ji správce' ?> (adresa, na kterou banka posílá avíza o příchozích platbách).</p>
     <?php else: ?>
       <p class="muted small" style="margin-top:0">Schránka <b><?= h($c['user']) ?></b> · kontroluje se sama každých <?= PLATBY_INTERVAL / 60 ?> min při práci v kartotéce<?= $st ? ' · naposledy ' . h(datum_cz($st['cas'] ?? null)) : '' ?>
         <?= !empty($st) && empty($st['ok']) ? '<br><span class="warn">❗ ' . h($st['chyba'] ?? '') . '</span>' : '' ?>
@@ -254,6 +326,7 @@ function stranka_platby(array $u): void
     <p class="muted small"><?php foreach (['k_vyrizeni' => 'k vyřízení', 'sparovano' => 'spárované', 'vse' => 'vše'] as $k => $t): ?><a href="/?r=nastaveni&amp;sekce=platby&amp;f=<?= $k ?>"<?= $f === $k ? ' class="on"' : '' ?>><?= $t ?></a> · <?php endforeach ?>
       Poukazů čeká na platbu: <a href="/?r=poukazy&amp;f=objednano"><?= count($cekaji) ?></a></p>
 
+    <?php if (!platby_nastaveno() && je_admin($u)) platby_karta(true, true, true); // nenastaveno: nastavení hned nahoře ?>
     <?php if (!$rows): ?><p class="card muted"><?= $f === 'k_vyrizeni' ? 'Žádná platba nečeká na spárování.' : 'Zatím žádné platby.' ?></p><?php endif ?>
     <?php foreach ($rows as $p): ?>
     <section class="card platba platba-<?= h($p['stav']) ?>">
@@ -286,6 +359,7 @@ function stranka_platby(array $u): void
       <details><summary class="muted small">text avíza</summary><pre class="platba-text"><?= h($p['text']) ?></pre></details>
     </section>
     <?php endforeach ?>
+    <?php if (platby_nastaveno() && je_admin($u)) platby_karta(true, true); // nastaveno: nastavení až pod platbami ?>
     <p class="muted small">Kartotéka čte ze schránky jen avíza o platbách (zprávy zůstanou nepřečtené). Poukaz se označí jako zaplacený až po potvrzení<?= $c['auto'] === '1' ? ' – nebo sám, když avízo přišlo od banky a sedí VS i částka' : '' ?>. VS poukazu je na jeho kartě.</p>
     <?php paticka();
 }
