@@ -660,6 +660,7 @@ function stranka_odmena(array $u): void
 /** JSON: tablety, kde masérka hlásí „to nejsem já“ a recepce to ještě nevyřešila (hlasitý poplach na všech stránkách). */
 function stranka_poplach(array $u): void
 {
+    platby_priprav_tik();   // avíza z banky na pozadí (nejvýš jednou za 10 min, po odeslání odpovědi)
     header('Content-Type: application/json; charset=utf-8');
     $rows = q("SELECT s.id, s.rezervace_id, s.neni_ona, m.nazev AS mistnost, z.prijmeni, z.jmeno, ma.jmeno AS maserka
         FROM sezeni s JOIN mistnosti m ON m.id=s.mistnost_id JOIN rezervace r ON r.id=s.rezervace_id JOIN zakaznici z ON z.id=r.zakaznik_id

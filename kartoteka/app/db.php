@@ -26,7 +26,7 @@ function q(string $sql, array $p = []): PDOStatement
 function q1(string $sql, array $p = []): ?array { $r = q($sql, $p)->fetch(); return $r ?: null; }
 function qv(string $sql, array $p = []) { $r = q($sql, $p)->fetchColumn(); return $r === false ? null : $r; }
 
-const DB_VERZE = 15;
+const DB_VERZE = 16;
 
 /** Migrace běží v jedné transakci a po získání zámku se verze ověří znovu (souběžné první požadavky). */
 function migrate(PDO $pdo): void
@@ -50,6 +50,7 @@ function migrate(PDO $pdo): void
         if ($ver < 13) migrate_v13($pdo);
         if ($ver < 14) migrate_v14($pdo);
         if ($ver < 15) migrate_v15($pdo);
+        if ($ver < 16) migrate_v16($pdo);
         $pdo->exec('PRAGMA user_version = ' . DB_VERZE);
         $pdo->exec('COMMIT');
     } catch (Throwable $e) {
@@ -172,6 +173,32 @@ function migrate_v1(PDO $pdo): void
  * mistnosti.tematicka = masérna je tematická (platí pro všechna její lůžka, nastavuje se v Tým → Masérny),
  * rezervace.atmosfera = zvolená atmosféra (klíč z ATMOSFERY, prázdné = bez / nezáleží). Masérna 2 se označí rovnou.
  */
+/**
+ * v16: platby z bankovních avíz (Správa → Platby). poukazy.vs = variabilní symbol (web: číslo objednávky z formuláře,
+ * recepce: 900000000 + id); platby = načtená avíza, castka_hal v haléřích (záporná = odchozí).
+ */
+function migrate_v16(PDO $pdo): void
+{
+    $pdo->exec(<<<SQL
+    ALTER TABLE poukazy ADD COLUMN vs TEXT NOT NULL DEFAULT '';
+    CREATE INDEX poukazy_vs ON poukazy(vs);
+    CREATE TABLE platby (
+        id INTEGER PRIMARY KEY, msg_id TEXT UNIQUE NOT NULL, prijato TEXT NOT NULL, odesilatel TEXT NOT NULL DEFAULT '',
+        predmet TEXT NOT NULL DEFAULT '', castka_hal INTEGER, vs TEXT NOT NULL DEFAULT '', protistrana TEXT NOT NULL DEFAULT '',
+        zprava TEXT NOT NULL DEFAULT '', text TEXT NOT NULL DEFAULT '', overeny INTEGER NOT NULL DEFAULT 0,
+        stav TEXT NOT NULL DEFAULT 'nova', navrh_poukaz_id INTEGER, navrh_typ TEXT NOT NULL DEFAULT '',
+        poukaz_id INTEGER REFERENCES poukazy(id), sparoval TEXT NOT NULL DEFAULT '', sparovano TEXT,
+        vytvoreno TEXT NOT NULL DEFAULT (datetime('now','localtime'))
+    );
+    CREATE INDEX platby_stav ON platby(stav);
+    SQL);
+    // VS doplnit: web má číslo objednávky v poznámce („Objednávka z webu 2611141530.“), ostatní 900000000 + id
+    foreach ($pdo->query('SELECT id, poznamka, zdroj FROM poukazy')->fetchAll(PDO::FETCH_ASSOC) as $p) {
+        $vs = preg_match('~Objednávka z webu (\d{1,10})\b~u', (string)$p['poznamka'], $m) ? $m[1] : (string)(900000000 + (int)$p['id']);
+        $pdo->prepare('UPDATE poukazy SET vs=? WHERE id=?')->execute([$vs, $p['id']]);
+    }
+}
+
 /**
  * v15: pošta nastavitelná v aplikaci (Správa → Pošta). posta_nast = účty a hesla (odděleně od „nastaveni“, stejně jako google_nast);
  * emaily.ucet = kterým účtem se e-mail posílá: zakaznici (komunikace se zákazníky) / interni (ostatní – upozornění, směny).

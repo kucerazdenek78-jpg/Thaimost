@@ -7,6 +7,7 @@ function stranka_nastaveni(array $u): void
 {
     if (($_GET['sekce'] ?? '') === 'reklamy') { stranka_reklamy($u); return; }
     if (($_GET['sekce'] ?? '') === 'posta') { stranka_posta($u); return; }
+    if (($_GET['sekce'] ?? '') === 'platby') { stranka_platby($u); return; }
     if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $akce = $_POST['akce'] ?? '';
         if ($akce === 'nastaveni') {
@@ -127,6 +128,12 @@ function stranka_nastaveni(array $u): void
           <p class="small"><?php foreach ($postaTxt as $t): ?><?= h($t) ?><br><?php endforeach ?>
           Upozornění chodí na <b><?= h(implode(', ', posta_upozorneni()) ?: '— nenastaveno —') ?></b>.</p>
           <p><a class="btn primary" href="/?r=nastaveni&amp;sekce=posta">Nastavit a hlídat poštu</a> <a class="btn" href="/?r=emaily">Fronta</a></p>
+        </section>
+        <?php $nPlateb = platby_ke_sparovani(); ?>
+        <section class="card side">
+          <h3>💳 Platby <?= $nPlateb ? '<b class="cnt">' . $nPlateb . '</b>' : '' ?></h3>
+          <p class="small"><?= platby_nastaveno() ? 'Avíza z banky se čtou ze schránky <b>' . h(platby_ucet()['user']) . '</b> a párují se s objednanými poukazy podle VS a částky.' : '<b class="warn">Schránka pro platby není nastavená.</b> Nastavíte ji v Pošta → 💳 Platby.' ?></p>
+          <p><a class="btn primary" href="/?r=nastaveni&amp;sekce=platby">Párování plateb</a></p>
         </section>
         <section class="card side">
           <h3>Uživatelé <a class="small" href="/?r=uzivatele">správa →</a></h3>

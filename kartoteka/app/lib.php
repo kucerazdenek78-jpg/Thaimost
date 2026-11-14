@@ -351,6 +351,7 @@ const STAVY_POUKAZU = [
 
 // ---------- E-maily ----------
 require_once __DIR__ . '/posta.php';
+require_once __DIR__ . '/platby.php';
 
 /**
  * Zařadí e-mail do fronty a (je-li účet nastavený) hned ho odešle. Vrací číslo ve frontě, 0 = neplatná adresa.

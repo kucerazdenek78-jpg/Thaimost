@@ -96,3 +96,11 @@ Výchozí nastavení: whirlpool a sauna = 0 masérek, wellness masérna; balíč
 - Schránka: přes IMAP jen čte (EXAMINE + BODY.PEEK – zprávy zůstanou nepřečtené) počet nepřečtených a posledních 10; obnovuje se při otevření stránky, když je stav starší než 10 min.
 - DNS: při otevření stránky kontrola domény odesílatele – MX, SPF (jen jeden, u Seznamu `include:spf.seznam.cz`), DKIM Seznamu (`szn1–3._domainkey` CNAME → seznam.cz; zástupný `*.domena` se nepočítá), DMARC. Když kartotéka nedosáhne na DNS, nic nehlásí jako chybějící.
 - Adresy pro upozornění: tamtéž (víc adres čárkou).
+
+## Platby – párování plateb za poukazy (Správa → Platby)
+- Samostatná schránka (např. platby@thaimost.cz) nastavená v **Správa → Pošta → 💳 Platby**. Na ni banka posílá avíza o příchozích platbách (zapíná se v internetovém bankovnictví).
+- Kartotéka schránku jen čte (EXAMINE, BODY.PEEK – zprávy zůstanou nepřečtené): při otevření stránky Platby (starší než 2 min), tlačítkem a na pozadí nejvýš jednou za 10 min při práci v kartotéce (`stranka_poplach` → `platby_priprav_tik`). Pamatuje si poslední UID, poprvé bere 60 dní zpět.
+- Z avíza (text i HTML) vytáhne částku, VS, protiúčet a zprávu podle obvyklých popisků („Částka“, „VS“ / „Variabilní symbol“, „Protiúčet“, „Zpráva příjemci“…); VS i ze zprávy „Poukaz 2611141530“ z QR platby na webu. Formáty bank se liší – po prvním skutečném avízu zkontrolovat, že se částka a VS načetly (text avíza je u každé platby).
+- „Avíza chodí od“ = adresa banky; zprávy od jiných odesílatelů se ignorují. Bez ní se berou všechny zprávy s částkou a nic se nepotvrzuje samo.
+- VS poukazu (`poukazy.vs`, DB v16): web = číslo objednávky z formuláře (10 číslic), recepce = 900000000 + id. Je na kartě poukazu.
+- Párování: ✅ sedí VS i částka · ⚠️ sedí VS, částka ne · 🔎 bez VS jen stejná částka (jediný objednaný poukaz za 45 dní). Potvrzení → poukaz Zaplaceno + poznámka. Automatické potvrzení (volitelné) jen pro ✅ od adresy banky. Spárování jde zrušit (poukaz zpět na Objednáno).

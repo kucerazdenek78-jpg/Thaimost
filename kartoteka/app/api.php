@@ -122,6 +122,7 @@ function api_poukaz(): void
         [$kod, $hodnota, $hodnota, $d['sluzba'] ?? '', $jmeno, $tel, $email, $d['komu'] ?? '', $d['od'] ?? '',
          $d['venovani'] ?? '', $d['prevzeti'] ?? '', $d['platba'] ?? '', trim(($cislo ? "Objednávka z webu $cislo. " : '') . ($d['poznamka'] ?? ''))]);
     $pid = (int)db()->lastInsertId();
+    q('UPDATE poukazy SET vs=? WHERE id=?', [preg_match('~^\d{1,10}$~', $cislo) ? ltrim($cislo, '0') : poukaz_vs_recepce($pid), $pid]);
 
     $popis = ($d['sluzba'] ?? '') !== '' ? $d['sluzba'] : kc($hodnota);
     $txtPoukaz = ["Objednávka poukazu – $jmeno ($popis)",
