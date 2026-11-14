@@ -6,6 +6,7 @@ require_once __DIR__ . '/stranky_reklamy.php';
 function stranka_nastaveni(array $u): void
 {
     if (($_GET['sekce'] ?? '') === 'reklamy') { stranka_reklamy($u); return; }
+    if (($_GET['sekce'] ?? '') === 'posta') { stranka_posta($u); return; }
     if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $akce = $_POST['akce'] ?? '';
         if ($akce === 'nastaveni') {
@@ -125,7 +126,7 @@ function stranka_nastaveni(array $u): void
           <h3>✉️ Pošta <?= $postaProblem ? '<b class="cnt">' . $postaProblem . '</b>' : '' ?></h3>
           <p class="small"><?php foreach ($postaTxt as $t): ?><?= h($t) ?><br><?php endforeach ?>
           Upozornění chodí na <b><?= h(implode(', ', posta_upozorneni()) ?: '— nenastaveno —') ?></b>.</p>
-          <p><a class="btn primary" href="/?r=posta">Nastavit a hlídat poštu</a> <a class="btn" href="/?r=emaily">Fronta</a></p>
+          <p><a class="btn primary" href="/?r=nastaveni&amp;sekce=posta">Nastavit a hlídat poštu</a> <a class="btn" href="/?r=emaily">Fronta</a></p>
         </section>
         <section class="card side">
           <h3>Uživatelé <a class="small" href="/?r=uzivatele">správa →</a></h3>
@@ -152,7 +153,7 @@ function stranka_emaily(array $u): void
                 : q('SELECT * FROM emaily ORDER BY id DESC LIMIT 100')->fetchAll();
     $stavy = ['ceka' => '⏳ čeká', 'odeslano' => '✅ odesláno', 'chyba' => '❌ chyba'];
     hlavicka('E-maily', 'nastaveni'); ?>
-    <p class="muted small"><a href="/?r=posta">← Pošta</a></p>
+    <p class="muted small"><a href="/?r=nastaveni&amp;sekce=posta">← Pošta</a></p>
     <h1>Fronta e-mailů</h1>
     <p><a class="chip<?= $uc === '' ? ' on' : '' ?>" href="/?r=emaily">Vše</a>
       <?php foreach (POSTA_UCTY as $k => $x): ?><a class="chip<?= $uc === $k ? ' on' : '' ?>" href="/?r=emaily&amp;ucet=<?= h($k) ?>"><?= h($x[0]) ?></a> <?php endforeach ?></p>

@@ -237,7 +237,7 @@ function posta_dns(string $domena, string $smtpHost): array
     return $vysl;
 }
 
-// ---------- Stránka Správa → Pošta ----------
+// ---------- Stránka Správa → Pošta (/?r=nastaveni&sekce=posta) ----------
 
 function stranka_posta(array $u): void
 {
@@ -287,7 +287,7 @@ function stranka_posta(array $u): void
         } elseif ($akce === 'odeslat') {
             odesli_frontu(); flash('Fronta e-mailů zpracována.');
         }
-        presmeruj('/?r=posta');
+        presmeruj('/?r=nastaveni&sekce=posta');
     }
     // schránky: obnovit, je-li uložený stav starší než 10 minut (jinak rychle z paměti)
     foreach (array_keys(POSTA_UCTY) as $uc) {

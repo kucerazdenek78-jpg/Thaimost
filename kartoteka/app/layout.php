@@ -23,7 +23,7 @@ function hlavicka(string $titul, string $aktivni = ''): void
     if ($u && smi_upravit_tym($u)) $menu['nastaveni'] = ['/?r=nastaveni', 'Správa' . ($konfl ? " <b class=\"cnt\">$konfl</b>" : '')];
     // stránky, které patří pod jinou položku menu
     $patri = ['dnes_stary' => 'dnes', 'volno' => 'kalendar', 'poukazy' => 'zakaznici', 'karty' => 'zakaznici',
-              'tym' => 'nastaveni', 'smeny' => 'nastaveni', 'uzivatele' => 'nastaveni', 'dostupnost' => 'nastaveni', 'posta' => 'nastaveni', 'emaily' => 'nastaveni'];
+              'tym' => 'nastaveni', 'smeny' => 'nastaveni', 'uzivatele' => 'nastaveni', 'dostupnost' => 'nastaveni'];
     $podmenu = null;
     if (in_array($aktivni, ['zakaznici', 'poukazy', 'karty'], true)) {
         $podmenu = ['zakaznici' => ['/?r=zakaznici', 'Zákazníci'],

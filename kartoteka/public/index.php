@@ -89,7 +89,7 @@ $stranky = [
     'rez_nova' => 'stranka_rez_nova', 'rezervace' => 'stranka_rezervace',
     'zakaznici' => 'stranka_zakaznici', 'zakaznik' => 'stranka_zakaznik', 'hledat' => 'stranka_hledat',
     'poukazy' => 'stranka_poukazy', 'poukaz' => 'stranka_poukaz', 'poukaz_novy' => 'stranka_poukaz_novy',
-    'nastaveni' => 'stranka_nastaveni', 'emaily' => 'stranka_emaily', 'posta' => 'stranka_posta',
+    'nastaveni' => 'stranka_nastaveni', 'emaily' => 'stranka_emaily',
     'masterny' => 'stranka_masterny', 'odmena' => 'stranka_odmena',
     'tym' => 'stranka_maserky', 'maserky' => 'stranka_maserky', 'maserka' => 'stranka_maserka', 'recepcni' => 'stranka_recepcni', 'uzivatele' => 'stranka_recepcni', 'smeny' => 'stranka_smeny',
     'hledej_zak' => 'stranka_hledej_zak', 'karty' => 'stranka_karty', 'karty_tisk' => 'stranka_karty_tisk',
