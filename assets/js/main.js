@@ -175,10 +175,21 @@
     const text = souhrn(CS), textZak = souhrn(LO);
 
     const mailto = `mailto:${D.salon.email}?subject=${encodeURIComponent("Objednávka poukazu č. " + vs)}&body=${encodeURIComponent(text)}`;
+    /* jak dlouho trvá spárování platby: podle nastavení kartotéky (Správa → Platby, /api/stav → platby_min), výchozí 1 hodina */
+    const parovaniText = () => {
+      const m = window.TM_PLATBY_MIN === undefined ? 60 : window.TM_PLATBY_MIN;
+      const kdy = m === 15 ? T("Platbu s objednávkou spárujeme v otevírací době obvykle do 15 minut od připsání na náš účet.")
+        : m === 30 ? T("Platbu s objednávkou spárujeme v otevírací době obvykle do 30 minut od připsání na náš účet.")
+        : m === 120 ? T("Platbu s objednávkou spárujeme v otevírací době obvykle do 2 hodin od připsání na náš účet.")
+        : m === 240 ? T("Platbu s objednávkou spárujeme v otevírací době obvykle do 4 hodin od připsání na náš účet.")
+        : m === 0 ? T("Platbu s objednávkou spárujeme na recepci v otevírací době.")
+        : T("Platbu s objednávkou spárujeme v otevírací době obvykle do 1 hodiny od připsání na náš účet.");
+      return kdy + " " + T("Převod z jiné banky může trvat až do následujícího pracovního dne.");
+    };
     let qr = "";
     if (platba === "prevod" && iban) {
       const svg = V.qrSvg(V.spd({ iban, castka: cena(), vs, zprava: "Poukaz " + vs }), 140);
-      qr = `<div class="qrpay">${svg}<div><b>${V.esc(T("QR platba"))}</b><br>${V.esc(T("Částka"))}: ${V.kc(cena())}<br>${V.esc(T("Účet"))}: ${V.esc(D.platba.cislo_uctu || iban)}<br>${V.esc(T("VS"))}: ${vs}<br><span class="hint">${V.esc(T("Naskenujte v aplikaci banky."))}</span></div></div>`;
+      qr = `<div class="qrpay">${svg}<div><b>${V.esc(T("QR platba"))}</b><br>${V.esc(T("Částka"))}: ${V.kc(cena())}<br>${V.esc(T("Účet"))}: ${V.esc(D.platba.cislo_uctu || iban)}<br>${V.esc(T("VS"))}: ${vs}<br><span class="hint">${V.esc(T("Naskenujte v aplikaci banky."))}</span><br><span class="hint">${V.esc(parovaniText())}</span></div></div>`;
     }
     const done = $("#done");
     const btn = e.submitter || $("#vForm button[type=submit]");
@@ -346,7 +357,7 @@
   try{ if(localStorage.getItem(K)==='0') H.classList.add('tm-off'); }catch(e){}
   function nastav(on){ H.classList.toggle('tm-off',!on); try{ localStorage.setItem(K,on?'1':'0'); }catch(e){}
     var sel=document.getElementById('bAtm'); if(!on&&sel) sel.value=''; }
-  if(window.ThaiApi&&ThaiApi.get) ThaiApi.get('/api/stav').then(function(r){ if(r&&r.ok&&typeof r.tematicka==='boolean') nastav(r.tematicka); }).catch(function(){});
+  if(window.ThaiApi&&ThaiApi.get) ThaiApi.get('/api/stav').then(function(r){ if(r&&r.ok&&typeof r.tematicka==='boolean') nastav(r.tematicka); if(r&&r.ok&&typeof r.platby_min==='number') window.TM_PLATBY_MIN=r.platby_min; }).catch(function(){});
 })();
 
 /* Tematická masérna: video se spustí, až je vidět; klepnutí na atmosféru ji předvyplní v objednávce */

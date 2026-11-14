@@ -368,5 +368,12 @@
  "Dárkový poukaz": "Gift voucher",
  "na libovolnou částku": "for any amount",
  "Skrýt nabídku poukazu": "Hide the voucher offer",
- "Zapnout hudbu": "Play music"
+ "Zapnout hudbu": "Play music",
+ "Platbu s objednávkou spárujeme v otevírací době obvykle do 15 minut od připsání na náš účet.": "We usually match the payment to the order within 15 minutes of it being credited to our account during opening hours.",
+ "Platbu s objednávkou spárujeme v otevírací době obvykle do 30 minut od připsání na náš účet.": "We usually match the payment to the order within 30 minutes of it being credited to our account during opening hours.",
+ "Platbu s objednávkou spárujeme v otevírací době obvykle do 2 hodin od připsání na náš účet.": "We usually match the payment to the order within 2 hours of it being credited to our account during opening hours.",
+ "Platbu s objednávkou spárujeme v otevírací době obvykle do 4 hodin od připsání na náš účet.": "We usually match the payment to the order within 4 hours of it being credited to our account during opening hours.",
+ "Platbu s objednávkou spárujeme na recepci v otevírací době.": "We will match the payment to your order at reception during opening hours.",
+ "Platbu s objednávkou spárujeme v otevírací době obvykle do 1 hodiny od připsání na náš účet.": "We usually match the payment to the order within 1 hour of it being credited to our account during opening hours.",
+ "Převod z jiné banky může trvat až do následujícího pracovního dne.": "A transfer from another bank may take up to the next working day."
 }

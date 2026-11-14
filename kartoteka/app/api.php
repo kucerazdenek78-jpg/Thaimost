@@ -39,7 +39,8 @@ function api_route(string $cesta): void
     $m = $_SERVER['REQUEST_METHOD'];
 
     if ($cesta === '/api/stav' && $m === 'GET') {
-        api_odpoved(['ok' => true, 'rezim' => nastaveni('rezim_webu', 'zajem'), 'tematicka' => (string)nastaveni('tematicka_web', '1') === '1' && tematicka_maserna_je()]);
+        api_odpoved(['ok' => true, 'rezim' => nastaveni('rezim_webu', 'zajem'), 'tematicka' => (string)nastaveni('tematicka_web', '1') === '1' && tematicka_maserna_je(),
+            'platby_min' => platby_nastaveno() ? platby_interval() : 0]);   // web: za jak dlouho se platba spáruje (0 = ručně)
     }
 
     if ($cesta === '/api/sluzby' && $m === 'GET') {
