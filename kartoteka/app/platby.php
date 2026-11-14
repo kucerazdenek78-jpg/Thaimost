@@ -46,19 +46,29 @@ function platby_nacti(): array
         $uv = preg_match('~UIDVALIDITY (\d+)~', $ex, $m) ? $m[1] : '0';
         $posl = posta_n('platby.uidvalidity') === $uv ? (int)posta_n('platby.posledni_uid', '0') : 0;
         $hledej = $posl > 0 ? 'UID SEARCH UID ' . ($posl + 1) . ':*' : 'UID SEARCH SINCE ' . date('j-M-Y', strtotime('-60 days'));
+        // jen zprávy od banky (když je adresa vyplněná) – v osobní schránce se nestahuje ostatní pošta
+        $od = array_values(array_filter(array_map(fn($x) => ltrim(trim($x), '@'), preg_split('~[\s,;]+~', $c['odesilatel']) ?: []), fn($x) => preg_match('~^[a-z0-9@._+-]+$~i', $x)));
+        if ($od) {
+            $kr = 'FROM "' . array_pop($od) . '"';
+            foreach ($od as $x) $kr = 'OR FROM "' . $x . '" ' . $kr;
+            $hledej .= ' ' . $kr;
+        }
         $se = $cmd($hledej);
         $uids = preg_match('~\* SEARCH([\d ]*)~', $se, $m) ? array_map('intval', array_filter(explode(' ', trim($m[1])), 'strlen')) : [];
         $uids = array_values(array_filter($uids, fn($u) => $u > $posl));
         sort($uids);
-        foreach (array_slice($uids, 0, 40) as $uid) {               // po dávkách, ať jedno načtení netrvá dlouho
+        $chybne = 0;
+        foreach (array_slice($uids, 0, 100) as $uid) {              // po dávkách, ať jedno načtení netrvá dlouho
             $f = $cmd("UID FETCH $uid (BODY.PEEK[]<0.300000>)");
             $raw = preg_match('~\{(\d+)\}\r\n~', $f, $m, PREG_OFFSET_CAPTURE) ? substr($f, $m[0][1] + strlen($m[0][0]), (int)$m[1][0]) : '';
-            if ($raw !== '' && platby_uloz_zpravu($raw, "$uv:$uid")) $nove++;
+            // chyba v jedné zprávě nesmí zastavit načítání ostatních (jinak by se na ní zaseklo navždy)
+            try { if ($raw !== '' && platby_uloz_zpravu($raw, "$uv:$uid")) $nove++; }
+            catch (Throwable $e) { $chybne++; error_log("platby: zpráva UID $uid: " . $e->getMessage()); }
             posta_uloz('platby.posledni_uid', (string)$uid);
         }
         posta_uloz('platby.uidvalidity', $uv);
         imap_odhlas($spoj);
-        $r = ['ok' => true, 'nove' => $nove, 'chyba' => ''];
+        $r = ['ok' => true, 'nove' => $nove, 'chyba' => $chybne ? "$chybne zpráv se nepodařilo přečíst (přeskočeny)." : ''];
     } catch (Throwable $e) {
         $r = ['ok' => false, 'nove' => $nove, 'chyba' => mb_substr($e->getMessage(), 0, 200)];
     }
@@ -180,6 +190,17 @@ function platby_ke_sparovani(): int { try { return (int)qv("SELECT COUNT(*) FROM
 
 // ---------- MIME (stačí pro textová avíza bank) ----------
 
+/** Převod textu do UTF-8. Banky často posílají windows-1250 / iso-8859-2; mbstring windows-1250 nezná, proto nejdřív iconv. */
+function text_do_utf8(string $t, string $cs): string
+{
+    $cs = strtoupper(trim($cs));
+    if ($cs === '' || $cs === 'UTF-8' || $cs === 'UTF8' || $cs === 'US-ASCII') return $t;
+    $cs = ['WINDOWS-1250' => 'CP1250', 'WIN-1250' => 'CP1250', 'X-CP1250' => 'CP1250', 'WINDOWS-1252' => 'CP1252'][$cs] ?? $cs;
+    if (function_exists('iconv')) { $k = @iconv($cs, 'UTF-8//IGNORE', $t); if (is_string($k) && $k !== '') return $k; }
+    try { $k = mb_convert_encoding($t, 'UTF-8', $cs); if (is_string($k)) return $k; } catch (Throwable $e) {}
+    return (string)mb_convert_encoding($t, 'UTF-8', 'UTF-8');     // neznámé kódování: aspoň zahodit neplatné bajty
+}
+
 /** Rozloží e-mail na hlavičky (malými písmeny) a čistý text (text/plain, jinak text/html bez značek). */
 function mime_rozloz(string $raw): array
 {
@@ -205,7 +226,7 @@ function mime_rozloz(string $raw): array
     if ($enc === 'base64') $telo = (string)base64_decode(preg_replace('~\s+~', '', $telo));
     elseif ($enc === 'quoted-printable') $telo = quoted_printable_decode($telo);
     $cs = preg_match('~charset="?([A-Za-z0-9_-]+)~i', $h['content-type'] ?? '', $m) ? strtoupper($m[1]) : 'UTF-8';
-    if ($cs !== 'UTF-8' && $cs !== 'US-ASCII') { $k = @mb_convert_encoding($telo, 'UTF-8', $cs); if (is_string($k)) $telo = $k; }
+    $telo = text_do_utf8($telo, $cs);
     $html = str_starts_with($typ, 'text/html');
     if ($html) {
         $telo = preg_replace('~<(script|style)\b.*?</\1>~is', '', $telo);
