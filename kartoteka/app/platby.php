@@ -27,7 +27,10 @@ function platby_odesilatel_ok(string $from): ?bool
     $povolene = array_filter(array_map('trim', preg_split('~[\s,;]+~', strtolower(platby_ucet()['odesilatel'])) ?: []), 'strlen');
     if (!$povolene) return null;                                   // nenastaveno = nevíme
     $adr = preg_match('~<([^>]+)>~', $from, $m) ? strtolower(trim($m[1])) : strtolower(trim($from));
-    foreach ($povolene as $p) if ($adr === $p || (str_starts_with($p, '@') && str_ends_with($adr, $p))) return true;
+    foreach ($povolene as $p) {
+        $dom = ltrim($p, '@');
+        if ($adr === $p || (str_starts_with($p, '@') && (str_ends_with($adr, $p) || str_ends_with($adr, ".$dom")))) return true;   // @rb.cz i @info.rb.cz
+    }
     return false;
 }
 
@@ -45,27 +48,42 @@ function platby_nacti(): array
         $ex = $cmd('EXAMINE INBOX');                                 // jen čtení – nic se neoznačí jako přečtené
         $uv = preg_match('~UIDVALIDITY (\d+)~', $ex, $m) ? $m[1] : '0';
         $posl = posta_n('platby.uidvalidity') === $uv ? (int)posta_n('platby.posledni_uid', '0') : 0;
-        $hledej = $posl > 0 ? 'UID SEARCH UID ' . ($posl + 1) . ':*' : 'UID SEARCH SINCE ' . date('j-M-Y', strtotime('-60 days'));
-        // jen zprávy od banky (když je adresa vyplněná) – v osobní schránce se nestahuje ostatní pošta
+        $zaklad = $posl > 0 ? 'UID SEARCH UID ' . ($posl + 1) . ':*' : 'UID SEARCH SINCE ' . date('j-M-Y', strtotime('-60 days'));
+        $cisla = fn(string $o) => preg_match('~\* SEARCH([\d ]*)~', $o, $m) ? array_map('intval', array_filter(explode(' ', trim($m[1])), 'strlen')) : [];
+        // jen zprávy od banky (když je adresa vyplněná) – v osobní schránce se nestahuje ostatní pošta.
+        // Některé servery (Centrum.cz) hledání podle odesílatele neumí – pak se odesílatel zjistí z hlaviček.
         $od = array_values(array_filter(array_map(fn($x) => ltrim(trim($x), '@'), preg_split('~[\s,;]+~', $c['odesilatel']) ?: []), fn($x) => preg_match('~^[a-z0-9@._+-]+$~i', $x)));
-        if ($od) {
+        $uids = null;
+        if ($od && posta_n('platby.bez_from') !== '1') {
             $kr = 'FROM "' . array_pop($od) . '"';
             foreach ($od as $x) $kr = 'OR FROM "' . $x . '" ' . $kr;
-            $hledej .= ' ' . $kr;
+            try { $uids = $cisla($cmd("$zaklad $kr")); }
+            catch (RuntimeException $e) { posta_uloz('platby.bez_from', '1'); }
         }
-        $se = $cmd($hledej);
-        $uids = preg_match('~\* SEARCH([\d ]*)~', $se, $m) ? array_map('intval', array_filter(explode(' ', trim($m[1])), 'strlen')) : [];
+        $podleHlavicek = $c['odesilatel'] !== '' && $uids === null;
+        if ($uids === null) $uids = $cisla($cmd($zaklad));
         $uids = array_values(array_filter($uids, fn($u) => $u > $posl));
         sort($uids);
+        $davka = array_slice($uids, 0, $podleHlavicek ? 400 : 100);   // po dávkách, ať jedno načtení netrvá dlouho
+        $nacist = $davka;
+        if ($podleHlavicek && $davka) {
+            $nacist = [];
+            foreach (array_chunk($davka, 100) as $kus) {
+                $f = $cmd('UID FETCH ' . implode(',', $kus) . ' (UID BODY.PEEK[HEADER.FIELDS (FROM)])');
+                foreach (preg_split('~^\* \d+ FETCH ~m', $f) as $blok)
+                    if (preg_match('~UID (\d+)~', $blok, $m) && platby_odesilatel_ok(imap_hlavicky($blok)['from'])) $nacist[] = (int)$m[1];
+            }
+            sort($nacist);
+        }
         $chybne = 0;
-        foreach (array_slice($uids, 0, 100) as $uid) {              // po dávkách, ať jedno načtení netrvá dlouho
+        foreach ($nacist as $uid) {
             $f = $cmd("UID FETCH $uid (BODY.PEEK[]<0.300000>)");
             $raw = preg_match('~\{(\d+)\}\r\n~', $f, $m, PREG_OFFSET_CAPTURE) ? substr($f, $m[0][1] + strlen($m[0][0]), (int)$m[1][0]) : '';
             // chyba v jedné zprávě nesmí zastavit načítání ostatních (jinak by se na ní zaseklo navždy)
             try { if ($raw !== '' && platby_uloz_zpravu($raw, "$uv:$uid")) $nove++; }
             catch (Throwable $e) { $chybne++; error_log("platby: zpráva UID $uid: " . $e->getMessage()); }
-            posta_uloz('platby.posledni_uid', (string)$uid);
         }
+        if ($davka) posta_uloz('platby.posledni_uid', (string)max($davka));
         posta_uloz('platby.uidvalidity', $uv);
         imap_odhlas($spoj);
         $r = ['ok' => true, 'nove' => $nove, 'chyba' => $chybne ? "$chybne zpráv se nepodařilo přečíst (přeskočeny)." : ''];
