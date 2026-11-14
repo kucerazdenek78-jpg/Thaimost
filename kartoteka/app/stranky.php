@@ -432,6 +432,16 @@ function rez_uloz(array $p, ?array $puvodni, bool $potvrdit): array
 
     // masérna: zvolená ve formuláři (prázdné = vybere kartotéka). Musí se služba do ní vejít a být v tu dobu volná.
     $maserna = array_key_exists('maserna', $p) ? (string)$p['maserna'] : null;
+    // atmosféra (projekce a hudba) je jen v tematické masérně: ta musí být zvolená (nebo automaticky) a v tu dobu volná
+    if ($atm !== '' && tematicka_maserna_je()) {
+        $den = den_obs_data($p['datum'], $delka, $delka, (int)($puvodni['id'] ?? 0), false);
+        $temM = array_values(array_filter($den['masterny'], fn($m) => $m['tem']));
+        if ($maserna !== null && $maserna !== '' && !in_array($maserna, array_column($temM, 'kl'), true))
+            return ['Atmosféru jde vybrat jen v tematické masérně (' . implode(', ', array_column($temM, 'nazev')) . '). Zvolte ji, nebo masáž bez atmosféry.', []];
+        $a = min_z($p['cas']);
+        if (empty($p['presto']) && $temM && !array_filter($temM, fn($m) => masterna_volna($m, $a, $a + $delka + prestavka())))
+            return ['Tematická masérna (' . implode(', ', array_column($temM, 'nazev')) . ') je v tu dobu obsazená – atmosféra by nebyla. Zvolte jiný čas, masáž bez atmosféry, nebo zaškrtněte „Přesto uložit“.', []];
+    }
     if ($maserna !== null && $maserna !== '') {
         $skupiny = prichody_skupiny();
         if (!isset($skupiny[$maserna])) $maserna = '';
@@ -533,7 +543,8 @@ function rez_formular(array $v, bool $novy, string $tlacitko, int $rezId = 0): v
       </div>
       <div id="obs" class="obs" aria-live="polite"></div>
       <?php if (tematicka_maserna_je()): ?>
-      <label id="latm">✨ Atmosféra (tematická masérna) <span class="muted small">– projekce na zeď a hudba; s atmosférou se masáž plánuje do tematické masérny</span>
+      <?php $temN = ''; foreach (prichody_skupiny() as $tt) if (array_filter($tt, fn($x) => !empty($x['tematicka']))) { $temN = trim($tt[0]['skupina']) ?: $tt[0]['nazev']; break; } ?>
+      <label id="latm">✨ Atmosféra (tematická masérna<?= $temN !== '' ? ' – ' . h($temN) : '' ?>) <span class="muted small">– projekce na zeď a hudba; jde jen v tematické masérně, masáž se tam naplánuje</span>
         <select name="atmosfera"><?= moznosti(['' => '— bez atmosféry / nezáleží —'] + array_map(fn($a) => $a['ikona'] . ' ' . $a['nazev'] . ' – ' . $a['popis'], ATMOSFERY), (string)($v['atmosfera'] ?? '')) ?></select></label>
       <?php endif ?>
       <?php if ($novy): ?><label>Poznámka<input name="poznamka" value="<?= h($v['poznamka'] ?? '') ?>"></label><?php endif ?>
@@ -568,6 +579,7 @@ function rez_formular(array $v, bool $novy, string $tlacitko, int $rezId = 0): v
         let k = data.masterny.slice();
         if (well) { const w = k.filter(m => m.well); if (w.length) k = w; }
         if (par) k = k.filter(m => m.luzka >= 2);
+        if (atm) k = k.filter(m => m.tem);   // atmosféra (projekce a hudba) je jen v tematické masérně
         return k.sort((x, y) => ((atm ? -1 : 1) * ((x.tem ? 1 : 0) - (y.tem ? 1 : 0))) || ((par || well) ? 0 : x.luzka - y.luzka));
       }
       const msVolna = (m, a, b) => !m.bloky.some(x => m2(x.od) < b && m2(x.do) > a);
@@ -642,11 +654,11 @@ function rez_formular(array $v, bool $novy, string $tlacitko, int $rezId = 0): v
           const vol = vh.filter(m => msVolna(m, s, e));
           msAuto = vol.length ? vol[0].kl : '';
           const zvol = data.masterny.find(m => m.kl === msV);
-          if (zvol && !vh.includes(zvol)) h += '<div class="obs-st bad">⚠ ' + esc(zvol.nazev) + ' se pro tuhle službu nehodí' + (pocetMas() >= 2 ? ' (párová potřebuje dvoulůžkovou masérnu)' : parseInt(varWell[f('varianta_id').value]) ? ' (whirlpool a sauna patří do wellness masérny)' : '') + '.</div>';
+          if (zvol && !vh.includes(zvol)) h += '<div class="obs-st bad">⚠ ' + esc(zvol.nazev) + ' se pro tuhle službu nehodí' + (atmOn() && !zvol.tem ? ' – atmosféra (projekce a hudba) je jen v tematické masérně' : pocetMas() >= 2 ? ' (párová potřebuje dvoulůžkovou masérnu)' : parseInt(varWell[f('varianta_id').value]) ? ' (whirlpool a sauna patří do wellness masérny)' : '') + '.</div>';
           else if (zvol && !msVolna(zvol, s, e)) h += '<div class="obs-st bad">⚠ <b>' + esc(zvol.nazev) + ' je v ' + cas + ' obsazená</b>: ' + zvol.bloky.filter(x => m2(x.od) < e && m2(x.do) > s).map(x => x.od + '–' + x.do + ' ' + esc(x.kdo)).join(', ') + '.</div>';
           h += '<div class="obs-st ' + (vol.length ? 'ok' : 'bad') + '">🚪 ' + (vol.length
             ? 'Volné masérny v ' + cas + '–' + hm(s + cel) + ': ' + vol.map(m => '<button type="button" class="chip' + (m.kl === msV ? ' on' : '') + '" data-ms="' + esc(m.kl) + '">' + esc(m.nazev) + (m.tem ? ' ✨' : '') + (m.well ? ' ♨' : '') + '</button>').join(' ') + (msV ? '' : ' <span class="small">(bez výběru vezme kartotéka ' + esc(vol[0].nazev) + ')</span>')
-            : 'V ' + cas + ' není volná žádná vhodná masérna.') + '</div>';
+            : 'V ' + cas + ' není volná žádná vhodná masérna' + (atmOn() ? ' – s atmosférou jen tematická masérna (zvolte jiný čas, nebo masáž bez atmosféry)' : '') + '.') + '</div>';
         }
         // přehled dne: nahoře masérny, pod nimi masérky; šedé = obsazeno, zlatá = vybraný termín; klepnutím do řádku se vybere čas (a masérna / masérka)
         h += '<div class="obs-den"><div class="obs-hl"><span>Obsazenost ' + esc(data.datum) + (data.svatek ? ' · 🎌 ' + esc(data.svatek) : '') + '</span><span class="muted small">klepněte do volného místa</span></div>';
@@ -657,7 +669,7 @@ function rez_formular(array $v, bool $novy, string $tlacitko, int $rezId = 0): v
             let bar = (data.ted > od ? '<i class="p" style="left:0;width:' + (Math.min(data.ted, do_) - od) / sir * 100 + '%" title="už uplynulo"></i>' : '')
               + m.bloky.map(b => '<i class="b" style="left:' + ((m2(b.od) - od) / sir * 100) + '%;width:' + ((m2(b.do) - m2(b.od)) / sir * 100) + '%" title="' + esc(b.od + '–' + b.do + ' ' + b.kdo) + '"></i>').join('');
             if (cas && on) { const s = m2(cas); bar += '<i class="v' + (msV ? '' : ' auto') + '" style="left:' + ((s - od) / sir * 100) + '%;width:' + (cel / sir * 100) + '%"></i>'; }
-            const pozn = !ok ? (pocetMas() >= 2 ? 'jen jednolůžková' : 'ne pro tuto službu') : (m.luzka > 1 ? m.luzka + ' lůžka' : '1 lůžko') + (m.well ? ' · wellness' : '') + (m.tem ? ' · tematická' : '');
+            const pozn = !ok ? (atmOn() && !m.tem ? 'bez atmosféry' : pocetMas() >= 2 ? 'jen jednolůžková' : 'ne pro tuto službu') : (m.luzka > 1 ? m.luzka + ' lůžka' : '1 lůžko') + (m.well ? ' · wellness' : '') + (m.tem ? ' · tematická' : '');
             h += '<div class="obs-r ms' + (on ? ' on' : '') + (ok ? '' : ' off') + '"><button type="button" class="obs-n" data-ms="' + esc(m.kl) + '" style="border-color:#6b4a2b"' + (ok ? '' : ' disabled') + '>' + esc(m.nazev) + (m.tem ? ' ✨' : '') + '<small>' + esc(pozn) + '</small></button>'
               + '<div class="obs-bar" data-ms="' + esc(m.kl) + '">' + bar + '</div></div>';
           });
@@ -714,7 +726,12 @@ function rez_formular(array $v, bool $novy, string $tlacitko, int $rezId = 0): v
       f('delka').addEventListener('input', () => { clearTimeout(t); t = setTimeout(nacti, 400); });
       ['cas', 'maserka_id'].forEach(n => { f(n).addEventListener('change', kresli); f(n).addEventListener('input', kresli); });
       if (msel()) msel().addEventListener('change', kresli);
-      if (f('atmosfera')) f('atmosfera').addEventListener('change', kresli);
+      if (f('atmosfera')) f('atmosfera').addEventListener('change', () => {
+        // atmosféra jen v tematické masérně: ručně zvolenou jinou masérnu přepnout na tematickou
+        const ms = msel(), tem = data && data.masterny ? data.masterny.find(m => m.tem) : null;
+        if (atmOn() && ms && ms.value && tem && ms.value !== tem.kl) ms.value = tem.kl;
+        kresli();
+      });
       // ⏩ první volný termín: zvolená masérka (bez ní kterákoli) + volná vhodná masérna, od zvoleného data a času
       const pb = document.getElementById('prvni'), pi = document.getElementById('prvniInfo');
       function popisPrvni() { const ms = [f('maserka_id'), f('maserka2_id')].map(x => x && x.value ? x.options[x.selectedIndex].text : '').filter(Boolean);
@@ -1109,6 +1126,7 @@ function masterny_vhodne(array $mas, bool $well, bool $par, bool $atm): array
     $k = $mas;
     if ($well) { $w = array_values(array_filter($k, fn($m) => $m['well'])); if ($w) $k = $w; }
     if ($par) $k = array_values(array_filter($k, fn($m) => $m['luzka'] >= 2));
+    if ($atm) $k = array_values(array_filter($k, fn($m) => $m['tem']));   // atmosféra jen v tematické masérně
     usort($k, fn($x, $y) => (($atm ? -1 : 1) * ((int)$x['tem'] <=> (int)$y['tem'])) ?: (($par || $well) ? 0 : $x['luzka'] <=> $y['luzka']));
     return $k;
 }
