@@ -4,7 +4,9 @@
 // Zaplaceno se poukaz označí až po potvrzení na stránce Správa → Platby (nebo automaticky, je-li to zapnuté,
 // avízo přišlo od nastavené adresy banky a sedí VS i částka). Schránka se jen čte: zprávy zůstanou nepřečtené.
 
-const PLATBY_INTERVAL = 600;   // jak často se schránka kontroluje na pozadí (s)
+const PLATBY_INTERVALY = [15 => 'každých 15 minut', 30 => 'každých 30 minut', 60 => 'každou hodinu', 120 => 'každé 2 hodiny', 240 => 'každé 4 hodiny', 0 => 'vypnuto – jen ručně tlačítkem'];
+/** Jak často se schránka plateb načítá sama (minuty, 0 = vypnuto). Výchozí 1 hodina. */
+function platby_interval(): int { $m = (int)posta_n('platby.interval', '60'); return array_key_exists($m, PLATBY_INTERVALY) ? $m : 60; }
 const PLATBY_STAVY = ['nova' => 'Ke spárování', 'sparovano' => 'Spárováno', 'ignorovano' => 'Nepatří k poukazu', 'odchozi' => 'Odchozí', 'nerozpoznano' => 'Nerozpoznané avízo'];
 
 /** VS pro poukaz z recepce (web má VS = číslo objednávky z formuláře, 10 číslic). 9 číslic → nikdy se nepotká s webem. */
@@ -140,14 +142,22 @@ function platby_potvrd(int $platbaId, int $poukazId, ?string $kdo = null): ?stri
     return null;
 }
 
-/** Načtení na pozadí (po odeslání odpovědi), nejvýš jednou za PLATBY_INTERVAL. */
+/**
+ * Automatické načtení na pozadí (po odeslání odpovědi), nejvýš jednou za platby_interval() minut.
+ * Spouští ho dotaz otevřené kartotéky (r=poplach) i dotazy tabletů v masérnách, takže běží, dokud je v salonu
+ * zapnutý tablet nebo otevřená kartotéka. Atomický zámek: časové razítko v posta_nast „platby.tik“.
+ */
 function platby_priprav_tik(): void
 {
+    static $hotovo = false;
+    if ($hotovo || PHP_SAPI === 'cli') return;
+    $hotovo = true;
     try {
-        if (!platby_nastaveno()) return;
-        $st = json_decode(posta_n('platby.stav'), true);
-        if ($st && strtotime($st['cas'] ?? '2000-01-01') > time() - PLATBY_INTERVAL) return;
-        posta_uloz('platby.stav', json_encode(($st ?: ['ok' => true, 'nove' => 0, 'chyba' => '']) + ['cas' => nyni()], JSON_UNESCAPED_UNICODE)); // zámek proti souběhu
+        $min = platby_interval();
+        if ($min === 0 || !platby_nastaveno()) return;
+        $ted = time();
+        q("INSERT OR IGNORE INTO posta_nast(klic,hodnota) VALUES('platby.tik','0')");
+        if (q("UPDATE posta_nast SET hodnota=? WHERE klic='platby.tik' AND CAST(hodnota AS INTEGER) <= ?", [(string)$ted, $ted - $min * 60])->rowCount() < 1) return;
     } catch (Throwable $e) { return; }
     register_shutdown_function(function (): void {
         while (ob_get_level() > 0) @ob_end_flush();
@@ -155,6 +165,15 @@ function platby_priprav_tik(): void
         if (session_status() === PHP_SESSION_ACTIVE) @session_write_close();
         try { platby_nacti(); } catch (Throwable $e) { error_log('platby: ' . $e->getMessage()); }
     });
+}
+
+/** Kdy proběhne další automatické načtení (text), nebo '' když je vypnuté. */
+function platby_dalsi(): string
+{
+    $min = platby_interval();
+    if ($min === 0) return '';
+    $t = (int)posta_n('platby.tik', '0') + $min * 60;
+    return $t <= time() ? 'při nejbližší práci v kartotéce nebo dotazu tabletu' : 'nejdřív v ' . date('G:i', $t);
 }
 
 function platby_ke_sparovani(): int { try { return (int)qv("SELECT COUNT(*) FROM platby WHERE stav IN ('nova','nerozpoznano')"); } catch (Throwable $e) { return 0; } }
@@ -216,6 +235,8 @@ function platby_akce_nastaveni(string $akce, bool $admin): bool
         if (trim((string)($_POST['pass'] ?? '')) !== '') posta_uloz('platby.pass', trim((string)$_POST['pass']));
         if (!empty($_POST['smazat_heslo'])) posta_uloz('platby.pass', '');
         posta_uloz('platby.auto', !empty($_POST['auto']) ? '1' : '0');
+        $int = (int)($_POST['interval'] ?? 60);
+        posta_uloz('platby.interval', (string)(array_key_exists($int, PLATBY_INTERVALY) ? $int : 60));
         zapis_log('posta_nastaveni', 'platby');
         flash('💳 Platby: uloženo.');
         return true;
@@ -236,7 +257,7 @@ function platby_karta(bool $admin, bool $naPlatbach, bool $otevrit = false): voi
       <h2><?= $naPlatbach ? '⚙️ Nastavení plateb' : '💳 Platby – avíza z banky' ?> <span class="posta-stav posta-<?= !platby_nastaveno() ? 'nenastaveno' : (empty($pst) ? 'nevyzkouseno' : (!empty($pst['ok']) ? 'ok' : 'chyba')) ?>"><?= !platby_nastaveno() ? '⚪ Nenastaveno' : (empty($pst) ? '🟡 Zatím nenačteno' : (!empty($pst['ok']) ? '🟢 Schránka se čte' : '🔴 Schránku se nepodařilo přečíst')) ?></span></h2>
       <p class="muted small" style="margin-top:0">Samostatná adresa (např. platby@thaimost.cz), kterou zadáte v internetovém bankovnictví pro zasílání avíz o příchozích platbách. Kartotéka z avíz vezme částku a VS a navrhne, ke kterému objednanému poukazu platba patří. <?= $naPlatbach ? '' : 'Výsledek: <a href="/?r=nastaveni&amp;sekce=platby">Správa → Platby</a>.' ?></p>
       <?php if (platby_nastaveno()): ?>
-        <p class="small">Schránka <b><?= h($pc['user']) ?></b><?= $pc['odesilatel'] ? ' · bere jen avíza od <b>' . h($pc['odesilatel']) . '</b>' : ' · <span class="warn">adresa banky není vyplněná</span>' ?> · automatické potvrzení: <b><?= $pc['auto'] === '1' ? 'zapnuto' : 'vypnuto' ?></b>
+        <p class="small">Schránka <b><?= h($pc['user']) ?></b><?= $pc['odesilatel'] ? ' · bere jen avíza od <b>' . h($pc['odesilatel']) . '</b>' : ' · <span class="warn">adresa banky není vyplněná</span>' ?> · načítání: <b><?= h(PLATBY_INTERVALY[platby_interval()]) ?></b> · automatické potvrzení: <b><?= $pc['auto'] === '1' ? 'zapnuto' : 'vypnuto' ?></b>
           <?php if ($pst): ?><br><span class="muted">Naposledy <?= h(datum_cz($pst['cas'] ?? null)) ?><?= empty($pst['ok']) ? '</span> <span class="warn">❗ ' . h($pst['chyba'] ?? '') : '' ?></span><?php endif ?>
           · ke spárování: <a href="/?r=nastaveni&amp;sekce=platby"><b><?= platby_ke_sparovani() ?></b></a></p>
         <div class="posta-akce"><form method="post" class="inline"><?= csrf_pole() ?><input type="hidden" name="akce" value="platby_nacist"><button class="btn">Zkontrolovat schránku teď</button></form>
@@ -255,6 +276,8 @@ function platby_karta(bool $admin, bool $naPlatbach, bool $otevrit = false): voi
             <label>IMAP port <span class="muted small">(SSL)</span><input type="number" name="imap_port" value="<?= h((string)$pc['imap_port']) ?>"></label>
           </div>
           <label>Avíza chodí od <span class="muted small">(adresa, ze které banka avíza posílá – najdete ji v prvním avízu; víc adres čárkou, celá doména jako „@banka.cz“)</span><input name="odesilatel" value="<?= h($pc['odesilatel']) ?>" autocapitalize="off"></label>
+          <label>Automatické načítání plateb<select name="interval"><?= moznosti(PLATBY_INTERVALY, (string)platby_interval()) ?></select>
+            <span class="muted small">Běží, dokud je v salonu otevřená kartotéka nebo zapnutý tablet v masérně. Tlačítkem „Načíst avíza teď“ jde kdykoli hned.</span></label>
           <label class="chk"><input type="checkbox" name="auto" value="1" <?= $pc['auto'] === '1' ? 'checked' : '' ?>> Automaticky označit poukaz jako zaplacený, když avízo přišlo z adresy banky výše a sedí VS i částka (jinak se jen navrhne a potvrdí ručně)</label>
           <?php if ($pc['pass'] !== ''): ?><label class="chk"><input type="checkbox" name="smazat_heslo" value="1"> Smazat uložené heslo</label><?php endif ?>
           <button class="btn primary">Uložit</button>
@@ -300,9 +323,7 @@ function stranka_platby(array $u): void
         }
         presmeruj('/?r=nastaveni&sekce=platby' . (isset($_GET['f']) ? '&f=' . urlencode($_GET['f']) : ''));
     }
-    // při otevření stránky načíst, je-li poslední kontrola starší než 2 minuty
     $st = json_decode(posta_n('platby.stav'), true) ?: [];
-    if (platby_nastaveno() && strtotime($st['cas'] ?? '2000-01-01') < time() - 120) { platby_nacti(); $st = json_decode(posta_n('platby.stav'), true) ?: []; }
 
     $f = $_GET['f'] ?? 'k_vyrizeni';
     $kde = ['k_vyrizeni' => "p.stav IN ('nova','nerozpoznano')", 'sparovano' => "p.stav='sparovano'", 'vse' => '1=1'][$f] ?? "p.stav IN ('nova','nerozpoznano')";
@@ -319,7 +340,7 @@ function stranka_platby(array $u): void
     <?php if (!platby_nastaveno()): ?>
       <p class="flash warn">Schránka pro platby zatím není nastavená<?= je_admin($u) ? ' – vyplňte ji níže v Nastavení plateb' : ' – nastaví ji správce' ?> (adresa, na kterou banka posílá avíza o příchozích platbách).</p>
     <?php else: ?>
-      <p class="muted small" style="margin-top:0">Schránka <b><?= h($c['user']) ?></b> · kontroluje se sama každých <?= PLATBY_INTERVAL / 60 ?> min při práci v kartotéce<?= $st ? ' · naposledy ' . h(datum_cz($st['cas'] ?? null)) : '' ?>
+      <p class="muted small" style="margin-top:0">Schránka <b><?= h($c['user']) ?></b> · <?= platby_interval() ? 'načítá se sama ' . h(PLATBY_INTERVALY[platby_interval()]) . ' (další ' . h(platby_dalsi()) . ')' : 'automatické načítání je vypnuté – jen tlačítkem' ?><?= $st ? ' · naposledy ' . h(datum_cz($st['cas'] ?? null)) : '' ?>
         <?= !empty($st) && empty($st['ok']) ? '<br><span class="warn">❗ ' . h($st['chyba'] ?? '') . '</span>' : '' ?>
         <?= $c['odesilatel'] === '' ? '<br><span class="warn">Není vyplněná adresa banky – berou se všechny zprávy s částkou a nic se nepotvrzuje samo.</span>' : '' ?></p>
     <?php endif ?>

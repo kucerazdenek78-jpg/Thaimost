@@ -235,6 +235,7 @@ function rez_zmen_maserku(int $rid, int $slot, int $nova, bool $prohodit): array
  */
 function tablet_auto(bool $force = false): int
 {
+    if (!$force) platby_priprav_tik();   // avíza plateb na pozadí (nejvýš podle nastaveného intervalu, výchozí 1 h)
     try { return tablet_auto_beh($force); }
     catch (Throwable $e) { error_log('tablet_auto: ' . $e); return 0; }
 }
