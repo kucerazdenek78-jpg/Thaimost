@@ -90,7 +90,7 @@ Výchozí nastavení: whirlpool a sauna = 0 masérek, wellness masérna; balíč
 
 ## Pošta (Správa → Pošta)
 - Dva účty: **Komunikace se zákazníky** (potvrzení termínů, odpovědi na žádosti, poukazy e‑mailem) a **Ostatní komunikace** (upozornění pro salon, objednávky poukazů, předčasně ukončené masáže, směny masérkám). Ostatní může jet „stejným účtem jako zákazníci“ (výchozí).
-- Předvolby serverů: Seznam (Email Profi i @seznam.cz) `smtp.seznam.cz:465`, `imap.seznam.cz:993`; Gmail `smtp.gmail.com:465`, `imap.gmail.com:993` (heslo aplikace). SMTP: port 465 = SSL, jiný port = STARTTLS.
+- Předvolby serverů: Seznam (Email Profi i @seznam.cz) `smtp.seznam.cz:465`, `imap.seznam.cz:993`; Centrum.cz `smtp.centrum.cz:465`, `imap.centrum.cz:993`; Gmail `smtp.gmail.com:465`, `imap.gmail.com:993` (heslo aplikace). SMTP: port 465 = SSL, jiný port = STARTTLS.
 - Nastavení a hesla jsou v tabulce `posta_nast` (DB v15), mění je jen admin; vidí vedoucí i admin. Každý e‑mail ve frontě má `emaily.ucet`.
 - Hlídání: stav účtu (🟢 funguje / 🔴 poslední odeslání selhalo / 🟡 nevyzkoušeno / ⚪ nenastaveno), počty za 30 dní, poslední chyba, zkušební e‑mail, opětovné odeslání fronty.
 - Schránka: přes IMAP jen čte (EXAMINE + BODY.PEEK – zprávy zůstanou nepřečtené) počet nepřečtených a posledních 10; obnovuje se při otevření stránky, když je stav starší než 10 min.

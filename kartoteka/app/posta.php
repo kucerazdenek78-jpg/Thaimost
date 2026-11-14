@@ -11,6 +11,7 @@ const POSTA_POLE = ['host', 'port', 'user', 'pass', 'from', 'from_name', 'reply_
 /** Předvolby: název, SMTP host, port (SSL), IMAP host, port (SSL), webmail. */
 const POSTA_PRESETY = [
     'seznam' => ['Seznam – Email Profi (vlastní doména) i @seznam.cz / @email.cz', 'smtp.seznam.cz', 465, 'imap.seznam.cz', 993, 'https://email.seznam.cz'],
+    'centrum' => ['Centrum.cz (i @atlas.cz – ty čtou z imap.atlas.cz)', 'smtp.centrum.cz', 465, 'imap.centrum.cz', 993, 'https://mail.centrum.cz'],
     'gmail'  => ['Gmail / Google Workspace (potřebuje „heslo aplikace“)', 'smtp.gmail.com', 465, 'imap.gmail.com', 993, 'https://mail.google.com'],
 ];
 
@@ -343,7 +344,7 @@ function stranka_posta(array $u): void
         <div>
           <h3>Schránka</h3>
           <?php if ($stejny): ?><p class="muted small">Stejná schránka jako u komunikace se zákazníky (výše).</p>
-          <?php elseif (!$ca): ?><p class="muted small"><?= $c['imap_host'] !== '' ? 'Zatím nezkontrolováno.' : 'Pro hlídání nové pošty vyplňte IMAP server (u Seznamu imap.seznam.cz).' ?></p>
+          <?php elseif (!$ca): ?><p class="muted small"><?= $c['imap_host'] !== '' ? 'Zatím nezkontrolováno.' : 'Pro hlídání nové pošty vyplňte IMAP server (Seznam imap.seznam.cz, Centrum imap.centrum.cz).' ?></p>
           <?php elseif (!$ca['ok']): ?><p class="warn small">❗ <?= h($ca['chyba'] ?? 'Chyba') ?> <span class="muted">(<?= h(datum_cz($ca['cas'] ?? null)) ?>)</span></p>
           <?php else: ?>
             <p>📥 <b><?= (int)$ca['nove'] ?></b> nepřečtených z <?= (int)$ca['celkem'] ?> v doručené poště <span class="muted small">(zkontrolováno <?= h(datum_cz($ca['cas'])) ?>)</span></p>
@@ -399,7 +400,7 @@ function stranka_posta(array $u): void
             <?php if (!$stejny && $c['pass'] !== '' && $c['zdroj'] === 'aplikace'): ?><label class="chk"><input type="checkbox" name="smazat_heslo" value="1"> Smazat uložené heslo</label><?php endif ?>
           </fieldset>
           <button class="btn primary">Uložit</button>
-          <span class="muted small">Po uložení pošlete zkušební e-mail. U Gmailu je potřeba „heslo aplikace“, ne běžné heslo.</span>
+          <span class="muted small">Po uložení pošlete zkušební e-mail. U Gmailu je potřeba „heslo aplikace“, ne běžné heslo. U Centra může odesílání vyžadovat bezplatné „rozšíření schránky“ ve webové poště Centra – když zkušební e-mail neodejde, zkontrolujte to tam.</span>
         </form>
       </details>
       <?php endif ?>
