@@ -20,15 +20,24 @@ function hlavicka(string $titul, string $aktivni = ''): void
         'kalendar' => ['/?r=kalendar&pohled=masterny', '📅 Kalendář'],
         'zakaznici' => ['/?r=zakaznici', 'Zákazníci' . ($poukazyCekaji ? " <b class=\"cnt\">$poukazyCekaji</b>" : '')],
     ];
-    if ($u && smi_upravit_tym($u)) $menu['nastaveni'] = ['/?r=nastaveni', 'Správa' . ($konfl ? " <b class=\"cnt\">$konfl</b>" : '')];
+    $nPlateb = ($u && smi_upravit_tym($u)) ? platby_ke_sparovani() : 0;
+    if ($u && smi_upravit_tym($u)) $menu['nastaveni'] = ['/?r=nastaveni', 'Správa' . (($konfl + $nPlateb) ? ' <b class="cnt">' . ($konfl + $nPlateb) . '</b>' : '')];
     // stránky, které patří pod jinou položku menu
     $patri = ['dnes_stary' => 'dnes', 'volno' => 'kalendar', 'poukazy' => 'zakaznici', 'karty' => 'zakaznici',
-              'tym' => 'nastaveni', 'smeny' => 'nastaveni', 'uzivatele' => 'nastaveni', 'dostupnost' => 'nastaveni'];
+              'tym' => 'nastaveni', 'smeny' => 'nastaveni', 'uzivatele' => 'nastaveni', 'dostupnost' => 'nastaveni', 'posta' => 'nastaveni', 'platby' => 'nastaveni'];
     $podmenu = null;
     if (in_array($aktivni, ['zakaznici', 'poukazy', 'karty'], true)) {
         $podmenu = ['zakaznici' => ['/?r=zakaznici', 'Zákazníci'],
                     'poukazy' => ['/?r=poukazy', 'Poukazy' . ($poukazyCekaji ? " <b class=\"cnt\">$poukazyCekaji</b>" : '')], 'karty' => ['/?r=karty', 'Věrnostní karty']];
         $podAkt = $aktivni;
+    }
+    // podmenu Správy (jen vedoucí a admin)
+    if ($u && smi_upravit_tym($u) && in_array($aktivni, ['nastaveni', 'tym', 'smeny', 'uzivatele', 'dostupnost', 'posta', 'platby'], true)) {
+        $podmenu = ['nastaveni' => ['/?r=nastaveni', '⚙️ Nastavení'], 'tym' => ['/?r=tym', '👥 Tým'], 'smeny' => ['/?r=smeny', '🗓 Směny'],
+                    'dostupnost' => ['/?r=dostupnost', '🌴 Volna' . ($konfl ? " <b class=\"cnt\">$konfl</b>" : '')],
+                    'posta' => ['/?r=nastaveni&amp;sekce=posta', '✉️ Pošta'],
+                    'platby' => ['/?r=nastaveni&amp;sekce=platby', '💳 Platby' . ($nPlateb ? " <b class=\"cnt\">$nPlateb</b>" : '')]];
+        $podAkt = $aktivni === 'uzivatele' ? 'tym' : $aktivni;
     }
     $aktivni = $patri[$aktivni] ?? $aktivni;
     ?><!doctype html>
@@ -36,7 +45,7 @@ function hlavicka(string $titul, string $aktivni = ''): void
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex, nofollow">
 <title><?= h($titul) ?> · Kartotéka Thai Most</title>
-<link rel="stylesheet" href="/style.css?v=15">
+<link rel="stylesheet" href="/style.css?v=16">
 <?php if (je_okno() && !je_app()): ?><base target="_top"><?php endif ?>
 <link rel="manifest" href="/?r=manifest">
 <meta name="theme-color" content="#6b4a2b">

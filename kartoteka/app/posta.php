@@ -326,7 +326,7 @@ function stranka_posta(array $u): void
         if ($c['imap_host'] !== '' && $c['pass'] !== '' && (!$ca || strtotime($ca['cas'] ?? '2000-01-01') < time() - 600)) posta_imap_obnov($uc);
     }
     $upoz = posta_upozorneni();
-    hlavicka('Pošta', 'nastaveni'); ?>
+    hlavicka('Pošta', 'posta'); ?>
     <p class="muted small"><a href="/?r=nastaveni">← Správa</a></p>
     <h1>✉️ Pošta</h1>
     <p class="muted" style="margin-top:0">Odkud kartotéka posílá e-maily, kam chodí upozornění, co čeká ve frontě a co je nového ve schránkách. Hesla vidí a mění jen správce.</p>

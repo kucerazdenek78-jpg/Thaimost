@@ -240,7 +240,7 @@ function stranka_platby(array $u): void
     $cekaji = q("SELECT id, kod, hodnota, vs, objednal_jmeno, vytvoreno FROM poukazy WHERE stav='objednano' ORDER BY vytvoreno DESC LIMIT 200")->fetchAll();
     $c = platby_ucet();
     $typy = ['presny' => ['✅', 'Sedí VS i částka'], 'castka' => ['⚠️', 'Sedí VS, částka ne'], 'jen_castka' => ['🔎', 'Bez VS – sedí jen částka']];
-    hlavicka('Platby', 'nastaveni'); ?>
+    hlavicka('Platby', 'platby'); ?>
     <p class="muted small"><a href="/?r=nastaveni">← Správa</a></p>
     <div class="cal-nav"><h1>💳 Platby</h1>
       <form method="post" class="inline"><?= csrf_pole() ?><input type="hidden" name="akce" value="nacist"><button class="btn primary"<?= platby_nastaveno() ? '' : ' disabled' ?>>Načíst avíza teď</button></form></div>

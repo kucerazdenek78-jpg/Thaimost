@@ -159,7 +159,7 @@ function stranka_emaily(array $u): void
     $rows = $uc ? q('SELECT * FROM emaily WHERE ucet=? ORDER BY id DESC LIMIT 100', [$uc])->fetchAll()
                 : q('SELECT * FROM emaily ORDER BY id DESC LIMIT 100')->fetchAll();
     $stavy = ['ceka' => '⏳ čeká', 'odeslano' => '✅ odesláno', 'chyba' => '❌ chyba'];
-    hlavicka('E-maily', 'nastaveni'); ?>
+    hlavicka('E-maily', 'posta'); ?>
     <p class="muted small"><a href="/?r=nastaveni&amp;sekce=posta">← Pošta</a></p>
     <h1>Fronta e-mailů</h1>
     <p><a class="chip<?= $uc === '' ? ' on' : '' ?>" href="/?r=emaily">Vše</a>
