@@ -51,7 +51,7 @@ function hlavicka(string $titul, string $aktivni = ''): void
 <meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Kartotéka"><meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="theme-color" content="#6b4a2b">
-<link rel="apple-touch-icon" href="<?= je_app() ? '/asistent-192.png' : '/kartoteka-192.png' ?>">
+<link rel="apple-touch-icon" href="<?= je_app() ? '/asistent-192.png' : 'https://cdn.jsdelivr.net/gh/kucerazdenek78-jpg/Thaimost@20462c0/kartoteka/public/kartoteka-192.png' ?>">
 </head><body<?= je_okno() ? ' class="okno' . (je_app() ? ' app' : '') . '"' : '' ?>>
 <?php if ($u && !je_okno()): ?>
 <header class="top">
