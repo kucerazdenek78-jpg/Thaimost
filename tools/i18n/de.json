@@ -375,5 +375,10 @@
  "Platbu s objednávkou spárujeme v otevírací době obvykle do 4 hodin od připsání na náš účet.": "Wir ordnen die Zahlung der Bestellung während der Öffnungszeiten in der Regel innerhalb von 4 Stunden nach Eingang auf unserem Konto zu.",
  "Platbu s objednávkou spárujeme na recepci v otevírací době.": "Die Zahlung ordnen wir während der Öffnungszeiten an der Rezeption der Bestellung zu.",
  "Platbu s objednávkou spárujeme v otevírací době obvykle do 1 hodiny od připsání na náš účet.": "Wir ordnen die Zahlung der Bestellung während der Öffnungszeiten in der Regel innerhalb von 1 Stunde nach Eingang auf unserem Konto zu.",
- "Převod z jiné banky může trvat až do následujícího pracovního dne.": "Eine Überweisung von einer anderen Bank kann bis zum nächsten Werktag dauern."
+ "Převod z jiné banky může trvat až do následujícího pracovního dne.": "Eine Überweisung von einer anderen Bank kann bis zum nächsten Werktag dauern.",
+ "Poukaz platí půl roku od nákupu. Do té doby je potřeba se objednat na masáž – stačí zavolat.": "Der Gutschein ist ein halbes Jahr ab Kaufdatum gültig. Bis dahin müssen Sie einen Termin für eine Massage vereinbaren – ein Anruf genügt.",
+ "Poukaz platí {mes} měs. od nákupu (při objednání dnes do {datum}). Do té doby je potřeba se objednat na masáž – stačí zavolat.": "Der Gutschein ist {mes} Monate ab Kaufdatum gültig (bei Bestellung heute bis zum {datum}). Bis dahin müssen Sie einen Termin für eine Massage vereinbaren – ein Anruf genügt.",
+ "číslo poukazu": "Gutscheinnummer",
+ "Poukaz platí do {datum}. Do té doby je potřeba se objednat na masáž – stačí zavolat na 778 429 329.": "Der Gutschein ist bis zum {datum} gültig. Bis dahin müssen Sie einen Termin für eine Massage vereinbaren – rufen Sie einfach unter 778 429 329 an.",
+ "Objednávka se odešle do salonu. Zaplatit můžete v salonu, nebo hned převodem s QR kódem – platba se s objednávkou spáruje sama.": "Die Bestellung wird an den Salon weitergeleitet. Sie können entweder im Salon bezahlen oder sofort per Überweisung mit dem QR-Code – die Zahlung wird automatisch mit der Bestellung verknüpft."
 }

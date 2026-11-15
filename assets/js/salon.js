@@ -16,6 +16,7 @@
     $("#kod").value = k;
   }
   novyKod();
+  { const d = new Date(); d.setMonth(d.getMonth() + 6); $("#plat").value = d.toISOString().slice(0, 10); }   // platnost půl roku od nákupu
 
   $("#sel").innerHTML = D.sluzby.map(s => `<option value="${s.id}">${V.esc(s.nazev)}</option>`).join("");
   const sl = () => D.sluzby.find(s => s.id === $("#sel").value);

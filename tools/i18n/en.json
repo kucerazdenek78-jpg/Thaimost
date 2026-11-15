@@ -375,5 +375,10 @@
  "Platbu s objednávkou spárujeme v otevírací době obvykle do 4 hodin od připsání na náš účet.": "We usually match the payment to the order within 4 hours of it being credited to our account during opening hours.",
  "Platbu s objednávkou spárujeme na recepci v otevírací době.": "We will match the payment to your order at reception during opening hours.",
  "Platbu s objednávkou spárujeme v otevírací době obvykle do 1 hodiny od připsání na náš účet.": "We usually match the payment to the order within 1 hour of it being credited to our account during opening hours.",
- "Převod z jiné banky může trvat až do následujícího pracovního dne.": "A transfer from another bank may take up to the next working day."
+ "Převod z jiné banky může trvat až do následujícího pracovního dne.": "A transfer from another bank may take up to the next working day.",
+ "Poukaz platí půl roku od nákupu. Do té doby je potřeba se objednat na masáž – stačí zavolat.": "The voucher is valid for six months from the date of purchase. You’ll need to book a massage before then – just give us a call.",
+ "Poukaz platí {mes} měs. od nákupu (při objednání dnes do {datum}). Do té doby je potřeba se objednat na masáž – stačí zavolat.": "The voucher is valid for {mes} months from the date of purchase (for orders placed today, until {datum}). You’ll need to book a massage before then – just give us a call.",
+ "číslo poukazu": "voucher number",
+ "Poukaz platí do {datum}. Do té doby je potřeba se objednat na masáž – stačí zavolat na 778 429 329.": "The voucher is valid until {datum}. You’ll need to book a massage before then – simply call 778 429 329.",
+ "Objednávka se odešle do salonu. Zaplatit můžete v salonu, nebo hned převodem s QR kódem – platba se s objednávkou spáruje sama.": "Your order will be sent to the salon. You can pay at the salon or straight away by bank transfer using the QR code – the payment will be automatically linked to your order."
 }

@@ -73,7 +73,7 @@ function stranka_poukaz_novy(array $u): void
       <div class="grid3">
         <label>Hodnota (Kč) *<input type="number" name="hodnota" min="1" required></label>
         <label>Na konkrétní službu <span class="muted">(nepovinné)</span><input name="sluzba_text" placeholder="např. Tradiční thajská 90 min"></label>
-        <label>Platnost do<input type="date" name="platnost_do" value="<?= date('Y-m-d', strtotime('+12 months')) ?>"></label>
+        <label>Platnost do <span class="muted small">(<?= poukaz_platnost_mes() ?> měs. od nákupu – do té doby se musí objednat)</span><input type="date" name="platnost_do" value="<?= poukaz_platnost_od() ?>"></label>
       </div>
       <div class="grid3">
         <label>Pro koho<input name="pro_koho"></label>

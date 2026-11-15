@@ -24,9 +24,9 @@ window.THAI = {
   /* Kartotéka salonu (NAS). Sem web posílá žádosti o termín a objednávky poukazů. */
   api: "https://masage.dvere.app",
 
-  /* Platby poukazů převodem – ÚČET DOPLNIT.
-     Dokud je cislo_uctu prázdné, web nabízí jen platbu v salonu
-     a QR platbu nezobrazuje. Formát: "123456789/0100" */
+  /* Platby poukazů převodem: číslo účtu se nastavuje v kartotéce (masage.dvere.app → Nastavení →
+     Poukazy a platba převodem) a web si ho bere odtud (/api/stav). Tady jen záloha, když kartotéka
+     neodpoví – prázdné = bez QR platby. VS = číslo poukazu z kartotéky. */
   platba: {
     cislo_uctu: "",
     iban: ""

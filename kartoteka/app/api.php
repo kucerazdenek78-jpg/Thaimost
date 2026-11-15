@@ -40,7 +40,9 @@ function api_route(string $cesta): void
 
     if ($cesta === '/api/stav' && $m === 'GET') {
         api_odpoved(['ok' => true, 'rezim' => nastaveni('rezim_webu', 'zajem'), 'tematicka' => (string)nastaveni('tematicka_web', '1') === '1' && tematicka_maserna_je(),
-            'platby_min' => platby_nastaveno() ? platby_interval() : 0]);   // web: za jak dlouho se platba spáruje (0 = ručně)
+            'platby_min' => platby_nastaveno() ? platby_interval() : 0,    // web: za jak dlouho se platba spáruje (0 = ručně)
+            'ucet' => salon_ucet() !== '' && ucet_iban(salon_ucet()) !== '' ? salon_ucet() : '', 'iban' => ucet_iban(salon_ucet()),   // platba poukazu převodem (Nastavení)
+            'platnost_mes' => poukaz_platnost_mes()]);
     }
 
     if ($cesta === '/api/sluzby' && $m === 'GET') {
@@ -116,26 +118,29 @@ function api_poukaz(): void
     if ($hodnota < 100 || $hodnota > 50000) api_odpoved(['ok' => false, 'chyba' => 'Zkontrolujte hodnotu poukazu.'], 422);
     if (empty($d['gdpr'])) api_odpoved(['ok' => false, 'chyba' => 'Potřebujeme souhlas se zpracováním údajů.'], 422);
 
-    $cislo = preg_replace('~[^A-Z0-9-]~', '', strtoupper($d['cislo'] ?? ''));
     $kod = poukaz_kod();
-    q("INSERT INTO poukazy(kod,hodnota,zustatek,sluzba_text,stav,objednal_jmeno,objednal_tel,objednal_email,pro_koho,od_koho,
-        venovani,prevzeti,platba,poznamka,zdroj) VALUES(?,?,?,?,'objednano',?,?,?,?,?,?,?,?,?,'web')",
-        [$kod, $hodnota, $hodnota, $d['sluzba'] ?? '', $jmeno, $tel, $email, $d['komu'] ?? '', $d['od'] ?? '',
-         $d['venovani'] ?? '', $d['prevzeti'] ?? '', $d['platba'] ?? '', trim(($cislo ? "Objednávka z webu $cislo. " : '') . ($d['poznamka'] ?? ''))]);
+    $platnost = poukaz_platnost_od();   // platnost od nákupu (Nastavení, výchozí 6 měsíců) – do té doby se musí zákazník objednat
+    q("INSERT INTO poukazy(kod,hodnota,zustatek,sluzba_text,platnost_do,stav,objednal_jmeno,objednal_tel,objednal_email,pro_koho,od_koho,
+        venovani,prevzeti,platba,poznamka,zdroj) VALUES(?,?,?,?,?,'objednano',?,?,?,?,?,?,?,?,?,'web')",
+        [$kod, $hodnota, $hodnota, $d['sluzba'] ?? '', $platnost, $jmeno, $tel, $email, $d['komu'] ?? '', $d['od'] ?? '',
+         $d['venovani'] ?? '', $d['prevzeti'] ?? '', $d['platba'] ?? '', 'Objednávka z webu. ' . ($d['poznamka'] ?? '')]);
     $pid = (int)db()->lastInsertId();
-    q('UPDATE poukazy SET vs=? WHERE id=?', [preg_match('~^\d{1,10}$~', $cislo) ? ltrim($cislo, '0') : poukaz_vs_recepce($pid), $pid]);
+    $cislo = poukaz_vs_recepce($pid);   // číslo poukazu = variabilní symbol platby
+    q('UPDATE poukazy SET vs=?, poznamka=? WHERE id=?', [$cislo, trim("Objednávka z webu č. $cislo. " . ($d['poznamka'] ?? '')), $pid]);
 
     $popis = ($d['sluzba'] ?? '') !== '' ? $d['sluzba'] : kc($hodnota);
     $txtPoukaz = ["Objednávka poukazu – $jmeno ($popis)",
-        "Nová objednávka dárkového poukazu z webu" . ($cislo ? " ($cislo)" : '') . ":\n\n"
+        "Nová objednávka dárkového poukazu z webu č. $cislo (VS $cislo):\n\n"
         . "Poukaz: $popis, hodnota " . kc($hodnota) . "\nObjednal: $jmeno, " . telefon_cz($tel) . ($email ? ", $email" : '') . "\n"
         . "Převzetí: " . ($d['prevzeti'] ?? '') . "\nPlatba: " . ($d['platba'] ?? '') . "\n"
         . (($d['poznamka'] ?? '') !== '' ? "Poznámka: $d[poznamka]\n" : '')
         . "\nKód v kartotéce: $kod\n" . rtrim(cfg()['url'], '/') . "/?r=poukaz&id=$pid\n"];
     foreach (posta_upozorneni() as $adr) posli_email($adr, $txtPoukaz[0], $txtPoukaz[1], null, 'interni');
 
-    // Kód poukazu zákazníkovi nevracíme – platí až po zaplacení a vydání v salonu.
-    api_odpoved(['ok' => true]);
+    // Kód poukazu zákazníkovi nevracíme – platí až po zaplacení a vydání v salonu. Číslo poukazu (= VS) a platnost ano.
+    $ucet = salon_ucet(); $iban = ucet_iban($ucet);
+    api_odpoved(['ok' => true, 'cislo' => $cislo, 'vs' => $cislo, 'castka' => $hodnota, 'platnost_do' => $platnost,
+        'platnost_txt' => date('j. n. Y', strtotime($platnost)), 'ucet' => $iban !== '' ? $ucet : '', 'iban' => $iban]);
 }
 
 

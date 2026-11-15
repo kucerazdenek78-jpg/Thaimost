@@ -26,7 +26,7 @@ function q(string $sql, array $p = []): PDOStatement
 function q1(string $sql, array $p = []): ?array { $r = q($sql, $p)->fetch(); return $r ?: null; }
 function qv(string $sql, array $p = []) { $r = q($sql, $p)->fetchColumn(); return $r === false ? null : $r; }
 
-const DB_VERZE = 16;
+const DB_VERZE = 17;
 
 /** Migrace běží v jedné transakci a po získání zámku se verze ověří znovu (souběžné první požadavky). */
 function migrate(PDO $pdo): void
@@ -51,6 +51,7 @@ function migrate(PDO $pdo): void
         if ($ver < 14) migrate_v14($pdo);
         if ($ver < 15) migrate_v15($pdo);
         if ($ver < 16) migrate_v16($pdo);
+        if ($ver < 17) $pdo->exec("UPDATE poukazy SET vs = CAST(id AS TEXT)");   // v17: VS poukazu = číslo poukazu (id), i u starších
         $pdo->exec('PRAGMA user_version = ' . DB_VERZE);
         $pdo->exec('COMMIT');
     } catch (Throwable $e) {

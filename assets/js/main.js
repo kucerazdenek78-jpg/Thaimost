@@ -62,8 +62,27 @@
   document.querySelectorAll(".reveal:not(.in)").forEach(el => io.observe(el));
 
   /* ================= POUKAZY ================= */
-  const iban = D.platba.iban || V.ibanZUctu(D.platba.cislo_uctu);
-  if (iban) $("#platba").insertAdjacentHTML("beforeend", '<option value="prevod">' + V.esc(T("Převodem / QR platbou předem")) + "</option>");
+  /* Platba převodem a platnost poukazu: z kartotéky (Nastavení → Poukazy a platba převodem), data.js je jen záloha */
+  const PL = { ucet: D.platba.cislo_uctu || "", iban: D.platba.iban || V.ibanZUctu(D.platba.cislo_uctu), mes: 6 };
+  function nabidniPrevod() {
+    if (PL.iban && !$('#platba option[value="prevod"]')) {
+      $("#platba").insertAdjacentHTML("beforeend", '<option value="prevod">' + V.esc(T("Převodem / QR platbou předem")) + "</option>");
+      if ($("#platbaPozn")) $("#platbaPozn").textContent = T("Objednávka se odešle do salonu. Zaplatit můžete v salonu, nebo hned převodem s QR kódem – platba se s objednávkou spáruje sama.");
+    }
+  }
+  nabidniPrevod();
+  const platnostDo = () => { const d = new Date(); d.setMonth(d.getMonth() + PL.mes); return d.getDate() + ". " + (d.getMonth() + 1) + ". " + d.getFullYear(); };
+  function platnostInfo() {
+    const el = $("#platnostInfo"); if (!el) return;
+    el.textContent = T("Poukaz platí {mes} měs. od nákupu (při objednání dnes do {datum}). Do té doby je potřeba se objednat na masáž – stačí zavolat.", { mes: PL.mes, datum: platnostDo() });
+  }
+  platnostInfo();
+  if (window.ThaiApi && ThaiApi.get) ThaiApi.get("/api/stav").then(r => {
+    if (!r || !r.ok) return;
+    if (r.iban) { PL.ucet = r.ucet; PL.iban = r.iban; nabidniPrevod(); }
+    if (r.platnost_mes) PL.mes = +r.platnost_mes;
+    platnostInfo(); update();
+  }).catch(() => {});
 
   const st = { typ: "hodnota", hodnota: 1000, sluzbaId: D.sluzby[0].id, varIdx: 0 };
   const HODNOTY = [500, 790, 1000, 1500, 2000];
@@ -93,7 +112,8 @@
     return {
       typ: st.typ, hodnota: st.hodnota,
       sluzba: s.nazev, varianta: s.ceny[st.varIdx][0],
-      komu: $("#komu").value.trim(), od: $("#od").value.trim(), venovani: $("#venovani").value.trim()
+      komu: $("#komu").value.trim(), od: $("#od").value.trim(), venovani: $("#venovani").value.trim(),
+      platnost: platnostDo()
     };
   }
   function update() {
@@ -149,7 +169,8 @@
     err.style.display = "none";
 
     const d = data(), n = new Date(), p2 = x => String(x).padStart(2, "0");
-    const vs = String(n.getFullYear()).slice(2) + p2(n.getMonth() + 1) + p2(n.getDate()) + p2(n.getHours()) + p2(n.getMinutes());
+    /* číslo objednávky = číslo poukazu z kartotéky (= variabilní symbol); dočasné číslo jen pro nouzový e-mail, když kartotéka neodpoví */
+    let vs = String(n.getFullYear()).slice(2) + p2(n.getMonth() + 1) + p2(n.getDate()) + p2(n.getHours()) + p2(n.getMinutes());
     const platba = $("#platba").value, prevzeti = $("#prevzeti").value;
 
     /* souhrn objednávky: tr = CS (pro salon, česky) nebo LO (pro zákazníka, jeho jazykem) */
@@ -172,7 +193,7 @@
       if (tr === CS && JAZYK) radky.push("Jazyk zákazníka: " + JAZYK);
       return radky.join("\n");
     };
-    const text = souhrn(CS), textZak = souhrn(LO);
+    let text = souhrn(CS), textZak = souhrn(LO);
 
     const mailto = `mailto:${D.salon.email}?subject=${encodeURIComponent("Objednávka poukazu č. " + vs)}&body=${encodeURIComponent(text)}`;
     /* jak dlouho trvá spárování platby: podle nastavení kartotéky (Správa → Platby, /api/stav → platby_min), výchozí 1 hodina */
@@ -186,11 +207,14 @@
         : T("Platbu s objednávkou spárujeme v otevírací době obvykle do 1 hodiny od připsání na náš účet.");
       return kdy + " " + T("Převod z jiné banky může trvat až do následujícího pracovního dne.");
     };
-    let qr = "";
-    if (platba === "prevod" && iban) {
-      const svg = V.qrSvg(V.spd({ iban, castka: cena(), vs, zprava: "Poukaz " + vs }), 140);
-      qr = `<div class="qrpay">${svg}<div><b>${V.esc(T("QR platba"))}</b><br>${V.esc(T("Částka"))}: ${V.kc(cena())}<br>${V.esc(T("Účet"))}: ${V.esc(D.platba.cislo_uctu || iban)}<br>${V.esc(T("VS"))}: ${vs}<br><span class="hint">${V.esc(T("Naskenujte v aplikaci banky."))}</span><br><span class="hint">${V.esc(parovaniText())}</span></div></div>`;
-    }
+    /* QR platba až s číslem poukazu od kartotéky (VS = číslo poukazu, podle něj se platba sama spáruje) */
+    const qrBlok = (r) => {
+      if (platba !== "prevod" || !r || !r.iban || !r.vs) return "";
+      const svg = V.qrSvg(V.spd({ iban: r.iban, castka: r.castka || cena(), vs: r.vs, zprava: "Poukaz " + r.vs }), 140);
+      return `<div class="qrpay">${svg}<div><b>${V.esc(T("QR platba"))}</b><br>${V.esc(T("Částka"))}: ${V.kc(r.castka || cena())}<br>${V.esc(T("Účet"))}: ${V.esc(r.ucet || r.iban)}<br>${V.esc(T("VS"))}: ${V.esc(r.vs)} <span class="hint">(${V.esc(T("číslo poukazu"))})</span><br><span class="hint">${V.esc(T("Naskenujte v aplikaci banky."))}</span><br><span class="hint">${V.esc(parovaniText())}</span></div></div>`;
+    };
+    const platnostBlok = (r) => r && r.platnost_txt
+      ? `<p class="hint">${V.esc(T("Poukaz platí do {datum}. Do té doby je potřeba se objednat na masáž – stačí zavolat na 778 429 329.", { datum: r.platnost_txt }))}</p>` : "";
     const done = $("#done");
     const btn = e.submitter || $("#vForm button[type=submit]");
     if (btn) { btn.disabled = true; btn.textContent = T("Odesílám…"); }
@@ -206,18 +230,20 @@
     };
     window.ThaiApi.post("/api/poukaz", payload).then(r => {
       if (!r.ok) throw new Error(r.chyba || "chyba");
+      if (r.cislo) { vs = String(r.cislo); textZak = souhrn(LO); }
+      const qr = qrBlok(r);
       const kontakt = payload.email
         ? T("Děkujeme! Salon se vám ozve na telefon <b>{tel}</b> nebo e-mail <b>{mail}</b> a domluví převzetí.", { tel: V.esc(payload.telefon), mail: V.esc(payload.email) })
         : T("Děkujeme! Salon se vám ozve na telefon <b>{tel}</b> a domluví převzetí.", { tel: V.esc(payload.telefon) });
       done.innerHTML = `<span class="eyebrow">${V.esc(T("Hotovo"))}</span><h3>${V.esc(T("Objednávka č. {vs} přijata", { vs }))}</h3>
-        <p>${kontakt}${platba === "prevod" ? " " + T("Platbu proveďte podle QR kódu níže.") : ""}</p>
+        <p>${kontakt}${qr ? " " + T("Platbu proveďte podle QR kódu níže.") : ""}</p>
+        ${platnostBlok(r)}
         ${qr}
         <div class="sum">${V.esc(textZak)}</div>
         <div class="btns"><a class="btn btn-gold" href="tel:+420778429329">${V.esc(T("Zavolat"))}</a></div>`;
     }).catch(() => {
       done.innerHTML = `<span class="eyebrow">${V.esc(T("Hotovo"))}</span><h3>${V.esc(T("Objednávka č. {vs}", { vs }))}</h3>
         <p>${T("Objednávku se nepodařilo odeslat automaticky. Otevřeli jsme vám e-mail s objednávkou – stačí ho <b>odeslat</b>. Pokud se neotevřel, použijte tlačítko níže nebo objednávku zkopírujte, případně zavolejte.")}</p>
-        ${qr}
         <div class="sum">${V.esc(textZak)}</div>
         <div class="btns">
           <a class="btn btn-dark" href="${mailto}">${V.esc(T("Odeslat e-mailem"))}</a>

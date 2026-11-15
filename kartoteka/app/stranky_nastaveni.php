@@ -13,6 +13,13 @@ function stranka_nastaveni(array $u): void
         if ($akce === 'nastaveni') {
             foreach (['rezim_webu', 'tematicka_web', 'oteviraci_od', 'oteviraci_do', 'prestavka_min', 'tablet_predstih_min', 'prah_staly_navstev', 'prah_spici_dni', 'prah_nespolehlivy', 'bonus_po', 'bonus_pocita_poukaz'] as $k)
                 if (isset($_POST[$k])) q('INSERT INTO nastaveni(klic,hodnota) VALUES(?,?) ON CONFLICT(klic) DO UPDATE SET hodnota=excluded.hodnota', [$k, trim($_POST[$k])]);
+            // poukazy a platba převodem: číslo účtu (kontrola modulo 11), platnost poukazů v měsících
+            if (isset($_POST['platba_ucet'])) {
+                $uc = preg_replace('~\s+~', '', (string)$_POST['platba_ucet']);
+                if ($uc !== '' && !ucet_rozloz($uc)) flash('Číslo účtu „' . $uc . '“ není platné (formát 123456789/0100 nebo 19-123456789/0800, kontrolní součet). Účet se neuložil.', 'err');
+                else q('INSERT INTO nastaveni(klic,hodnota) VALUES(?,?) ON CONFLICT(klic) DO UPDATE SET hodnota=excluded.hodnota', ['platba_ucet', $uc]);
+            }
+            if (isset($_POST['poukaz_platnost_mes'])) q('INSERT INTO nastaveni(klic,hodnota) VALUES(?,?) ON CONFLICT(klic) DO UPDATE SET hodnota=excluded.hodnota', ['poukaz_platnost_mes', (string)max(1, min(36, (int)$_POST['poukaz_platnost_mes']))]);
             flash('Nastavení uloženo.');
         } elseif ($akce === 'maserky') {
             foreach ($_POST['m'] ?? [] as $id => $m) {
@@ -76,6 +83,14 @@ function stranka_nastaveni(array $u): void
             <label>Na tablet se pošle (min před začátkem)<input type="number" name="tablet_predstih_min" min="0" max="180" step="5" value="<?= h($n['tablet_predstih_min'] ?? '20') ?>"></label>
           </div>
           <p class="muted small">Rezervace se na tablet v masérně posílají samy tolik minut před začátkem (jakmile je tablet volný a rezervace má masérku). Ruční posílání už není potřeba.</p>
+          <h2 id="poukazy-platba">🎁 Poukazy a platba převodem</h2>
+          <div class="grid3">
+            <label>Číslo účtu salonu<input name="platba_ucet" value="<?= h(salon_ucet()) ?>" placeholder="123456789/0100" inputmode="numeric" autocomplete="off"></label>
+            <label>Platnost poukazu (měsíce od nákupu)<input type="number" name="poukaz_platnost_mes" min="1" max="36" value="<?= h((string)poukaz_platnost_mes()) ?>"></label>
+          </div>
+          <p class="muted small">S číslem účtu nabízí web u objednávky poukazu <b>platbu převodem s QR kódem</b> (variabilní symbol = číslo poukazu) a platba se pak sama spáruje v Platbách. Bez účtu jen platbu v salonu.
+            <?= salon_ucet() !== '' ? 'IBAN: <b>' . h(chunk_split(ucet_iban(salon_ucet()), 4, ' ')) . '</b>.' : '' ?>
+            Platnost se poukazu nastaví při nákupu a je na něm vytištěná – do toho data se musí zákazník objednat.</p>
           <h2>Štítky zákazníků</h2>
           <div class="grid3">
             <label>⭐ Stálý: návštěv za 6 měs.<input type="number" name="prah_staly_navstev" value="<?= h($n['prah_staly_navstev']) ?>"></label>

@@ -40,8 +40,8 @@ Veřejný web (`index.html`) je i anglicky (`/en/`) a německy (`/de/`). Zdrojem
 - Mapa webu (`sitemap.xml`) a `<link rel="alternate" hreflang>` propojují všechny tři jazyky; přepínač CS / EN / DE je v hlavičce.
 
 ## Co je potřeba doplnit / rozhodnout
-- **Číslo účtu** pro platbu poukazů převodem – v `data.js` → `platba.cislo_uctu`. Dokud je prázdné, nabízí se jen platba v salonu. Po doplnění se zákazníkovi zobrazí QR platba s VS = číslo objednávky.
-- **Platnost poukazů** – na webu se neuvádí (původní web ji neuvádí). V `salon.html` se volí při vystavení.
+- **Číslo účtu** pro platbu poukazů převodem se nastavuje v kartotéce: Nastavení → 🎁 Poukazy a platba převodem (kontrola modulo 11, IBAN se dopočítá). Web si ho bere z `/api/stav`; bez účtu se nabízí jen platba v salonu. Po odeslání objednávky dostane zákazník QR platbu s **VS = číslo poukazu** (id v kartotéce, vrací `/api/poukaz`) a platba se spáruje v Platbách.
+- **Platnost poukazů**: v kartotéce Nastavení → Platnost poukazu (výchozí 6 měsíců od nákupu). Nastaví se při objednávce (web i recepce), je vytištěná v políčku Platnost a pod políčky („do tohoto data je potřeba se objednat, zavolejte…“), web ji ukazuje u platby i po odeslání.
 - **Fotky služeb**: `assets/img/ai/<id>.jpg` (Magnific, Nano Banana 2.1, 11/2026) – vyrobené ve stylu skutečných fotek salonu (černo-zlatý úbor, fialové ručníky, bambus). Původní fotky jsou v `assets/img/sluzby/`. Navíc `ai/parova.jpg` (párová masáž) pro reklamy.
 - Evidence poukazů v `salon.html` je uložená jen v prohlížeči, kde se vystavují – zálohovat přes Export CSV.
 

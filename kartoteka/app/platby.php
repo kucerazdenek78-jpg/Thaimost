@@ -9,8 +9,42 @@ const PLATBY_INTERVALY = [15 => 'každých 15 minut', 30 => 'každých 30 minut'
 function platby_interval(): int { $m = (int)posta_n('platby.interval', '60'); return array_key_exists($m, PLATBY_INTERVALY) ? $m : 60; }
 const PLATBY_STAVY = ['nova' => 'Ke spárování', 'sparovano' => 'Spárováno', 'ignorovano' => 'Nepatří k poukazu', 'odchozi' => 'Odchozí', 'nerozpoznano' => 'Nerozpoznané avízo'];
 
-/** VS pro poukaz z recepce (web má VS = číslo objednávky z formuláře, 10 číslic). 9 číslic → nikdy se nepotká s webem. */
-function poukaz_vs_recepce(int $id): string { return (string)(900000000 + $id); }
+/** VS poukazu = číslo poukazu (id v kartotéce), stejné pro web i recepci. */
+function poukaz_vs_recepce(int $id): string { return (string)$id; }
+
+/** Platnost poukazu v měsících od nákupu (Nastavení → Poukazy a platba). Do té doby se musí zákazník objednat. */
+function poukaz_platnost_mes(): int { return max(1, min(36, (int)nastaveni('poukaz_platnost_mes', '6'))); }
+function poukaz_platnost_od(string $od = 'now'): string { return date('Y-m-d', strtotime($od . ' +' . poukaz_platnost_mes() . ' months')); }
+
+/** Číslo účtu salonu pro platby převodem (Nastavení). Formát „[předčíslí-]číslo/kód banky“. */
+function salon_ucet(): string { return trim((string)nastaveni('platba_ucet', '')); }
+
+/** Rozloží a zkontroluje české číslo účtu (modulo 11). Vrací [předčíslí, číslo, banka] nebo null. */
+function ucet_rozloz(string $u): ?array
+{
+    $u = preg_replace('~\s+~', '', $u);
+    if (!preg_match('~^(?:(\d{1,6})-)?(\d{2,10})/(\d{4})$~', $u, $m)) return null;
+    $kontrola = function (string $c, array $vahy): bool {
+        $c = str_pad($c, count($vahy), '0', STR_PAD_LEFT); $sum = 0;
+        foreach ($vahy as $i => $v) $sum += (int)$c[$i] * $v;
+        return $sum % 11 === 0;
+    };
+    if ($m[1] !== '' && !$kontrola($m[1], [10, 5, 8, 4, 2, 1])) return null;
+    if (!$kontrola($m[2], [6, 3, 7, 9, 10, 5, 8, 4, 2, 1])) return null;
+    return [$m[1], $m[2], $m[3]];
+}
+
+/** IBAN z českého čísla účtu (CZkk BBBB PPPPPP AAAAAAAAAA). */
+function ucet_iban(string $u): string
+{
+    $r = ucet_rozloz($u);
+    if (!$r) return '';
+    $bban = $r[2] . str_pad($r[0], 6, '0', STR_PAD_LEFT) . str_pad($r[1], 10, '0', STR_PAD_LEFT);
+    $num = $bban . '1235' . '00';   // C=12, Z=35
+    $mod = 0;
+    foreach (str_split($num) as $ch) $mod = ($mod * 10 + (int)$ch) % 97;
+    return 'CZ' . str_pad((string)(98 - $mod), 2, '0', STR_PAD_LEFT) . $bban;
+}
 
 function platby_ucet(): array
 {
@@ -164,7 +198,7 @@ function platby_potvrd(int $platbaId, int $poukazId, ?string $kdo = null): ?stri
     $ted = nyni();
     q("UPDATE platby SET stav='sparovano', poukaz_id=?, sparoval=?, sparovano=? WHERE id=?", [$poukazId, $kdo, $ted, $platbaId]);
     $pozn = 'Zaplaceno převodem ' . date('j. n. Y', strtotime($p['prijato'])) . ' (' . number_format($p['castka_hal'] / 100, 2, ',', ' ') . ' Kč' . ($p['vs'] !== '' ? ', VS ' . $p['vs'] : '') . ", spároval $kdo).";
-    if ($pk['stav'] === 'objednano') q("UPDATE poukazy SET stav='zaplaceno', poznamka=TRIM(poznamka || ' ' || ?) WHERE id=?", [$pozn, $poukazId]);
+    if ($pk['stav'] === 'objednano') q("UPDATE poukazy SET stav='zaplaceno', platnost_do=COALESCE(platnost_do, ?), poznamka=TRIM(poznamka || ' ' || ?) WHERE id=?", [poukaz_platnost_od(), $pozn, $poukazId]);
     else q("UPDATE poukazy SET poznamka=TRIM(poznamka || ' ' || ?) WHERE id=?", [$pozn, $poukazId]);
     q('INSERT INTO log(kdo,akce,detail) VALUES(?,?,?)', [$kdo, 'platba_sparovana', "platba #$platbaId → poukaz $pk[kod]"]);   // bez session (běží i na pozadí)
     return null;
