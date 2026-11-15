@@ -45,6 +45,13 @@ function stranka_poukaz_novy(array $u): void
     if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $p = $_POST;
         $hodnota = (int)($p['hodnota'] ?? 0);
+        // na konkrétní masáž: hodnota = cena z ceníku, služba = „Název – varianta“ (vytiskne se v políčku Procedura)
+        if (($p['typ'] ?? '') === 'masaz') {
+            $v = q1('SELECT v.*, s.nazev FROM varianty v JOIN sluzby s ON s.id=v.sluzba_id WHERE v.id=? AND v.aktivni=1', [(int)($p['varianta_id'] ?? 0)]);
+            if (!$v) { flash('Vyberte masáž.', 'err'); presmeruj('/?r=poukaz_novy'); }
+            $hodnota = (int)$v['cena'];
+            $p['sluzba_text'] = $v['nazev'] . ' – ' . $v['popis'];
+        } else $p['sluzba_text'] = '';
         if ($hodnota < 1) { flash('Zadejte hodnotu poukazu.', 'err'); presmeruj('/?r=poukaz_novy'); }
         $kod = poukaz_kod();
         $platnost = preg_match('~^\d{4}-\d{2}-\d{2}$~', $p['platnost_do'] ?? '') ? $p['platnost_do'] : null;
@@ -70,9 +77,18 @@ function stranka_poukaz_novy(array $u): void
     <h1>Vystavit poukaz</h1>
     <form method="post" class="card">
       <?= csrf_pole() ?>
+      <?php $vars = q("SELECT v.id, v.popis, v.cena, s.nazev FROM varianty v JOIN sluzby s ON s.id=v.sluzba_id WHERE v.aktivni=1 AND s.aktivni=1 AND v.cena>0 ORDER BY s.poradi, v.poradi")->fetchAll(); ?>
+      <div class="seg pk-typ" role="radiogroup">
+        <label><input type="radio" name="typ" value="castka" checked> Na částku</label>
+        <label><input type="radio" name="typ" value="masaz"> Na konkrétní masáž</label>
+      </div>
       <div class="grid3">
-        <label>Hodnota (Kč) *<input type="number" name="hodnota" min="1" required></label>
-        <label>Na konkrétní službu <span class="muted">(nepovinné)</span><input name="sluzba_text" placeholder="např. Tradiční thajská 90 min"></label>
+        <label id="pkCastka">Hodnota (Kč) *<input type="number" name="hodnota" min="1" required list="pkHodnoty"><datalist id="pkHodnoty"><option value="500"><option value="1000"><option value="1500"><option value="2000"></datalist></label>
+        <label id="pkMasaz" hidden>Masáž *<select name="varianta_id"><option value="">— vyberte masáž —</option>
+          <?php $sk = null; foreach ($vars as $v): if ($sk !== $v['nazev']): if ($sk !== null): ?></optgroup><?php endif; $sk = $v['nazev']; ?><optgroup label="<?= h($sk) ?>"><?php endif ?>
+            <option value="<?= (int)$v['id'] ?>" data-cena="<?= (int)$v['cena'] ?>"><?= h($v['nazev'] . ' – ' . $v['popis'] . ' – ' . number_format((int)$v['cena'], 0, ',', ' ') . ' Kč') ?></option>
+          <?php endforeach; if ($sk !== null): ?></optgroup><?php endif ?>
+        </select><span class="muted small" id="pkCena"></span></label>
         <label>Platnost do <span class="muted small">(<?= poukaz_platnost_mes() ?> měs. od nákupu – do té doby se musí objednat)</span><input type="date" name="platnost_do" value="<?= poukaz_platnost_od() ?>"></label>
       </div>
       <div class="grid3">
@@ -90,6 +106,21 @@ function stranka_poukaz_novy(array $u): void
       <label class="check"><input type="checkbox" name="zaplaceno" value="1" checked> Zaplaceno a předáno teď</label>
       <button class="btn primary">Vystavit</button>
     </form>
+    <script>
+    (function () {
+      const f = document.currentScript.previousElementSibling, c = document.getElementById('pkCastka'), m = document.getElementById('pkMasaz'), info = document.getElementById('pkCena');
+      function prepni() {
+        const masaz = f.querySelector('[name=typ]:checked').value === 'masaz';
+        c.hidden = masaz; m.hidden = !masaz;
+        f.hodnota.required = !masaz; f.varianta_id.required = masaz;
+        const o = f.varianta_id.selectedOptions[0];
+        info.textContent = masaz && o && o.dataset.cena ? 'Hodnota poukazu: ' + Number(o.dataset.cena).toLocaleString('cs-CZ') + ' Kč (podle ceníku)' : '';
+      }
+      f.querySelectorAll('[name=typ]').forEach(r => r.addEventListener('change', prepni));
+      f.varianta_id.addEventListener('change', prepni);
+      prepni();
+    })();
+    </script>
     <?php paticka();
 }
 
