@@ -9,6 +9,31 @@ function reklamy_seznam(): array
     $w = REKLAMY_WEB;
     return [
         [
+            'nazev' => 'Nabídka masáží – příspěvek 4:5', 'typ' => 'obrazek', 'format' => '4:5 · 1080×1350',
+            'kde' => 'Facebook a Instagram feed, Meta reklama', 'pridano' => '15. 11. 2026',
+            'soubor' => $w . 'assets/reklamy/nabidka/nabidka-feed-4x5.png',
+            'pozn' => 'Propaguje e-book s celou nabídkou masáží ke stažení na webu (nabidka-masazi.pdf). Grafika nemá ceny, při změně ceníku se nemusí upravovat.',
+            'texty' => ['Hlavní text' => reklamy_text_nabidka(), 'Nadpis' => 'Celá nabídka masáží ke stažení',
+                        'Popis' => 'Thajské masáže Most · od roku 2004', 'Tlačítko' => 'Zobrazit web'],
+        ],
+        [
+            'nazev' => 'Nabídka masáží – story / reel 9:16', 'typ' => 'obrazek', 'format' => '9:16 · 1080×1920',
+            'kde' => 'Facebook a Instagram Stories a Reels', 'pridano' => '15. 11. 2026',
+            'soubor' => $w . 'assets/reklamy/nabidka/nabidka-story-9x16.png',
+            'texty' => ['Hlavní text' => reklamy_text_nabidka(), 'Nadpis' => 'Celá nabídka masáží ke stažení',
+                        'Popis' => 'Thajské masáže Most · od roku 2004', 'Tlačítko' => 'Zobrazit web'],
+        ],
+        [
+            'nazev' => 'Nabídka masáží – čtverec 1:1', 'typ' => 'obrazek', 'format' => '1:1 · 1080×1080',
+            'kde' => 'Facebook a Instagram feed', 'pridano' => '15. 11. 2026',
+            'soubor' => $w . 'assets/reklamy/nabidka/nabidka-ctverec-1x1.png',
+        ],
+        [
+            'nazev' => 'Nabídka masáží – banner 16:9', 'typ' => 'obrazek', 'format' => '16:9 · 1920×1080',
+            'kde' => 'Web, Facebook banner, širší plochy', 'pridano' => '15. 11. 2026',
+            'soubor' => $w . 'assets/reklamy/nabidka/nabidka-banner-16x9.png',
+        ],
+        [
             'nazev' => 'Reel – Dárkové poukazy (svíčky, ručníky, hudba Chrám)', 'typ' => 'video', 'format' => '9:16 · 1080×1920 · 26 s',
             'kde' => 'Facebook a Instagram Reels, Stories', 'pridano' => '5. 11. 2026',
             'soubor' => $w . 'assets/reklamy/poukaz-reel-9x16.mp4', 'nahled' => $w . 'assets/reklamy/poukaz-reel-9x16.jpg',
@@ -48,6 +73,14 @@ function reklamy_seznam(): array
             'pozn' => 'Delší reel pro recepci (84 s) a verze 9:16 jsou zatím jen na notebooku ve složce Videos\\ThaiMost-maserny.',
         ],
     ];
+}
+
+function reklamy_text_nabidka(): string
+{
+    return 'Objevte celou naši nabídku thajských masáží na jednom místě. 19 masáží a rituálů – tradiční thajská, '
+         . 'olejová, aroma i bylinná masáž, rituály nebo privátní wellness s vířivkou a saunou. '
+         . 'Masírují rodilé Thajky a Filipínky s certifikací chrámové školy Wat Pho. '
+         . 'Přehlednou nabídku si stáhnete na thaimost.cz nebo zavolejte na 778 429 329.';
 }
 
 function reklamy_text_poukaz(): string
