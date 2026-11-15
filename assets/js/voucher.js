@@ -44,7 +44,7 @@
       const [x0, x1] = POLE[k], max = x1 - x0 - 2 * ODSAZENI;
       h += `<span class="pk-t" data-max="${max}" style="left:${pct(x0 + ODSAZENI, W)};top:${pct(ZAKLADNI_LINKA - NAD_LINKOU * VELIKOST, H)};font-size:${cq(VELIKOST)};max-width:${pct(max, W)}">${esc(t[k])}</span>`;
     }
-    if (d.platnost) h += `<span class="pk-t pk-info" style="left:${pct(INFO.x, W)};top:${pct(INFO.top - NAD_LINKOU * INFO.size, H)};font-size:${cq(INFO.size)}">${esc("Poukaz platí do " + d.platnost + " – do tohoto data je potřeba se objednat, zavolejte na 778 429 329.")}</span>`;
+    if (d.platnost) h += `<span class="pk-t pk-info" style="left:${pct(INFO.x, W)};top:${pct(INFO.top - NAD_LINKOU * INFO.size, H)};font-size:${cq(INFO.size)}">${esc("Poukaz platí do " + d.platnost + " – do tohoto data je potřeba se objednat, zavolejte na 778 429 329. Masáž na poukaz se nezapočítává do věrnostní kartičky.")}</span>`;
     if (d.kod) {
       h += `<span class="pk-k" style="right:${pct(W - KOD.right, W)};top:${pct(KOD.top - NAD_LINKOU * KOD.size, H)};font-size:${cq(KOD.size)}">KÓD&nbsp; ${esc(d.kod)}</span>`;
       const qr = qrSvg(d.kod, 120);

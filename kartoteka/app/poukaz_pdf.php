@@ -26,7 +26,7 @@ const POUKAZ_BARVA_TEXTU = [0.17, 0.12, 0.09]; // teak hnědá (#2b1e16) z nové
 const POUKAZ_QR = [214.0, 147.0, 33.0];
 /** Řádek o platnosti pod políčky (pod „Storno“): [x, základní linka shora, velikost]. Stejně ve voucher.js. */
 const POUKAZ_INFO = [25.4, 273.0, 6.8];
-function poukaz_info_text(string $datum): string { return "Poukaz platí do $datum – do tohoto data je potřeba se objednat, zavolejte na 778 429 329."; }
+function poukaz_info_text(string $datum): string { return "Poukaz platí do $datum – do tohoto data je potřeba se objednat, zavolejte na 778 429 329. Masáž na poukaz se nezapočítává do věrnostní kartičky."; }
 /** Kód poukazu bílým písmem na tmavém pruhu: konec textu zprava (x), základní linka od shora, velikost. */
 const POUKAZ_KOD = [518.0, 188.7, 6.8];
 
