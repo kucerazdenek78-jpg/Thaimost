@@ -47,3 +47,8 @@ Veřejný web (`index.html`) je i anglicky (`/en/`) a německy (`/de/`). Zdrojem
 
 ## Zveřejnění
 GitHub → Settings → Pages → Source: *Deploy from a branch* → `main` / `(root)`.
+
+## Nabídka masáží (e-book ke stažení)
+
+- `nabidka-masazi.html` – vícestránková nabídka (A4), generuje se automaticky z `assets/js/data.js` (ceny + texty + fotky). Na webu odkaz v sekci „Služby a ceník“.
+- `nabidka-masazi.pdf` – stažitelný PDF e-book. **Po změně cen/textů v `data.js` přegenerovat:** `python3 tools/nabidka_pdf.py` (potřebuje Google Chrome / Chromium). Poté commitnout nový PDF.
