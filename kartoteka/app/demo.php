@@ -278,43 +278,56 @@ function demo_nahrat(): string
         . ($noveMistnosti ? " Založena $noveMistnosti lůžka s tablety (2 jednolůžkové masérny + dvoulůžková pro wellness) (po smazání vzoru zůstanou)." : '');
 }
 
+/**
+ * Smaže zadané zákazníky, rezervace, poukazy a karty (SQL poddotazy vracející id) včetně všeho, co na ně odkazuje.
+ * Cizí odkazy jinde se vynulují, a kde být musí (NOT NULL), řádek se smaže – jinak by smazání spadlo na cizím klíči.
+ * Volá se uvnitř transakce.
+ */
+function smaz_zaznamy(string $zak, string $rez, string $pou, string $kar): void
+{
+    $rez = "SELECT id FROM rezervace WHERE id IN ($rez) OR zakaznik_id IN ($zak)";
+    q("UPDATE sezeni SET hodnoceni_id=NULL WHERE rezervace_id IN ($rez)");
+    q("DELETE FROM hodnoceni_maserek WHERE rezervace_id IN ($rez)");
+    q("DELETE FROM sezeni WHERE rezervace_id IN ($rez)");
+    q("DELETE FROM poukaz_pohyby WHERE rezervace_id IN ($rez) OR poukaz_id IN ($pou)");
+    $sady = ['zakaznici' => $zak, 'rezervace' => $rez, 'poukazy' => $pou, 'karty' => $kar];
+    $vlastni = ['zakaznici', 'rezervace', 'poukazy', 'poukaz_pohyby', 'sezeni', 'hodnoceni_maserek', 'karty', 'demo'];
+    foreach (q("SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'")->fetchAll(PDO::FETCH_COLUMN) as $t) {
+        if (in_array($t, $vlastni, true)) continue;
+        $sl = []; foreach (q("PRAGMA table_info(\"$t\")")->fetchAll() as $c) $sl[$c['name']] = (int)$c['notnull'];
+        foreach (q("PRAGMA foreign_key_list(\"$t\")")->fetchAll() as $fk) {
+            if (!isset($sady[$fk['table']])) continue;
+            $c = $fk['from'];
+            if (!empty($sl[$c])) q("DELETE FROM \"$t\" WHERE \"$c\" IN ({$sady[$fk['table']]})");
+            else q("UPDATE \"$t\" SET \"$c\"=NULL WHERE \"$c\" IN ({$sady[$fk['table']]})");
+        }
+    }
+    try { q("UPDATE platby SET navrh_poukaz_id=NULL WHERE navrh_poukaz_id IN ($pou)"); } catch (Throwable $e) {}
+    try { q("UPDATE poukazy SET razitko_zak_id=NULL WHERE razitko_zak_id IN ($zak)"); } catch (Throwable $e) {}
+    q("UPDATE poukazy SET zakaznik_id=NULL WHERE zakaznik_id IN ($zak) AND id NOT IN ($pou)");
+    q("UPDATE rezervace SET poukaz_id=NULL WHERE poukaz_id IN ($pou)");
+    q("DELETE FROM rezervace WHERE id IN ($rez)");
+    q("DELETE FROM poukazy WHERE id IN ($pou)");
+    q("DELETE FROM karty WHERE id IN ($kar) OR zakaznik_id IN ($zak)");
+    q("DELETE FROM zakaznici WHERE id IN ($zak)");
+}
+
 /** Smaže všechna vzorová data – i to, co recepce během testování u vzorových zákazníků vytvořila. */
 function demo_smazat(): string
 {
     demo_tabulka();
     db()->beginTransaction();
     try {
-        $zak = 'SELECT id FROM zakaznici WHERE zdroj=\'vzor\'';
+        $zak = "SELECT id FROM zakaznici WHERE zdroj='vzor'";
         $rez = "SELECT id FROM rezervace WHERE zakaznik_id IN ($zak) OR id IN (SELECT rid FROM demo WHERE tab='rezervace')";
         $pou = "SELECT id FROM poukazy WHERE zdroj='vzor' OR zakaznik_id IN ($zak) OR id IN (SELECT rid FROM demo WHERE tab='poukazy')";
         $nZak = (int)qv("SELECT COUNT(*) FROM ($zak)");
         $nRez = (int)qv("SELECT COUNT(*) FROM ($rez)");
-        q("UPDATE sezeni SET hodnoceni_id=NULL WHERE rezervace_id IN ($rez)");
-        q("DELETE FROM hodnoceni_maserek WHERE rezervace_id IN ($rez) OR id IN (SELECT rid FROM demo WHERE tab='hodnoceni_maserek')");
-        q("DELETE FROM sezeni WHERE rezervace_id IN ($rez)");
-        q("DELETE FROM poukaz_pohyby WHERE rezervace_id IN ($rez) OR poukaz_id IN ($pou)");
-        // ostatní tabulky, které odkazují na vzorové zákazníky / rezervace / poukazy (platby, AI návrhy, Google kontakty, …):
-        // odkaz se vynuluje, a kde být musí, řádek se smaže – jinak by smazání spadlo na cizím klíči
-        $sady = ['zakaznici' => $zak, 'rezervace' => $rez, 'poukazy' => $pou];
-        $vlastni = ['zakaznici', 'rezervace', 'poukazy', 'poukaz_pohyby', 'sezeni', 'hodnoceni_maserek', 'karty', 'demo'];
-        foreach (q("SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'")->fetchAll(PDO::FETCH_COLUMN) as $t) {
-            if (in_array($t, $vlastni, true)) continue;
-            $sl = []; foreach (q("PRAGMA table_info(\"$t\")")->fetchAll() as $c) $sl[$c['name']] = (int)$c['notnull'];
-            foreach (q("PRAGMA foreign_key_list(\"$t\")")->fetchAll() as $fk) {
-                if (!isset($sady[$fk['table']])) continue;
-                $c = $fk['from'];
-                if (!empty($sl[$c])) q("DELETE FROM \"$t\" WHERE \"$c\" IN ({$sady[$fk['table']]})");
-                else q("UPDATE \"$t\" SET \"$c\"=NULL WHERE \"$c\" IN ({$sady[$fk['table']]})");
-            }
-        }
-        try { q("UPDATE platby SET navrh_poukaz_id=NULL WHERE navrh_poukaz_id IN ($pou)"); } catch (Throwable $e) {}
-        try { q("UPDATE poukazy SET razitko_zak_id=NULL WHERE razitko_zak_id IN ($zak)"); } catch (Throwable $e) {}
-        q("UPDATE rezervace SET poukaz_id=NULL WHERE poukaz_id IN ($pou)");
-        q("DELETE FROM rezervace WHERE id IN ($rez)");
-        q("DELETE FROM poukazy WHERE id IN ($pou)");
-        q("DELETE FROM karty WHERE zakaznik_id IN ($zak) OR id IN (SELECT rid FROM demo WHERE tab='karty')");
+        q("DELETE FROM hodnoceni_maserek WHERE id IN (SELECT rid FROM demo WHERE tab='hodnoceni_maserek')");
+        // id zákazníků/poukazů si zapamatovat dřív, než se smažou (poddotazy se vyhodnocují průběžně)
+        $ids = fn(string $sql) => implode(',', array_map('intval', q($sql)->fetchAll(PDO::FETCH_COLUMN))) ?: '0';
+        smaz_zaznamy($ids($zak), $ids($rez), $ids($pou), $ids("SELECT rid FROM demo WHERE tab='karty'"));
         q("DELETE FROM maserky_volno WHERE id IN (SELECT rid FROM demo WHERE tab='maserky_volno') OR kdo='VZOR'");
-        q("DELETE FROM zakaznici WHERE zdroj='vzor'");
         q('DELETE FROM demo');
         q("INSERT INTO log(kdo,akce,detail) VALUES(?, 'vzor_smazano', ?)", [kdo(), "zákazníků $nZak, rezervací $nRez"]);
         db()->commit();
@@ -324,6 +337,80 @@ function demo_smazat(): string
     }
     return "Vzorová data smazána: $nZak zákazníků a $nRez rezervací (včetně všeho, co se u nich během testování vytvořilo).";
 }
+
+/**
+ * Zkušební záznamy, které nejsou vzorová data (např. vlastní objednávka poukazu z webu na vyzkoušení):
+ * nabídne poukazy bez čerpání (objednané / zrušené), zneplatněné karty a zákazníky bez proběhlé masáže.
+ */
+function zkusebni_kandidati(): array
+{
+    return [
+        'poukazy' => q("SELECT * FROM poukazy p WHERE zdroj<>'vzor' AND stav IN ('objednano','zruseno')
+            AND NOT EXISTS (SELECT 1 FROM poukaz_pohyby pp WHERE pp.poukaz_id=p.id) ORDER BY id DESC")->fetchAll(),
+        'karty' => q("SELECT k.*, z.jmeno, z.prijmeni FROM karty k LEFT JOIN zakaznici z ON z.id=k.zakaznik_id
+            WHERE k.aktivni=0 AND k.kdo<>'VZOR' ORDER BY k.id DESC")->fetchAll(),
+        'zakaznici' => q("SELECT z.*, (SELECT COUNT(*) FROM rezervace r WHERE r.zakaznik_id=z.id) AS rez FROM zakaznici z
+            WHERE zdroj<>'vzor' AND NOT EXISTS (SELECT 1 FROM rezervace r WHERE r.zakaznik_id=z.id AND r.stav='probehlo')
+            AND NOT EXISTS (SELECT 1 FROM poukazy p WHERE (p.zakaznik_id=z.id OR p.razitko_zak_id=z.id) AND p.stav IN ('zaplaceno','vydano','uplatneno'))
+            ORDER BY z.id DESC LIMIT 100")->fetchAll(),
+    ];
+}
+
+/** Smaže vybrané zkušební záznamy (jen ty, které jsou pořád mezi kandidáty). */
+function zkusebni_smazat(array $vyber): string
+{
+    $k = zkusebni_kandidati();
+    $ok = fn(string $t) => array_values(array_intersect(array_map('intval', (array)($vyber[$t] ?? [])), array_map(fn($r) => (int)$r['id'], $k[$t])));
+    $pou = $ok('poukazy'); $kar = $ok('karty'); $zak = $ok('zakaznici');
+    if (!$pou && !$kar && !$zak) return '';
+    $sez = fn(array $a) => $a ? implode(',', $a) : '0';
+    $popis = [];
+    foreach ($k['poukazy'] as $r) if (in_array((int)$r['id'], $pou, true)) $popis[] = 'poukaz ' . $r['kod'];
+    foreach ($k['karty'] as $r) if (in_array((int)$r['id'], $kar, true)) $popis[] = 'karta ' . $r['kod'];
+    foreach ($k['zakaznici'] as $r) if (in_array((int)$r['id'], $zak, true)) $popis[] = 'zákazník ' . jmeno_z($r);
+    db()->beginTransaction();
+    try {
+        smaz_zaznamy($sez($zak), '0', $sez($pou), $sez($kar));
+        zapis_log('zkusebni_smazano', implode(', ', $popis));
+        db()->commit();
+    } catch (Throwable $e) {
+        if (db()->inTransaction()) db()->rollBack();
+        throw $e;
+    }
+    return 'Smazáno: ' . implode(', ', $popis) . '.';
+}
+
+/** Karta do Nastavení: výběr zkušebních záznamů ke smazání (jen admin). */
+function zkusebni_karta(array $u): void
+{
+    if (($u['role'] ?? '') !== 'admin') return;
+    $k = zkusebni_kandidati();
+    $stav = ['objednano' => 'objednáno', 'zruseno' => 'zrušeno']; ?>
+    <section class="card side demo-card" id="zkusebni">
+      <h3>🧹 Zkušební záznamy</h3>
+      <p class="small">Co jste si sami vyzkoušeli (např. objednávku poukazu z webu) a není to vzorová data. Zaškrtněte, co smazat. Smaže se natrvalo i se vším, co k tomu patří (rezervace a žádosti zákazníka, platby se jen odpojí).</p>
+      <?php if (!$k['poukazy'] && !$k['karty'] && !$k['zakaznici']): ?>
+        <p class="muted small">Nic takového tu není.</p>
+      <?php else: ?>
+      <form method="post"><?= csrf_pole() ?><input type="hidden" name="akce" value="zkusebni_smazat">
+        <?php if ($k['poukazy']): ?><p class="small"><b>Poukazy bez čerpání</b> (objednané / zrušené)</p>
+          <?php foreach ($k['poukazy'] as $r): ?><label class="small" style="display:block"><input type="checkbox" name="poukazy[]" value="<?= (int)$r['id'] ?>">
+            <?= h($r['kod']) ?> · <?= h($stav[$r['stav']] ?? $r['stav']) ?> · <?= number_format((int)$r['hodnota'], 0, ',', ' ') ?> Kč · <?= h(trim($r['objednal_jmeno'] . ' ' . $r['objednal_tel'])) ?> · <?= h(substr($r['vytvoreno'], 0, 16)) ?></label><?php endforeach ?>
+        <?php endif ?>
+        <?php if ($k['karty']): ?><p class="small"><b>Zneplatněné věrnostní karty</b></p>
+          <?php foreach ($k['karty'] as $r): ?><label class="small" style="display:block"><input type="checkbox" name="karty[]" value="<?= (int)$r['id'] ?>">
+            <?= h($r['kod']) ?> · <?= $r['zakaznik_id'] ? h(trim($r['jmeno'] . ' ' . $r['prijmeni'])) : 'nepřiřazená' ?> · <?= h(substr($r['vytvoreno'], 0, 16)) ?></label><?php endforeach ?>
+        <?php endif ?>
+        <?php if ($k['zakaznici']): ?><p class="small"><b>Zákazníci bez proběhlé masáže</b> (pozor, patří sem i noví skuteční zákazníci)</p>
+          <?php foreach ($k['zakaznici'] as $r): ?><label class="small" style="display:block"><input type="checkbox" name="zakaznici[]" value="<?= (int)$r['id'] ?>">
+            <?= h(jmeno_z($r)) ?> · <?= h(telefon_cz($r['telefon'])) ?> · rezervací/žádostí <?= (int)$r['rez'] ?> · <?= h($r['zdroj']) ?></label><?php endforeach ?>
+        <?php endif ?>
+        <label class="small">Pro potvrzení napište <b>SMAZAT</b><input name="potvrzeni" autocomplete="off" required pattern="SMAZAT"></label>
+        <button class="btn danger">Smazat vybrané</button>
+      </form>
+      <?php endif ?>
+    </section>
+<?php }
 
 /** Karta do Nastavení. */
 function demo_karta(array $u): void

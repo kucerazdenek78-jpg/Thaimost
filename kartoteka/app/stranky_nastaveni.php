@@ -117,6 +117,10 @@ function stranka_nastaveni(array $u): void
         } elseif ($akce === 'demo_smazat' && $u['role'] === 'admin') {
             if (($_POST['potvrzeni'] ?? '') !== 'SMAZAT') flash('Pro smazání napište SMAZAT.', 'err');
             else { try { flash(demo_smazat()); } catch (Throwable $e) { flash('Smazání selhalo: ' . $e->getMessage(), 'err'); } }
+        } elseif ($akce === 'zkusebni_smazat' && $u['role'] === 'admin') {
+            if (($_POST['potvrzeni'] ?? '') !== 'SMAZAT') flash('Pro smazání napište SMAZAT.', 'err');
+            else { try { $m = zkusebni_smazat($_POST); $m ? flash($m) : flash('Nic nebylo vybráno.', 'err'); } catch (Throwable $e) { flash('Smazání selhalo: ' . $e->getMessage(), 'err'); } }
+            presmeruj('/?r=nastaveni#zkusebni');
         } elseif ($akce === 'odeslat_emaily') {
             odesli_frontu(); flash('Fronta e-mailů zpracována.');
         }
@@ -314,6 +318,7 @@ function stranka_nastaveni(array $u): void
       </div>
       <div>
         <?php demo_karta($u) ?>
+        <?php zkusebni_karta($u) ?>
         <?php [$postaProblem, $postaTxt] = posta_souhrn(); ?>
         <section class="card side">
           <h3>✉️ Pošta <?= $postaProblem ? '<b class="cnt">' . $postaProblem . '</b>' : '' ?></h3>
