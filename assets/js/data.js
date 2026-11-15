@@ -14,7 +14,7 @@ window.THAI = {
     ico: "87149931",
     oteviraci: [
       ["Po–Pá", "9:00–20:00"],
-      ["So–Ne", "pouze wellness / dle domluvy s masérkami (příplatek 150 Kč/os.)"]
+      ["So–Ne", "pouze wellness / masáže dle domluvy s masérkami"]
     ],
     facebook: "https://www.facebook.com/thaimost",
     prohlidka: "https://www.google.cz/maps/@50.5091022,13.6297946,3a,90y,63.93h,71.2t,1.1r/data=!3m6!1e1!3m4!1sAF1QipO1f8iBY91Br7rOrJZZ6xbhF6DJpPeIUz5ivMpt!2e10!7i5376!8i2688?hl=cs",

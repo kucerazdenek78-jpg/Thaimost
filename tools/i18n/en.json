@@ -123,7 +123,6 @@
  "Kokosový krémový peeling, zábal s tělovým máslem, přikládání lávových kamenů a na závěr lehká olejová masáž.": "A coconut cream scrub, a body butter wrap, hot stone therapy, and, to finish, a light oil massage.",
  "Cukrový vánek z ráje": "A sugary breeze from paradise",
  "Luxusní peeling cukrovou třtinou z Fidži s tropickými oleji a kokosovým mlékem. Odstraní odumřelé buňky a hluboce hydratuje.": "A luxurious sugar scrub made from Fijian sugar cane, enriched with tropical oils and coconut milk. It removes dead skin cells and deeply moisturises.",
- "Víkendové masáže dle domluvy s masérkami – příplatek 150 Kč/osoba.": "Weekend massages by arrangement with the masseuses – surcharge of 150 CZK per person.",
  "Pět masáží, šestá od nás": "Five massages, the sixth on us",
  "S naší zákaznickou kartičkou získáte po každé páté zaplacené masáži jednu masáž od nás zdarma. Pro více informací nám zavolejte.": "With our loyalty card, you’ll receive one free massage from us after every fifth massage you’ve paid for. Please call us for more information.",
  "Razítko platí při platbě v hotovosti.": "The stamp is valid for cash payments.",
@@ -225,7 +224,6 @@
  "Otevírací doba": "Opening hours",
  "Po–Pá": "Monday–Friday",
  "So–Ne": "Saturday–Sunday",
- "pouze wellness, masáže dle domluvy (+150 Kč/os.)": "Wellness only; massages by arrangement (+150 CZK per person)",
  "Virtuální prohlídka": "Virtual tour",
  "Provozovatel: Hana Kučerová, J. A. Komenského 534/3, 434 01 Most · IČO 87149931": "Operator: Hana Kučerová, J. A. Komenského 534/3, 434 01 Most · Company registration number 87149931",
  "Mapa – thajské masáže Most, Thai Most": "Map – Thai Massages Most, Thai Most",
@@ -391,5 +389,6 @@
  "Ilustrační foto": "Illustrative photo",
  "Děkujeme! Potvrzení s údaji k platbě jsme poslali na e-mail <b>{mail}</b>. Poukaz vám po připsání platby pošleme e-mailem – obvykle do dvou hodin.": "Thank you! We have sent a confirmation email containing your payment details to <b>{mail}</b>. We will email you the voucher once the payment has been credited – usually within two hours.",
  "Děkujeme! Pro poukaz se prosím zastavte na recepci v otevírací době (Po–Pá 9–20 h) a zaplaťte ho v hotovosti.": "Thank you! To collect your voucher, please pop into reception during opening hours (Mon–Fri 9 am–8 pm) and pay for it in cash.",
- "Potvrzení objednávky jsme poslali na e-mail <b>{mail}</b>.": "We have sent the order confirmation to the email address <b>{mail}</b>."
+ "Potvrzení objednávky jsme poslali na e-mail <b>{mail}</b>.": "We have sent the order confirmation to the email address <b>{mail}</b>.",
+ "pouze wellness, masáže dle domluvy": "Wellness only; massages by arrangement"
 }
