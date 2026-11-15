@@ -33,7 +33,8 @@ window.THAI = {
   },
 
   /* Obrázky služeb: assets/img/ai/<id>.jpg (vyrobené v Magnific, 11/2026).
-     Původní fotky ze starého webu jsou v assets/img/sluzby/. */
+     Původní fotky ze starého webu jsou v assets/img/sluzby/.
+     Na fotce je štítek „Ilustrační foto“, dokud nejsou nafocené vlastní: u služby s vlastní fotkou přidejte vlastni: true. */
   img: "assets/img/ai/",
 
   sluzby: [

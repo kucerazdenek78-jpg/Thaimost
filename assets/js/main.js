@@ -34,7 +34,7 @@
       const od = Math.min(...s.ceny.map(c => c[1]));
       const nazev = T(s.nazev);
       const img = s.foto
-        ? `<img src="${/^https?:/.test(s.foto) ? s.foto : T.root + D.img + s.foto}" alt="${V.esc(T("{nazev} – thajské masáže Most, Thai Most", { nazev }))}" loading="lazy" onerror="this.remove()">${s.ilustracni ? '<span class="sv-ilu">' + V.esc(T("VZOR")) + "</span>" : ""}`
+        ? `<img src="${/^https?:/.test(s.foto) ? s.foto : T.root + D.img + s.foto}" alt="${V.esc(T("{nazev} – thajské masáže Most, Thai Most", { nazev }))}" loading="lazy" onerror="this.remove()">${!s.vlastni && !/^https?:/.test(s.foto) ? '<span class="sv-ilu">' + V.esc(T("Ilustrační foto")) + "</span>" : ""}`
         : "";
       return `<article class="sv reveal in">
         <div class="sv-img"><div class="ph">${LOTUS}</div>${img}${s.top ? '<span class="sv-tag">' + V.esc(T("Oblíbené")) + "</span>" : ""}</div>

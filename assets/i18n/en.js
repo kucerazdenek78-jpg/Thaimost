@@ -2,7 +2,7 @@
 window.THAI_I18N = window.THAI_I18N || {};
 window.THAI_I18N.en = {
  "{nazev} – thajské masáže Most, Thai Most": "{nazev} – Thai massages in Most, Thai Most",
- "VZOR": "ILLUSTRATIVE PHOTO",
+ "Ilustrační foto": "Illustrative photo",
  "Oblíbené": "Favourites",
  "Darovat jako poukaz →": "Give as a gift voucher →",
  "masáž<br>zdarma": "free<br>massage",
