@@ -47,7 +47,8 @@ function api_route(string $cesta): void
             // motivy poukazu pro web: obrázky podkladů (vánoční jen když je nahraný) a co je teď přednastavené
             'motivy' => array_filter(['darkovy' => poukaz_motiv_jpg('darkovy') ? rtrim(cfg()['url'], '/') . poukaz_motiv_url('darkovy') : '',
                                       'vanocni' => poukaz_motiv_jpg('vanocni') ? rtrim(cfg()['url'], '/') . poukaz_motiv_url('vanocni') : ''], fn($x) => true),
-            'motiv' => poukaz_motiv_vychozi()]);
+            'motiv' => poukaz_motiv_vychozi(),
+            'fotky' => (object)sluzby_fotky_web()]);   // vlastní fotky služeb (Nastavení → Ceník) místo ilustračních
     }
 
     if ($cesta === '/api/sluzby' && $m === 'GET') {

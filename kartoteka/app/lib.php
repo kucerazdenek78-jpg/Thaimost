@@ -274,6 +274,72 @@ function poukaz_razitko(int $poukazId): ?int
     return $zid;
 }
 
+/**
+ * Vlastní fotky služeb pro web (Nastavení → Ceník → Fotky služeb). Uložené v data/sluzby-foto/<kód>.<jpg|webp|png>,
+ * na web jdou přes veřejnou kopii v public/ (v názvu čas změny kvůli mezipaměti). Web je dostane v /api/stav (fotky)
+ * a u služby s vlastní fotkou už nepíše „Ilustrační foto“. Prohlížeč fotku před nahráním zmenší (max. 1600 px).
+ */
+const SLUZBA_FOTO_TYPY = [IMAGETYPE_JPEG => 'jpg', IMAGETYPE_WEBP => 'webp', IMAGETYPE_PNG => 'png'];
+
+function sluzba_foto_dir(): string { return dirname(cfg()['db_path']) . '/sluzby-foto'; }
+
+function sluzba_foto_soubor(string $kod): ?string
+{
+    if (!preg_match('~^[a-z0-9-]{1,40}$~', $kod)) return null;
+    foreach (SLUZBA_FOTO_TYPY as $ext) { $f = sluzba_foto_dir() . "/$kod.$ext"; if (is_file($f)) return $f; }
+    return null;
+}
+
+/** Adresa veřejné kopie (relativní, např. /sluzba-foto-tradicni-1794000000.jpg), nebo null. */
+function sluzba_foto_url(string $kod): ?string
+{
+    $f = sluzba_foto_soubor($kod);
+    if (!$f) return null;
+    $ext = pathinfo($f, PATHINFO_EXTENSION);
+    $jmeno = "sluzba-foto-$kod-" . filemtime($f) . ".$ext";
+    $pub = dirname(__DIR__) . "/public/$jmeno";
+    if (!is_file($pub)) {
+        foreach (glob(dirname(__DIR__) . "/public/sluzba-foto-$kod-*") ?: [] as $stary) @unlink($stary);
+        if (!@copy($f, $pub)) return null;
+    }
+    return "/$jmeno";
+}
+
+/** Všechny vlastní fotky pro web: [kód služby => absolutní adresa]. */
+function sluzby_fotky_web(): array
+{
+    $o = [];
+    foreach (q('SELECT kod FROM sluzby WHERE kod IS NOT NULL AND aktivni=1')->fetchAll(PDO::FETCH_COLUMN) as $kod) {
+        $u = sluzba_foto_url((string)$kod);
+        if ($u) $o[$kod] = rtrim(cfg()['url'] ?? '', '/') . $u;
+    }
+    return $o;
+}
+
+function sluzba_foto_nahraj(string $kod, array $soubor): ?string
+{
+    if (!preg_match('~^[a-z0-9-]{1,40}$~', $kod) || !qv('SELECT 1 FROM sluzby WHERE kod=?', [$kod])) return 'Neznámá služba.';
+    if (($soubor['error'] ?? 1) !== UPLOAD_ERR_OK || !is_uploaded_file($soubor['tmp_name'])) return 'Fotka se nenahrála (možná je moc velká – zkuste menší).';
+    if ($soubor['size'] > 6 * 1024 * 1024) return 'Fotka je větší než 6 MB.';
+    $i = @getimagesize($soubor['tmp_name']);
+    if (!$i || !isset(SLUZBA_FOTO_TYPY[$i[2]])) return 'Fotka musí být JPG, WebP nebo PNG.';
+    if ($i[0] < 600 || $i[1] < 400) return 'Fotka je moc malá – aspoň 600 × 400 px (ideálně na šířku, 3 : 2).';
+    if (!is_dir(sluzba_foto_dir()) && !@mkdir(sluzba_foto_dir(), 0775, true)) return 'Nejde vytvořit složku pro fotky.';
+    sluzba_foto_smaz($kod);
+    $cil = sluzba_foto_dir() . "/$kod." . SLUZBA_FOTO_TYPY[$i[2]];
+    if (!move_uploaded_file($soubor['tmp_name'], $cil)) return 'Fotku se nepodařilo uložit.';
+    @chmod($cil, 0664);
+    sluzba_foto_url($kod);
+    return null;
+}
+
+function sluzba_foto_smaz(string $kod): void
+{
+    if (!preg_match('~^[a-z0-9-]{1,40}$~', $kod)) return;
+    foreach (SLUZBA_FOTO_TYPY as $ext) @unlink(sluzba_foto_dir() . "/$kod.$ext");
+    foreach (glob(dirname(__DIR__) . "/public/sluzba-foto-$kod-*") ?: [] as $stary) @unlink($stary);
+}
+
 /** Platby, za které se dává razítko (masáž na poukaz jen když je to v nastavení zapnuté). */
 function bonus_platby(): array
 {

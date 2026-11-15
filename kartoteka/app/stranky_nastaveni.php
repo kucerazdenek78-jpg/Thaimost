@@ -45,6 +45,21 @@ function stranka_nastaveni(array $u): void
             if (trim($_POST['nova_maserka'] ?? '') !== '')
                 q('INSERT INTO maserky(jmeno,poradi) VALUES(?, (SELECT COALESCE(MAX(poradi),0)+1 FROM maserky))', [trim($_POST['nova_maserka'])]);
             flash('Masérky uloženy.');
+        } elseif ($akce === 'fotky_sluzeb') {
+            // vlastní fotky služeb pro web
+            $n = 0;
+            foreach (array_keys($_POST['smazat_foto'] ?? []) as $kod) { sluzba_foto_smaz((string)$kod); $n++; flash('Fotka smazána – na webu je zase ilustrační.'); }
+            foreach ($_FILES['foto']['name'] ?? [] as $kod => $jm) {
+                if ($jm === '' || $jm === null) continue;
+                $f = ['name' => $jm, 'tmp_name' => $_FILES['foto']['tmp_name'][$kod], 'error' => $_FILES['foto']['error'][$kod], 'size' => $_FILES['foto']['size'][$kod]];
+                $chyba = sluzba_foto_nahraj((string)$kod, $f);
+                $nazev = (string)qv('SELECT nazev FROM sluzby WHERE kod=?', [(string)$kod]);
+                $chyba ? flash("$nazev: $chyba", 'err') : flash("$nazev: fotka nahrána, na webu se ukáže do minuty.");
+                $n++;
+            }
+            if (!$n) flash('Nevybrali jste žádnou fotku.', 'err');
+            zapis_log('sluzby_fotky', (string)$n);
+            presmeruj('/?r=nastaveni#fotky');
         } elseif ($akce === 'cenik') {
             foreach ($_POST['v'] ?? [] as $id => $v)
                 q('UPDATE varianty SET cena=?, minuty=?, aktivni=?, maserky=?, maserky_min=?, wellness_mistnost=? WHERE id=?', [(int)$v['cena'], $v['minuty'] !== '' ? (int)$v['minuty'] : null, !empty($v['aktivni']) ? 1 : 0,
@@ -173,6 +188,49 @@ function stranka_nastaveni(array $u): void
           <button class="btn">Uložit ceník</button>
           </details>
         </form>
+
+        <?php $sluzbyF = q('SELECT kod, nazev FROM sluzby WHERE kod IS NOT NULL AND aktivni=1 ORDER BY poradi')->fetchAll(); $vlastnich = 0; foreach ($sluzbyF as $sf) if (sluzba_foto_soubor($sf['kod'])) $vlastnich++; ?>
+        <form method="post" class="card" id="fotky" enctype="multipart/form-data">
+          <?= csrf_pole() ?><input type="hidden" name="akce" value="fotky_sluzeb">
+          <details class="rozbal"<?= ($_GET['f'] ?? '') === '1' ? ' open' : '' ?>><summary><h2>📷 Fotky služeb na webu <span class="muted small">(vlastních <?= $vlastnich ?> z <?= count($sluzbyF) ?> – klepnutím rozbalíte)</span></h2></summary>
+          <p class="muted small">Dokud služba nemá vlastní fotku, je na webu ilustrační se štítkem „Ilustrační foto“. Nahrajte fotku ze salonu (nejlépe na šířku, 3 : 2) – štítek zmizí. Fotku z telefonu stačí vybrat, před odesláním se sama zmenší.</p>
+          <div class="sf-grid">
+            <?php foreach ($sluzbyF as $sf): $url = sluzba_foto_url($sf['kod']); ?>
+              <div class="sf">
+                <div class="sf-img"><img src="<?= h($url ?: REKLAMY_WEB . 'assets/img/ai/' . $sf['kod'] . '.jpg') ?>" alt="" loading="lazy"><span class="<?= $url ? 'sf-ok' : 'sf-ilu' ?>"><?= $url ? '✓ vlastní' : 'ilustrační' ?></span></div>
+                <b><?= h($sf['nazev']) ?></b>
+                <input type="file" name="foto[<?= h($sf['kod']) ?>]" accept="image/jpeg,image/png,image/webp,image/heic,image/*" class="sf-in">
+                <?php if ($url): ?><label class="check small"><input type="checkbox" name="smazat_foto[<?= h($sf['kod']) ?>]" value="1"> smazat (zpět ilustrační)</label><?php endif ?>
+              </div>
+            <?php endforeach ?>
+          </div>
+          <button class="btn primary">Nahrát vybrané fotky</button> <span class="muted small" id="sfStav"></span>
+          </details>
+        </form>
+        <script>
+        // zmenšení fotky v prohlížeči (max. 1600 px, JPEG) – fotka z telefonu má jinak i 5 MB a server ji nemusí přijmout
+        document.querySelectorAll('.sf-in').forEach(function (inp) {
+          inp.addEventListener('change', function () {
+            var f = inp.files && inp.files[0]; if (!f || !window.DataTransfer) return;
+            var st = document.getElementById('sfStav'), img = new Image(), url = URL.createObjectURL(f);
+            st.textContent = 'Připravuji fotku…';
+            img.onload = function () {
+              var k = Math.min(1, 1600 / Math.max(img.naturalWidth, img.naturalHeight)), c = document.createElement('canvas');
+              c.width = Math.round(img.naturalWidth * k); c.height = Math.round(img.naturalHeight * k);
+              c.getContext('2d').drawImage(img, 0, 0, c.width, c.height); URL.revokeObjectURL(url);
+              c.toBlob(function (b) {
+                if (!b) { st.textContent = ''; return; }
+                var dt = new DataTransfer(); dt.items.add(new File([b], f.name.replace(/\.[^.]+$/, '') + '.jpg', { type: 'image/jpeg' }));
+                inp.files = dt.files;
+                var nah = inp.closest('.sf').querySelector('img'); nah.src = URL.createObjectURL(b);
+                st.textContent = 'Fotka připravena (' + Math.round(b.size / 1024) + ' kB) – klepněte na „Nahrát vybrané fotky“.';
+              }, 'image/jpeg', 0.85);
+            };
+            img.onerror = function () { URL.revokeObjectURL(url); st.textContent = 'Fotku se nepodařilo načíst v prohlížeči – zkuste JPG.'; };
+            img.src = url;
+          });
+        });
+        </script>
       </div>
       <div>
         <?php demo_karta($u) ?>

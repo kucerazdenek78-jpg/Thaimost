@@ -29,7 +29,9 @@
 
   /* služby */
   const grid = $("#svGrid");
+  let katAkt = "vse";
   function renderSluzby(kat) {
+    katAkt = kat;
     grid.innerHTML = D.sluzby.filter(s => kat === "vse" || s.kat === kat).map(s => {
       const od = Math.min(...s.ceny.map(c => c[1]));
       const nazev = T(s.nazev);
@@ -94,6 +96,12 @@
         st.motiv = r.motiv === "vanocni" ? "vanocni" : "darkovy";
         const radio = document.querySelector('input[name="motiv"][value="' + st.motiv + '"]'); if (radio) radio.checked = true;
       }
+    }
+    /* vlastní fotky služeb nahrané v kartotéce (Nastavení → Fotky služeb) – místo ilustračních, bez štítku */
+    if (r.fotky && typeof r.fotky === "object") {
+      let zmena = false;
+      D.sluzby.forEach(s => { const u = r.fotky[s.id]; if (u && /^https:\/\//.test(u)) { s.foto = u; s.vlastni = true; zmena = true; } });
+      if (zmena) renderSluzby(katAkt);
     }
     platnostInfo(); update();
   }).catch(() => {});
