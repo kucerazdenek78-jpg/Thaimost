@@ -293,6 +293,22 @@ function demo_smazat(): string
         q("DELETE FROM hodnoceni_maserek WHERE rezervace_id IN ($rez) OR id IN (SELECT rid FROM demo WHERE tab='hodnoceni_maserek')");
         q("DELETE FROM sezeni WHERE rezervace_id IN ($rez)");
         q("DELETE FROM poukaz_pohyby WHERE rezervace_id IN ($rez) OR poukaz_id IN ($pou)");
+        // ostatní tabulky, které odkazují na vzorové zákazníky / rezervace / poukazy (platby, AI návrhy, Google kontakty, …):
+        // odkaz se vynuluje, a kde být musí, řádek se smaže – jinak by smazání spadlo na cizím klíči
+        $sady = ['zakaznici' => $zak, 'rezervace' => $rez, 'poukazy' => $pou];
+        $vlastni = ['zakaznici', 'rezervace', 'poukazy', 'poukaz_pohyby', 'sezeni', 'hodnoceni_maserek', 'karty', 'demo'];
+        foreach (q("SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'")->fetchAll(PDO::FETCH_COLUMN) as $t) {
+            if (in_array($t, $vlastni, true)) continue;
+            $sl = []; foreach (q("PRAGMA table_info(\"$t\")")->fetchAll() as $c) $sl[$c['name']] = (int)$c['notnull'];
+            foreach (q("PRAGMA foreign_key_list(\"$t\")")->fetchAll() as $fk) {
+                if (!isset($sady[$fk['table']])) continue;
+                $c = $fk['from'];
+                if (!empty($sl[$c])) q("DELETE FROM \"$t\" WHERE \"$c\" IN ({$sady[$fk['table']]})");
+                else q("UPDATE \"$t\" SET \"$c\"=NULL WHERE \"$c\" IN ({$sady[$fk['table']]})");
+            }
+        }
+        try { q("UPDATE platby SET navrh_poukaz_id=NULL WHERE navrh_poukaz_id IN ($pou)"); } catch (Throwable $e) {}
+        try { q("UPDATE poukazy SET razitko_zak_id=NULL WHERE razitko_zak_id IN ($zak)"); } catch (Throwable $e) {}
         q("UPDATE rezervace SET poukaz_id=NULL WHERE poukaz_id IN ($pou)");
         q("DELETE FROM rezervace WHERE id IN ($rez)");
         q("DELETE FROM poukazy WHERE id IN ($pou)");
