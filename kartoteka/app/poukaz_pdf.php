@@ -21,14 +21,17 @@ const POUKAZ_POLE_Y = [210.2, 238.9];         // horní a dolní okraj políček
 const POUKAZ_ZAKLADNI_LINKA = 235.0;          // na které výšce (od horního okraje) leží písmo ve vyplněném políčku
 const POUKAZ_VELIKOST = 11.0;                 // největší a nejmenší velikost písma v políčku (pt)
 const POUKAZ_VELIKOST_MIN = 6.5;
-const POUKAZ_BARVA_TEXTU = [0.17, 0.12, 0.09]; // teak hnědá (#2b1e16) z nového návrhu
+const POUKAZ_BARVA_TEXTU = [0.38, 0.14, 0.04]; // tmavě hnědá k oranžovému návrhu salonu (dárkový)
+const POUKAZ_BARVA_VANOCNI = [0.17, 0.12, 0.09]; // teak hnědá (#2b1e16) k vánočnímu návrhu
 /** QR s kódem v rámečku ve spodním pásu: [x, y shora, strana] včetně bílého okraje (pt). */
 const POUKAZ_QR = [214.0, 147.0, 33.0];
-/** Řádek o platnosti pod políčky (pod „Storno“): [x, základní linka shora, velikost]. Stejně ve voucher.js. */
-const POUKAZ_INFO = [25.4, 273.0, 6.8];
+/** Řádek o platnosti: [x, základní linka shora, velikost, na střed, barva]. Stejně ve voucher.js.
+ *  Vánoční: pod políčky (pod „Storno“). Dárkový (oranžový návrh salonu má dole kontakty): světle úplně dole, na střed pod kontakty. */
+const POUKAZ_INFO = ['vanocni' => [25.4, 273.0, 6.8, false, null], 'darkovy' => [282.0, 279.4, 5.3, true, [0.973, 0.925, 0.863]]];
 function poukaz_info_text(string $datum): string { return "Poukaz platí do $datum – do tohoto data je potřeba se objednat, zavolejte na 778 429 329. Masáž na poukaz se nezapočítává do věrnostní kartičky."; }
 /** Kód poukazu bílým písmem na tmavém pruhu: konec textu zprava (x), základní linka od shora, velikost. */
 const POUKAZ_KOD = [518.0, 188.7, 6.8];
+const POUKAZ_KOD_VANOCNI = [515.0, 192.9, 6.8];   // vánoční návrh: na střed tmavého pruhu „Kód poukazu“
 
 function poukaz_dir(): string { return __DIR__ . '/poukaz'; }
 
@@ -169,13 +172,13 @@ function poukaz_motiv_smaz(string $m): void
  * commit (adresa se nemění) a každý soubor se před uložením ověří podle SHA-256, takže nelze podstrčit jiný obsah.
  * Soubory, které už na disku jsou, se nestahují. Při změně podkladů se tady změní commit a součty.
  */
-const POUKAZ_ZDROJ = 'https://raw.githubusercontent.com/kucerazdenek78-jpg/thaimost/31c9ff038f99f7d6846ad45db8b104eac66ca186/kartoteka/';
+const POUKAZ_ZDROJ = 'https://raw.githubusercontent.com/kucerazdenek78-jpg/thaimost/ddec7319fb8742fd1128a56e5ad935af2466d164/kartoteka/';
 const POUKAZ_PODKLADY = [   // cesta v kartotéce => SHA-256
-    'app/poukaz/sablona.pdf' => '0d1a1fad1d00d6c60caef9ec234e306a12b213c93827b661eb60812c55100f18',
+    'app/poukaz/sablona.pdf' => '3cca0433bba07b83f97a5e76f325769d2a2a2512da78c9e3f7238c917c4207c5',
     'app/poukaz/pismo.ttf' => '795ff699ad2fdcfa5ce3585f35e0e8938b739d2cb30ae55961aeccd7fe514a19',
     'app/poukaz/pismo.json' => '5cf0f3b764a94b785a314744988e60a4f7a971dffb2c1a74411100cde768bbbb',
     'app/poukaz/darkovy-poukaz-original.pdf' => '2379a9a63d8d6f0dd0116bc4fecaccedf010f657e78d82d6aa531cf441abff6c',
-    'public/poukaz-pozadi.jpg' => '0d2c4fbee4ba18e640d69139ec1a3e228e6d45d751cdcc637a3df9f3cd905735',
+    'public/poukaz-pozadi.jpg' => '0ad6943bfd6834cc3bdca949f16c3c1d1fad0de53447c1164dd57bf59b437ec1',
     'app/qrcode.php' => '839337a00e1ab8be1916ab20702d724aa41cdd7991dd7fc8187ffbc602998b4e',   // knihovna QR (MIT)
 ];
 
@@ -263,13 +266,20 @@ function poukaz_texty(array $p): array
     $platnost = !empty($p['platnost_do']) && strtotime((string)$p['platnost_do']) ? 'do ' . date('j. n. Y', strtotime((string)$p['platnost_do'])) : '';
     $pole = ['jmeno' => trim((string)($p['pro_koho'] ?? '')), 'procedura' => $procedura, 'platnost' => $platnost];
     $out = [];
+    $vanocni = poukaz_motiv($p) === 'vanocni';
+    $barva = $vanocni ? POUKAZ_BARVA_VANOCNI : POUKAZ_BARVA_TEXTU;
     foreach (POUKAZ_POLE as $k => [$x0, $x1]) {
         if ($pole[$k] === '') continue;
         [$t, $v] = poukaz_vlozit($pole[$k], ($x1 - $x0) - 2 * 5.5);
-        $out[$k] = ['text' => $t, 'x' => $x0 + 5.5, 'y' => POUKAZ_ZAKLADNI_LINKA, 'velikost' => $v];
+        $out[$k] = ['text' => $t, 'x' => $x0 + 5.5, 'y' => POUKAZ_ZAKLADNI_LINKA, 'velikost' => $v, 'barva' => $barva];
     }
-    // pod políčky (pod řádkem Storno): do data platnosti je potřeba se objednat
-    if ($platnost !== '') $out['info'] = ['text' => poukaz_ocisti(poukaz_info_text(date('j. n. Y', strtotime((string)$p['platnost_do'])))), 'x' => POUKAZ_INFO[0], 'y' => POUKAZ_INFO[1], 'velikost' => POUKAZ_INFO[2]];
+    // do data platnosti je potřeba se objednat (poloha podle návrhu)
+    if ($platnost !== '') {
+        [$ix, $iy, $iv, $stred, $ib] = POUKAZ_INFO[$vanocni ? 'vanocni' : 'darkovy'];
+        $t = poukaz_ocisti(poukaz_info_text(date('j. n. Y', strtotime((string)$p['platnost_do']))));
+        if ($stred) $ix -= poukaz_sirka($t, $iv) / 2;
+        $out['info'] = ['text' => $t, 'x' => $ix, 'y' => $iy, 'velikost' => $iv, 'barva' => $ib ?? $barva];
+    }
     return $out;
 }
 
@@ -305,15 +315,15 @@ function poukaz_vrstva(array $p): string
 {
     $h = POUKAZ_VYSKA;
     $s = "q\n";
-    [$r, $g, $b] = POUKAZ_BARVA_TEXTU;
     foreach (poukaz_texty($p) as $t) {
+        [$r, $g, $b] = $t['barva'];
         $s .= sprintf("BT /FT0 %s Tf %s %s %s rg 1 0 0 1 %s %s Tm <%s> Tj ET\n", poukaz_cislo($t['velikost']), poukaz_cislo($r), poukaz_cislo($g),
             poukaz_cislo($b), poukaz_cislo($t['x']), poukaz_cislo($h - $t['y']), poukaz_hex($t['text']));
     }
     $kod = trim((string)($p['kod'] ?? ''));
     if ($kod !== '') {
         $kod = poukaz_ocisti($kod);
-        [$kx, $ky, $kv] = POUKAZ_KOD;
+        [$kx, $ky, $kv] = poukaz_motiv($p) === 'vanocni' ? POUKAZ_KOD_VANOCNI : POUKAZ_KOD;
         $text = 'KÓD  ' . $kod;
         $s .= sprintf("BT /FT0 %s Tf 1 1 1 rg 1 0 0 1 %s %s Tm <%s> Tj ET\n", poukaz_cislo($kv), poukaz_cislo($kx - poukaz_sirka($text, $kv)),
             poukaz_cislo($h - $ky), poukaz_hex($text));
@@ -445,11 +455,11 @@ function poukaz_html(array $p): string
     $s = '<div class="pk"><img src="' . h(poukaz_motiv_url($motiv)) . '" alt="' . h(POUKAZ_MOTIVY[$motiv]) . ' poukaz Thajské masáže Most">';
     foreach (poukaz_texty($p) as $t) {
         $s .= '<span class="pk-t" style="left:' . $pct($t['x'], POUKAZ_SIRKA) . ';top:' . $pct($horni($t['y'], $t['velikost']), POUKAZ_VYSKA)
-            . ';font-size:' . poukaz_cislo($t['velikost'] / POUKAZ_SIRKA * 100) . 'cqw">' . htmlspecialchars($t['text'], ENT_QUOTES, 'UTF-8') . '</span>';
+            . ';font-size:' . poukaz_cislo($t['velikost'] / POUKAZ_SIRKA * 100) . 'cqw;color:' . vsprintf('#%02x%02x%02x', array_map(fn($c) => (int)round($c * 255), $t['barva'])) . '">' . htmlspecialchars($t['text'], ENT_QUOTES, 'UTF-8') . '</span>';
     }
     $kod = poukaz_ocisti((string)($p['kod'] ?? ''));
     if ($kod !== '') {
-        [$kx, $ky, $kv] = POUKAZ_KOD;
+        [$kx, $ky, $kv] = poukaz_motiv($p) === 'vanocni' ? POUKAZ_KOD_VANOCNI : POUKAZ_KOD;
         $s .= '<span class="pk-k" style="right:' . $pct(POUKAZ_SIRKA - $kx, POUKAZ_SIRKA) . ';top:' . $pct($horni($ky, $kv), POUKAZ_VYSKA) . ';font-size:'
             . poukaz_cislo($kv / POUKAZ_SIRKA * 100) . 'cqw">KÓD&nbsp; ' . htmlspecialchars($kod, ENT_QUOTES, 'UTF-8') . '</span>';
         [$qx, $qy, $qs] = POUKAZ_QR;
