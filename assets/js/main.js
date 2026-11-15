@@ -301,9 +301,15 @@
       if (!r.ok) throw new Error(r.chyba || "chyba");
       if (r.cislo) { vs = String(r.cislo); textZak = souhrn(LO); }
       const qr = qrBlok(r);
-      const kontakt = payload.email
-        ? T("Děkujeme! Salon se vám ozve na telefon <b>{tel}</b> nebo e-mail <b>{mail}</b> a domluví převzetí.", { tel: V.esc(payload.telefon), mail: V.esc(payload.email) })
-        : T("Děkujeme! Salon se vám ozve na telefon <b>{tel}</b> a domluví převzetí.", { tel: V.esc(payload.telefon) });
+      /* převodem + e-mailem: poukaz přijde sám po připsání platby; osobně: vyzvednout a zaplatit hotově na recepci */
+      const mail = V.esc(payload.email || "");
+      const kontakt = platba === "prevod" && payload.email && prevzeti === "email"
+        ? T("Děkujeme! Potvrzení s údaji k platbě jsme poslali na e-mail <b>{mail}</b>. Poukaz vám po připsání platby pošleme e-mailem – obvykle do dvou hodin.", { mail })
+        : platba !== "prevod"
+          ? T("Děkujeme! Pro poukaz se prosím zastavte na recepci v otevírací době (Po–Pá 9–20 h) a zaplaťte ho v hotovosti.") + (payload.email ? " " + T("Potvrzení objednávky jsme poslali na e-mail <b>{mail}</b>.", { mail }) : "")
+          : payload.email
+            ? T("Děkujeme! Salon se vám ozve na telefon <b>{tel}</b> nebo e-mail <b>{mail}</b> a domluví převzetí.", { tel: V.esc(payload.telefon), mail })
+            : T("Děkujeme! Salon se vám ozve na telefon <b>{tel}</b> a domluví převzetí.", { tel: V.esc(payload.telefon) });
       done.innerHTML = `<span class="eyebrow">${V.esc(T("Hotovo"))}</span><h3>${V.esc(T("Objednávka č. {vs} přijata", { vs }))}</h3>
         <p>${kontakt}${qr ? " " + T("Platbu proveďte podle QR kódu níže.") : ""}</p>
         ${platnostBlok(r)}

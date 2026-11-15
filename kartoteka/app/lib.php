@@ -340,6 +340,58 @@ function sluzba_foto_smaz(string $kod): void
     foreach (glob(dirname(__DIR__) . "/public/sluzba-foto-$kod-*") ?: [] as $stary) @unlink($stary);
 }
 
+/** Chce zákazník poukaz poslat e-mailem? / Platí převodem? (texty voleb z webu se ukládají česky) */
+function poukaz_chce_email(array $p): bool { return mb_stripos((string)$p['prevzeti'], 'e-mail') !== false; }
+function poukaz_platba_prevodem(array $p): bool { return mb_stripos((string)$p['platba'], 'převod') !== false; }
+
+/**
+ * Potvrzení objednávky poukazu z webu zákazníkovi (bez poukazu – ten platí až po zaplacení):
+ *  - převodem: údaje k platbě, poukaz přijde e-mailem do dvou hodin od připsání platby;
+ *  - hotově / vyzvednutí: ať se pro poukaz zastaví na recepci v otevírací době a zaplatí hotově.
+ */
+function poukaz_email_objednavka(int $pid): void
+{
+    $p = q1('SELECT * FROM poukazy WHERE id=?', [$pid]);
+    if (!$p || !filter_var($p['objednal_email'], FILTER_VALIDATE_EMAIL)) return;
+    $popis = trim((string)$p['sluzba_text']) !== '' ? $p['sluzba_text'] . ' (' . kc((int)$p['hodnota']) . ')' : 'na částku ' . kc((int)$p['hodnota']);
+    $cislo = $p['vs'] !== '' ? $p['vs'] : (string)$p['id'];
+    $r = ['Dobrý den,', '', "děkujeme za objednávku dárkového poukazu č. $cislo – $popis" . (trim((string)$p['pro_koho']) !== '' ? ', pro: ' . trim($p['pro_koho']) : '') . '.', ''];
+    $ucet = salon_ucet();
+    if (poukaz_platba_prevodem($p) && $ucet !== '') {
+        array_push($r, 'Prosíme o úhradu převodem:', "  Účet: $ucet", '  IBAN: ' . ucet_iban($ucet), '  Částka: ' . kc((int)$p['hodnota']), "  Variabilní symbol: $cislo", '',
+            poukaz_chce_email($p)
+                ? 'Jakmile platba dorazí na náš účet, pošleme vám poukaz e-mailem – obvykle do dvou hodin od připsání platby (převod z jiné banky může trvat až do dalšího pracovního dne).'
+                : 'Jakmile platba dorazí na náš účet, poukaz pro vás připravíme na recepci.');
+    } else {
+        array_push($r, 'Pro poukaz se prosím zastavte na recepci v otevírací době (Po–Pá 9–20 h) a zaplaťte ho v hotovosti – ' . kc((int)$p['hodnota']) . '.',
+            "Stačí říct číslo objednávky $cislo.");
+    }
+    if (!empty($p['platnost_do'])) array_push($r, '', 'Poukaz platí do ' . date('j. n. Y', strtotime((string)$p['platnost_do'])) . ' – do té doby je potřeba se na masáž objednat (telefon 778 429 329).');
+    array_push($r, '', 'Děkujeme a těšíme se na vás.', 'Thajské masáže Most', 'SNP 2654/26, 434 01 Most', '+420 778 429 329');
+    posli_email($p['objednal_email'], "Thai Most – objednávka dárkového poukazu č. $cislo", implode("\n", $r) . "\n");
+}
+
+/**
+ * Po spárování platby převodem: poukaz se aktivuje (stav „vydáno“) a když ho zákazník chtěl e-mailem, rovnou se mu pošle.
+ * Vrací text do poznámky / logu.
+ */
+function poukaz_po_zaplaceni(int $pid): string
+{
+    $p = q1('SELECT * FROM poukazy WHERE id=?', [$pid]);
+    if (!$p || $p['stav'] !== 'zaplaceno') return '';
+    if (!poukaz_chce_email($p)) return '';
+    if (!filter_var($p['objednal_email'], FILTER_VALIDATE_EMAIL)) return 'Poukaz chtěl e-mailem, ale e-mail chybí – pošlete ho ručně.';
+    if (!function_exists('poukaz_posli_emailem')) return '';
+    [$txt, $typ] = poukaz_posli_emailem($p, $p['objednal_email']);
+    if ($typ === 'ok') {
+        q("UPDATE poukazy SET stav='vydano', poznamka=TRIM(poznamka || ' ' || ?) WHERE id=? AND stav='zaplaceno'", ['Poukaz odeslán e-mailem ' . date('j. n. Y H:i') . ' na ' . $p['objednal_email'] . ' (po spárování platby) – aktivní.', $pid]);
+        return "poukaz odeslán na $p[objednal_email] a aktivován";
+    }
+    q("UPDATE poukazy SET poznamka=TRIM(poznamka || ' ' || ?) WHERE id=?", ['⚠ Automatické odeslání poukazu se nepovedlo: ' . $txt, $pid]);
+    foreach (posta_upozorneni() as $adr) posli_email($adr, "Poukaz $p[kod] se nepodařilo odeslat zákazníkovi", "Platba za poukaz $p[kod] je spárovaná, ale poukaz se nepodařilo poslat na $p[objednal_email]:\n$txt\n\n" . rtrim(cfg()['url'], '/') . "/?r=poukaz&id=$pid\n", null, 'interni');
+    return 'odeslání poukazu selhalo: ' . $txt;
+}
+
 /** Platby, za které se dává razítko (masáž na poukaz jen když je to v nastavení zapnuté). */
 function bonus_platby(): array
 {
@@ -520,7 +572,7 @@ function poukaz_kod_norm(string $k): string
 const STAVY_POUKAZU = [
     'objednano' => 'Objednáno (čeká na platbu)',
     'zaplaceno' => 'Zaplaceno',
-    'vydano' => 'Vydáno',
+    'vydano' => 'Aktivní (vydáno)',
     'uplatneno' => 'Uplatněno',
     'propadle' => 'Propadlé',
     'zruseno' => 'Zrušeno',

@@ -388,5 +388,8 @@
  "Vánoční poukaz": "Weihnachtsgutschein",
  "s vánočním motivem": "mit Weihnachtsmotiv",
  "Masáž na poukaz se nezapočítává do věrnostní kartičky.": "Eine Massage, die mit einem Gutschein bezahlt wird, wird nicht auf der Treuekarte gutgeschrieben.",
- "Ilustrační foto": "Beispielfoto"
+ "Ilustrační foto": "Beispielfoto",
+ "Děkujeme! Potvrzení s údaji k platbě jsme poslali na e-mail <b>{mail}</b>. Poukaz vám po připsání platby pošleme e-mailem – obvykle do dvou hodin.": "Vielen Dank! Wir haben Ihnen eine Bestätigung mit den Zahlungsdaten an die E-Mail-Adresse <b>{mail}</b> gesendet. Den Gutschein senden wir Ihnen per E-Mail zu, sobald die Zahlung eingegangen ist – in der Regel innerhalb von zwei Stunden.",
+ "Děkujeme! Pro poukaz se prosím zastavte na recepci v otevírací době (Po–Pá 9–20 h) a zaplaťte ho v hotovosti.": "Vielen Dank! Um den Gutschein abzuholen, kommen Sie bitte während der Öffnungszeiten (Mo–Fr 9–20 Uhr) an der Rezeption vorbei und bezahlen Sie ihn in bar.",
+ "Potvrzení objednávky jsme poslali na e-mail <b>{mail}</b>.": "Wir haben die Bestellbestätigung an die E-Mail-Adresse <b>{mail}</b> gesendet."
 }

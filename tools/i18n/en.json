@@ -388,5 +388,8 @@
  "Vánoční poukaz": "Christmas voucher",
  "s vánočním motivem": "with a Christmas design",
  "Masáž na poukaz se nezapočítává do věrnostní kartičky.": "Massages paid for with a voucher do not count towards the loyalty card.",
- "Ilustrační foto": "Illustrative photo"
+ "Ilustrační foto": "Illustrative photo",
+ "Děkujeme! Potvrzení s údaji k platbě jsme poslali na e-mail <b>{mail}</b>. Poukaz vám po připsání platby pošleme e-mailem – obvykle do dvou hodin.": "Thank you! We have sent a confirmation email containing your payment details to <b>{mail}</b>. We will email you the voucher once the payment has been credited – usually within two hours.",
+ "Děkujeme! Pro poukaz se prosím zastavte na recepci v otevírací době (Po–Pá 9–20 h) a zaplaťte ho v hotovosti.": "Thank you! To collect your voucher, please pop into reception during opening hours (Mon–Fri 9 am–8 pm) and pay for it in cash.",
+ "Potvrzení objednávky jsme poslali na e-mail <b>{mail}</b>.": "We have sent the order confirmation to the email address <b>{mail}</b>."
 }

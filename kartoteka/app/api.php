@@ -148,6 +148,7 @@ function api_poukaz(): void
         . (($d['poznamka'] ?? '') !== '' ? "Poznámka: $d[poznamka]\n" : '')
         . "\nKód v kartotéce: $kod\n" . rtrim(cfg()['url'], '/') . "/?r=poukaz&id=$pid\n"];
     foreach (posta_upozorneni() as $adr) posli_email($adr, $txtPoukaz[0], $txtPoukaz[1], null, 'interni');
+    try { poukaz_email_objednavka($pid); } catch (Throwable $e) { error_log('potvrzení objednávky poukazu: ' . $e->getMessage()); }   // zákazníkovi: jak zaplatit / kdy poukaz dostane
 
     // Kód poukazu zákazníkovi nevracíme – platí až po zaplacení a vydání v salonu. Číslo poukazu (= VS) a platnost ano.
     $ucet = salon_ucet(); $iban = ucet_iban($ucet);
