@@ -69,6 +69,26 @@ function import_vcf(string $obsah): array
     return $out;
 }
 
+/** Kontakty přímo z připojeného Google účtu (Správa → Google kontakty) – stejný formát jako ze souboru. */
+function import_z_googlu(): array
+{
+    $out = []; $dalsi = null;
+    for ($i = 0; $i < 60; $i++) {
+        $d = gk_api('GET', 'people/me/connections', null, array_filter(['personFields' => 'names,phoneNumbers,emailAddresses,metadata', 'pageSize' => 1000, 'pageToken' => $dalsi]), 60);
+        foreach ($d['connections'] ?? [] as $o) {
+            if (!empty($o['metadata']['deleted'])) continue;
+            $n = $o['names'][0] ?? [];
+            $out[] = import_kontakt((string)($n['givenName'] ?? ''), (string)($n['familyName'] ?? ''), (string)($n['displayName'] ?? ''),
+                array_map(fn($p) => (string)($p['canonicalForm'] ?? $p['value'] ?? ''), $o['phoneNumbers'] ?? []),
+                array_map(fn($m) => (string)($m['value'] ?? ''), $o['emailAddresses'] ?? []));
+        }
+        $dalsi = $d['nextPageToken'] ?? null;
+        if (!$dalsi) break;
+    }
+    usort($out, fn($a, $b) => strcoll($a['prijmeni'] . ' ' . $a['jmeno'], $b['prijmeni'] . ' ' . $b['jmeno']));
+    return $out;
+}
+
 function stranka_import(array $u): void
 {
     session_start_safe();
@@ -79,6 +99,13 @@ function stranka_import(array $u): void
             if (!$fl || $fl['error'] !== UPLOAD_ERR_OK || $fl['size'] > 8 * 1024 * 1024) { flash('Soubor se nepodařilo nahrát (max. 8 MB).', 'err'); presmeruj('/?r=import'); }
             $kontakty = import_parsuj((string)file_get_contents($fl['tmp_name']));
             if (!$kontakty) { flash('V souboru nejsou žádné kontakty. Použijte export z Google Kontaktů ve formátu Google CSV nebo vCard.', 'err'); presmeruj('/?r=import'); }
+            $_SESSION['import'] = $kontakty;
+            presmeruj('/?r=import');
+        } elseif ($akce === 'google') {
+            if (!function_exists('gk_pripojeno') || !gk_pripojeno()) { flash('Google účet není připojený (Správa → Nastavení → Google kontakty).', 'err'); presmeruj('/?r=import'); }
+            try { $kontakty = import_z_googlu(); }
+            catch (Throwable $e) { flash('Kontakty z Googlu se nepodařilo načíst: ' . $e->getMessage(), 'err'); presmeruj('/?r=import'); }
+            if (!$kontakty) { flash('V Google účtu nejsou žádné kontakty.', 'err'); presmeruj('/?r=import'); }
             $_SESSION['import'] = $kontakty;
             presmeruj('/?r=import');
         } elseif ($akce === 'potvrd' && !empty($_SESSION['import'])) {
@@ -105,8 +132,16 @@ function stranka_import(array $u): void
     <div class="cal-nav"><h1>Import kontaktů z Google</h1><a class="btn" href="/?r=zakaznici">‹ Zákazníci</a></div>
     <?php if (!$kont): ?>
       <div class="cols"><div>
+        <?php if (function_exists('gk_pripojeno') && gk_pripojeno()): ?>
+        <form method="post" class="card"><?= csrf_pole() ?><input type="hidden" name="akce" value="google">
+          <h2>Načíst přímo z Google účtu</h2>
+          <p class="small">Načte všechny kontakty z připojeného účtu <b><?= h(gk_nast('ucet') ?: gk_nast('email')) ?></b>. Nejdřív uvidíte náhled a vyberete, koho převzít.
+            Převzatí lidé se zpět do telefonu nepřepisují (žádné značky ve jménu), dokud u vás nemají první rezervaci.</p>
+          <button class="btn primary">⬇ Načíst kontakty z Googlu</button>
+        </form>
+        <?php endif ?>
         <form method="post" enctype="multipart/form-data" class="card"><?= csrf_pole() ?><input type="hidden" name="akce" value="nahraj">
-          <h2>1. Nahrajte exportovaný soubor</h2>
+          <h2><?= function_exists('gk_pripojeno') && gk_pripojeno() ? 'Nebo nahrajte' : '1. Nahrajte' ?> exportovaný soubor</h2>
           <label>Soubor z Google Kontaktů (.csv nebo .vcf)<input type="file" name="soubor" accept=".csv,.vcf,text/csv,text/vcard" required></label>
           <button class="btn primary">Nahrát a ukázat náhled</button>
         </form>

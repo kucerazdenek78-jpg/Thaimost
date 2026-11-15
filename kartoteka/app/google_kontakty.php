@@ -275,10 +275,14 @@ function gk_maserka_jmeno(?int $id): string
     return $id ? (string)($m[$id] ?? '') : '';
 }
 
-/** Zákazníci, kteří se posílají do telefonu (vzorová data a zákazníci bez platného čísla ne). */
+/** Zákazníci, kteří se posílají do telefonu (vzorová data a zákazníci bez platného čísla ne).
+ *  Lidé převzatí z Google kontaktů (zdroj 'google') se zpět do Googlu nezapisují, dokud u nás nemají rezervaci –
+ *  jinak by kartotéka přejmenovala (doplnila značky) všechny osobní kontakty v telefonu. */
 function gk_zakaznici(): array
 {
-    return q("SELECT * FROM zakaznici WHERE zdroj <> 'vzor' ORDER BY prijmeni, jmeno, id")->fetchAll();
+    return q("SELECT * FROM zakaznici WHERE zdroj <> 'vzor'
+        AND (zdroj <> 'google' OR EXISTS (SELECT 1 FROM rezervace r WHERE r.zakaznik_id = zakaznici.id))
+        ORDER BY prijmeni, jmeno, id")->fetchAll();
 }
 
 /**
