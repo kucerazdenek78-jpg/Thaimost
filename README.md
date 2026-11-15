@@ -52,3 +52,4 @@ GitHub → Settings → Pages → Source: *Deploy from a branch* → `main` / `(
 
 - `nabidka-masazi.html` – vícestránková nabídka (A4), generuje se automaticky z `assets/js/data.js` (ceny + texty + fotky). Na webu odkaz v sekci „Služby a ceník“.
 - `nabidka-masazi.pdf` – stažitelný PDF e-book. **Po změně cen/textů v `data.js` přegenerovat:** `python3 tools/nabidka_pdf.py` (potřebuje Google Chrome / Chromium). Poté commitnout nový PDF.
+- `nabidka-masazi-tisk.pdf` (a `-en-tisk`, `-de-tisk`) – verze pro tiskárnu: A4 na šířku, spad 3 mm, ořezové značky, TrimBox/BleedBox. Přegenerování: `python3 tools/nabidka_tisk.py`.
