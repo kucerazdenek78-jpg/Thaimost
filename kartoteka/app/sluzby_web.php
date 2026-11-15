@@ -166,7 +166,6 @@ h2{font:600 1.6em "EB Garamond",Georgia,serif;color:#6b4a2b;margin:0 0 .3em;padd
   <div class="pata">
     <ul>
       <?php if ($bonus): ?><li><?= h(cenik_t('Každá šestá masáž zdarma s věrnostní kartičkou.', $jz)) ?></li><?php endif ?>
-      <li><?= h(cenik_t('Víkendové masáže dle domluvy s masérkami – příplatek 150 Kč/osoba.', $jz)) ?></li>
       <li><?= h(cenik_t('Dárkové poukazy na částku i na konkrétní masáž – na recepci nebo na webu.', $jz)) ?></li>
       <li><?= h(cenik_t('Otevřeno Po–Pá 9–20 h, víkendy po domluvě. Změny a storno prosím telefonicky.', $jz)) ?></li>
     </ul>
