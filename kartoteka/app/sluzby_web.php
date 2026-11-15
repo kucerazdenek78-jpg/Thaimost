@@ -95,7 +95,8 @@ function cenik_kc(int $n, string $jz): string
 /** Ceník na jednu stranu A4 – tisk z prohlížeče (Tisk → Uložit jako PDF). Volby: jazyk, popisy, datum platnosti. */
 function stranka_cenik_tisk(): void
 {
-    $jz = in_array($_GET['jazyk'] ?? 'cs', ['cs', 'en', 'de'], true) ? $_GET['jazyk'] : 'cs';
+    $jz = (string)($_GET['jazyk'] ?? 'cs');
+    if (!in_array($jz, ['cs', 'en', 'de'], true)) $jz = 'cs';
     $popisy = ($_GET['popisy'] ?? '1') === '1';
     $od = preg_match('~^\d{4}-\d{2}-\d{2}$~', $_GET['od'] ?? '') ? $_GET['od'] : date('Y-m-d');
     $kat = q('SELECT kod, kat FROM sluzby')->fetchAll(PDO::FETCH_KEY_PAIR);
