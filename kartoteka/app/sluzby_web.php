@@ -52,3 +52,119 @@ function sluzby_web(): array
     }
     return $o;
 }
+
+// ---------- Ceník A4 k tisku (Nastavení → Ceník → „Ceník A4“) ----------
+
+/** Pevné texty ceníku a položky ceníku v angličtině / němčině (z překladů webu, tools/i18n). */
+const CENIK_TISK_PREKLADY = ['en' => ['Sauna + sprcha' => 'Sauna + shower', '90 min whirlpool' => '90-minute whirlpool', '90 min whirlpool + sauna' => '90-minute whirlpool + sauna', '120 min párová (2 asistentky + šampaňské + whirlpool + sauna)' => '120-minute couples’ treatment (2 assistants + champagne + whirlpool + sauna)', '60 min s bylinnými sáčky' => '60 minutes with herbal sachets', 'Víkendové masáže dle domluvy s masérkami – příplatek 150 Kč/osoba.' => 'Weekend massages by arrangement with the masseuses – surcharge of 150 CZK per person.', 'Masáže' => 'Massages', 'Wellness a rituály' => 'Wellness and rituals', 'Otevřeno Po–Pá 9–20 h, víkendy po domluvě. Změny a storno prosím telefonicky.' => 'Open Monday–Friday 9 am–8 pm; weekends by arrangement. Please contact us by telephone to make any changes or cancellations.', 'Dárkové poukazy' => 'Gift vouchers', 'Ceník' => 'Price List', 'Thajské masáže Most · od roku 2004' => 'Thai Massages Most · since 2004', 'Platí od' => 'Valid from', 'Každá šestá masáž zdarma s věrnostní kartičkou.' => 'Every sixth massage is free with a loyalty card.', 'Dárkové poukazy na částku i na konkrétní masáž – na recepci nebo na webu.' => 'Gift vouchers for a specific amount or for a particular massage – available at reception or online.', 'Objednávky' => 'Orders'], 'de' => ['Sauna + sprcha' => 'Sauna + Dusche', '90 min whirlpool' => '90 Minuten Whirlpool', '90 min whirlpool + sauna' => '90 Minuten Whirlpool + Sauna', '120 min párová (2 asistentky + šampaňské + whirlpool + sauna)' => '120 Min. für Paare (2 Assistentinnen + Champagner + Whirlpool + Sauna)', '60 min s bylinnými sáčky' => '60 Minuten mit Kräutersäckchen', 'Víkendové masáže dle domluvy s masérkami – příplatek 150 Kč/osoba.' => 'Massagen am Wochenende nach Absprache mit den Masseurinnen – Aufpreis 150 CZK pro Person.', 'Masáže' => 'Massagen', 'Wellness a rituály' => 'Wellness und Rituale', 'Otevřeno Po–Pá 9–20 h, víkendy po domluvě. Změny a storno prosím telefonicky.' => 'Geöffnet Montag–Freitag 9–20 Uhr, am Wochenende nach Vereinbarung. Änderungen und Stornierungen bitte telefonisch.', 'Dárkové poukazy' => 'Geschenkgutscheine', 'Ceník' => 'Preisliste', 'Thajské masáže Most · od roku 2004' => 'Thai-Massagen Most · seit 2004', 'Platí od' => 'Gültig ab', 'Každá šestá masáž zdarma s věrnostní kartičkou.' => 'Jede sechste Massage ist mit der Treuekarte kostenlos.', 'Dárkové poukazy na částku i na konkrétní masáž – na recepci nebo na webu.' => 'Geschenkgutscheine für einen bestimmten Betrag oder für eine bestimmte Massage – an der Rezeption oder auf der Website erhältlich.', 'Objednávky' => 'Bestellungen']];
+
+function cenik_t(string $t, string $jz): string
+{
+    if ($jz === 'cs') return $t;
+    if (isset(CENIK_TISK_PREKLADY[$jz][$t])) return CENIK_TISK_PREKLADY[$jz][$t];
+    if (preg_match('~^(\d+) min$~', $t, $m)) return $jz === 'en' ? "$m[1] mins" : "$m[1] Min.";
+    return $t;
+}
+
+function cenik_kc(int $n, string $jz): string
+{
+    return $jz === 'cs' ? number_format($n, 0, ',', "\u{00A0}") . "\u{00A0}Kč" : number_format($n, 0, ',', $jz === 'de' ? '.' : ',') . "\u{00A0}CZK";
+}
+
+/** Ceník na jednu stranu A4 – tisk z prohlížeče (Tisk → Uložit jako PDF). Volby: jazyk, popisy, datum platnosti. */
+function stranka_cenik_tisk(): void
+{
+    $jz = in_array($_GET['jazyk'] ?? 'cs', ['cs', 'en', 'de'], true) ? $_GET['jazyk'] : 'cs';
+    $popisy = ($_GET['popisy'] ?? '1') === '1';
+    $od = preg_match('~^\d{4}-\d{2}-\d{2}$~', $_GET['od'] ?? '') ? $_GET['od'] : date('Y-m-d');
+    $kat = q('SELECT kod, kat FROM sluzby')->fetchAll(PDO::FETCH_KEY_PAIR);
+    $skupiny = ['masaze' => [], 'wellness' => []];
+    foreach (sluzby_web() as $kod => $s) {
+        if (!$s['aktivni']) continue;
+        $tr = $s['preklady'][$jz] ?? [];
+        $s['t_nazev'] = $jz !== 'cs' && ($tr['nazev'] ?? '') !== '' ? $tr['nazev'] : $s['nazev'];
+        $s['t_popis'] = $jz !== 'cs' && ($tr['popis'] ?? '') !== '' ? $tr['popis'] : $s['popis'];
+        $s['t_pozn'] = $jz !== 'cs' && ($tr['pozn'] ?? '') !== '' ? $tr['pozn'] : $s['pozn'];
+        $skupiny[($kat[$kod] ?? 'masaze') === 'wellness' ? 'wellness' : 'masaze'][] = $s;
+    }
+    $datum = $jz === 'en' ? date('j F Y', strtotime($od)) : date('j. n. Y', strtotime($od));
+    $bonus = (int)nastaveni('bonus_po', 5) === 5;
+    $url = function (array $zmena) use ($jz, $popisy, $od) { return '/?' . http_build_query(array_merge(['r' => 'nastaveni', 'sekce' => 'cenik_tisk', 'jazyk' => $jz, 'popisy' => $popisy ? '1' : '0', 'od' => $od], $zmena)); };
+    ?><!doctype html><html lang="<?= $jz ?>"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title><?= h(cenik_t('Ceník', $jz)) ?> – Thai Most</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=EB+Garamond:wght@500;600&family=Manrope:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+@page{size:A4;margin:0}
+*{box-sizing:border-box}
+body{margin:0;background:#e9e2d8;font:400 9.4pt/1.38 Manrope,Arial,sans-serif;color:#2b1e16;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+.list{width:210mm;height:297mm;margin:12px auto;background:#fbf7f1;padding:12mm 13mm 10mm;position:relative;box-shadow:0 4px 24px rgba(0,0,0,.18);display:flex;flex-direction:column;overflow:hidden;font-size:9.4pt}
+.obsah{display:flex;flex-direction:column;flex:1;min-height:0;overflow:hidden;font-size:1em}
+.hl{display:flex;align-items:flex-end;justify-content:space-between;border-bottom:1.5pt solid #b07a3a;padding-bottom:.42em;margin-bottom:.6em}
+.hl h1{margin:0;font:600 3em/1 "EB Garamond",Georgia,serif;color:#6b4a2b;letter-spacing:.01em}
+.hl .pod{font:700 .78em Manrope;letter-spacing:.22em;text-transform:uppercase;color:#b07a3a;margin-top:.3em}
+.hl .kontakt{text-align:right;font-size:.92em;line-height:1.5}.hl .kontakt b{font-size:1.25em}
+h2{font:600 1.6em "EB Garamond",Georgia,serif;color:#6b4a2b;margin:0 0 .3em;padding-bottom:.05em;border-bottom:.6pt solid #d9c3a3}
+.sk{columns:2;column-gap:8mm;margin-bottom:.5em}
+.sl{break-inside:avoid;margin:0 0 .5em}
+.sl h3{margin:0;font:600 1.22em/1.2 "EB Garamond",Georgia,serif;color:#2b1e16}
+.sl p{margin:.1em 0 .15em;font-size:.86em;line-height:1.33;color:#5a4a3f}.sl p.pozn{font-style:italic;color:#7d6a5c;margin-top:0}
+.c{display:flex;align-items:baseline;gap:.4em;font-size:.95em;line-height:1.35}.c span{flex:0 1 auto}.c i{flex:1;border-bottom:.8pt dotted #b9a58c;transform:translateY(-.25em)}.c b{white-space:nowrap;font-weight:700}
+.pata{margin-top:auto;border-top:.6pt solid #d9c3a3;padding-top:.4em;font-size:.86em;color:#5a4a3f;display:flex;justify-content:space-between;gap:8mm}
+.pata ul{margin:0;padding-left:1.1em}
+.pata .plati{white-space:nowrap;text-align:right}
+.ovl{max-width:210mm;margin:12px auto 0;font:14px Manrope,sans-serif;display:flex;gap:10px;flex-wrap:wrap;align-items:center;padding:0 8px}
+.ovl a,.ovl button{padding:7px 12px;border-radius:8px;border:1px solid #b07a3a;background:#fff;color:#6b4a2b;text-decoration:none;font:600 14px Manrope,sans-serif;cursor:pointer}
+.ovl a.on{background:#6b4a2b;color:#fff;border-color:#6b4a2b}.ovl button{background:#b07a3a;color:#fff}.ovl input{font:14px Manrope;padding:5px}
+@media print{body{background:#fff}.ovl{display:none}.list{margin:0;box-shadow:none}}
+</style></head><body>
+<div class="ovl">
+  <button onclick="print()">🖨 Vytisknout / uložit jako PDF</button>
+  <?php foreach (['cs' => 'Česky', 'en' => 'English', 'de' => 'Deutsch'] as $k => $n): ?><a class="<?= $k === $jz ? 'on' : '' ?>" href="<?= h($url(['jazyk' => $k])) ?>"><?= $n ?></a><?php endforeach ?>
+  <a class="<?= $popisy ? 'on' : '' ?>" href="<?= h($url(['popisy' => $popisy ? '0' : '1'])) ?>">Popisy služeb <?= $popisy ? 'ano' : 'ne' ?></a>
+  <form style="display:inline-flex;gap:6px;align-items:center" method="get"><input type="hidden" name="r" value="nastaveni"><input type="hidden" name="sekce" value="cenik_tisk"><input type="hidden" name="jazyk" value="<?= $jz ?>"><input type="hidden" name="popisy" value="<?= $popisy ? '1' : '0' ?>">Platí od <input type="date" name="od" value="<?= h($od) ?>" onchange="this.form.submit()"></form>
+  <span style="color:#7d6a5c;font-size:12px" id="vejde"></span>
+</div>
+<div class="list" id="list"><div class="obsah" id="obsah">
+  <div class="hl">
+    <div><h1>Thai Most · <?= h(cenik_t('Ceník', $jz)) ?></h1><div class="pod"><?= h(cenik_t('Thajské masáže Most · od roku 2004', $jz)) ?></div></div>
+    <div class="kontakt"><b>+420 778 429 329</b><br>SNP 2654/26, 434 01 Most<br>www.thaimost.cz</div>
+  </div>
+  <?php foreach (['masaze' => 'Masáže', 'wellness' => 'Wellness a rituály'] as $k => $nadpis): if (!$skupiny[$k]) continue; ?>
+    <h2><?= h(cenik_t($nadpis, $jz)) ?></h2>
+    <div class="sk">
+    <?php foreach ($skupiny[$k] as $s): ?>
+      <div class="sl"><h3><?= h($s['t_nazev']) ?></h3>
+        <?php if ($popisy && $s['t_popis'] !== ''): ?><p><?= h($s['t_popis']) ?></p><?php endif ?>
+        <?php if ($popisy && $s['t_pozn'] !== ''): ?><p class="pozn"><?= h($s['t_pozn']) ?></p><?php endif ?>
+        <?php foreach ($s['ceny'] as [$pol, $cena]): ?><div class="c"><span><?= h(cenik_t($pol, $jz)) ?></span><i></i><b><?= h(cenik_kc($cena, $jz)) ?></b></div><?php endforeach ?>
+      </div>
+    <?php endforeach ?>
+    </div>
+  <?php endforeach ?>
+  <div class="pata">
+    <ul>
+      <?php if ($bonus): ?><li><?= h(cenik_t('Každá šestá masáž zdarma s věrnostní kartičkou.', $jz)) ?></li><?php endif ?>
+      <li><?= h(cenik_t('Víkendové masáže dle domluvy s masérkami – příplatek 150 Kč/osoba.', $jz)) ?></li>
+      <li><?= h(cenik_t('Dárkové poukazy na částku i na konkrétní masáž – na recepci nebo na webu.', $jz)) ?></li>
+      <li><?= h(cenik_t('Otevřeno Po–Pá 9–20 h, víkendy po domluvě. Změny a storno prosím telefonicky.', $jz)) ?></li>
+    </ul>
+    <div class="plati"><?= h(cenik_t('Platí od', $jz)) ?> <?= h($datum) ?></div>
+  </div>
+</div></div>
+<script>
+// přizpůsobení na jednu stranu A4: písmo se zmenšuje, dokud se obsah nevejde (nejmíň na 72 %)
+(function () {
+  var l = document.getElementById('list'), o = document.getElementById('obsah'), s = document.getElementById('vejde');
+  function fit() {
+    var v = 9.4; l.style.fontSize = v + 'pt';
+    while (o.scrollHeight > o.clientHeight + 1 && v > 6.8) { v -= 0.1; l.style.fontSize = v.toFixed(2) + 'pt'; }
+    s.textContent = o.scrollHeight > o.clientHeight + 1 ? '⚠ Nevejde se na jednu stranu A4 ani zmenšené – vypněte popisy služeb.' : '✓ Jedna strana A4' + (v < 9.39 ? ' (písmo ' + Math.round(v / 9.4 * 100) + ' %)' : '') + '.';
+  }
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(fit); else fit();
+  window.addEventListener('beforeprint', fit);
+})();
+</script>
+</body></html><?php
+    exit;
+}

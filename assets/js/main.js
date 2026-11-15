@@ -28,6 +28,24 @@
   if (vid) vid.addEventListener("error", () => vid.remove(), true);
 
   /* služby; tx = text služby v jazyce stránky (překlad z kartotéky, jinak slovník webu); s.nazev/popis/pozn zůstávají česky (salon, poukaz) */
+  /* ceny z data.js při načtení – když kartotéka pošle jiné, přepíšou se i v textech označených data-ceny (úvod, otázky) */
+  const CENY_PUVODNI = new Map(D.sluzby.map(s => [s.id, s.ceny.map(c => c[1])]));
+  function prepisCenyVTextech() {
+    const zmeny = new Map(), sporne = new Set();
+    D.sluzby.forEach(s => (CENY_PUVODNI.get(s.id) || []).forEach((stara, i) => {
+      const nova = s.ceny[i] && s.ceny[i][1]; if (!nova || nova === stara) return;
+      if (zmeny.has(stara) && zmeny.get(stara) !== nova) sporne.add(stara); else zmeny.set(stara, nova);
+    }));
+    sporne.forEach(c => zmeny.delete(c));
+    if (!zmeny.size) return;
+    const fmt = n => Number(n).toLocaleString(T.loc || "cs-CZ");
+    document.querySelectorAll("[data-ceny]").forEach(el => {
+      const w = document.createTreeWalker(el, NodeFilter.SHOW_TEXT); let n;
+      while ((n = w.nextNode())) n.nodeValue = n.nodeValue.replace(/(\d{1,3}(?:[ \u00a0\u202f.,]\d{3})*)(\s*)(Kč|CZK)/g, (m, cis, mez, mena) => {
+        const v = +cis.replace(/\D/g, ""); return zmeny.has(v) ? fmt(zmeny.get(v)).replace(/\u202f/g, "\u00a0") + mez + mena : m;
+      });
+    });
+  }
   const tx = (s, f) => (T.lang !== "cs" && s.tr && s.tr[f]) || T(s[f] || "");
   const grid = $("#svGrid");
   let katAkt = "vse";
@@ -118,18 +136,24 @@
     if (r.fotky && typeof r.fotky === "object") {
       D.sluzby.forEach(s => { const u = r.fotky[s.id]; if (u && /^https:\/\//.test(u)) { s.foto = u; s.vlastni = true; zmena = true; } });
     }
-    if (zmena) { renderSluzby(katAkt); naplnSluzbyPoukazu(); }
+    if (zmena) { renderSluzby(katAkt); naplnSluzbyPoukazu(); naplnHodnoty(); prepisCenyVTextech(); }
     platnostInfo(); update();
   }).catch(() => {});
 
   const st = { typ: "hodnota", hodnota: 1000, sluzbaId: D.sluzby[0].id, varIdx: 0, motiv: "darkovy" };
   document.querySelectorAll('input[name="motiv"]').forEach(r => r.addEventListener("change", () => { st.motiv = r.value; update(); }));
-  const HODNOTY = [500, 790, 1000, 1500, 2000];
+  /* částky poukazu; druhá = cena tradiční thajské masáže 60 min z ceníku (kartotéka), ať sedí s ceníkem */
+  const HODNOTY = [500, 800, 1000, 1500, 2000];
+  function naplnHodnoty() {
+    const t = D.sluzby.find(s => s.id === "tradicni");
+    if (t && t.ceny[0]) HODNOTY[1] = t.ceny[0][1];
+    $("#chips").innerHTML = HODNOTY.map(h => `<button type="button" data-h="${h}">${V.kc(h)}</button>`).join("") + `<button type="button" data-h="x">${V.esc(T("Jiná částka"))}</button>`;
+  }
   /* texty voleb, které se odesílají salonu (vždy česky; zákazník vidí svůj jazyk) */
   const PREVZETI_CS = { salon: TK("Vyzvednu osobně v salonu"), email: TK("Pošlete mi ho e-mailem k vytištění") };
   const PLATBA_CS = { salon: TK("Hotově v salonu při vyzvednutí"), prevod: TK("Převodem / QR platbou předem") };
 
-  $("#chips").innerHTML = HODNOTY.map(h => `<button type="button" data-h="${h}">${V.kc(h)}</button>`).join("") + `<button type="button" data-h="x">${V.esc(T("Jiná částka"))}</button>`;
+  naplnHodnoty();
   function naplnSluzbyPoukazu() {
     if (!D.sluzby.some(s => s.id === st.sluzbaId)) st.sluzbaId = D.sluzby[0].id;
     $("#selSluzba").innerHTML = ["masaze", "wellness"].map(k =>

@@ -10,6 +10,7 @@ function stranka_nastaveni(array $u): void
     if (($_GET['sekce'] ?? '') === 'reklamy') { stranka_reklamy($u); return; }
     if (($_GET['sekce'] ?? '') === 'posta') { stranka_posta($u); return; }
     if (($_GET['sekce'] ?? '') === 'platby') { stranka_platby($u); return; }
+    if (($_GET['sekce'] ?? '') === 'cenik_tisk') { stranka_cenik_tisk(); return; }
     if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $akce = $_POST['akce'] ?? '';
         if ($akce === 'poukaz_motivy') {
@@ -195,6 +196,7 @@ function stranka_nastaveni(array $u): void
         <form method="post" class="card" id="cenik" enctype="multipart/form-data">
           <?= csrf_pole() ?><input type="hidden" name="akce" value="cenik">
           <details class="rozbal"<?= ($_GET['c'] ?? '') === '1' ? ' open' : '' ?>><summary><h2>Ceník a služby na webu <span class="muted small">(<?= count($sluzbyC) ?> služeb, <?= count($cenik) ?> položek · vlastních fotek <?= $vlastnich ?> – klepnutím rozbalíte)</span></h2></summary>
+          <p><a class="btn" href="/?r=nastaveni&amp;sekce=cenik_tisk" target="_blank">🖨 Ceník A4 k tisku (PDF)</a> <span class="muted small">česky, anglicky i německy – z uložených cen a textů</span></p>
           <p class="muted small">U každé služby upravíte název, popis a poznámku na webu (i anglicky a německy), fotku a jednotlivé položky ceníku. Změny se na webu ukážou do minuty po uložení.<br>
             Masérek: 0 = bez masérky (whirlpool, sauna), 2 = párová. „Masérky min“ = jak dlouho jsou masérky potřeba (balíček párová + whirlpool: 60, zbytek jsou zákazníci sami). „Celá wellness“ = zabere obě lůžka dvoulůžkové masérny.</p>
           <?php foreach ($sluzbyC as $sc): $sid = (int)$sc['id']; $pr = sluzba_preklady($sc); $furl = $sc['kod'] ? sluzba_foto_url($sc['kod']) : null;
