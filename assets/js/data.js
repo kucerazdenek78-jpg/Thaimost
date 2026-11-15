@@ -8,7 +8,7 @@ window.THAI = {
     podtitul: "Thajské masáže Most",
     telefon: "+420 778 429 329",
     telefonHref: "tel:+420778429329",
-    email: "stepanova.hanka@centrum.cz",
+    email: "salon@thaimost.cz",
     adresa: ["Slovenského národního povstání 2654/26", "434 01 Most"],
     provozovatel: "Hana Follprechtová, J. A. Komenského 534/3, 434 01 Most",
     ico: "87149931",

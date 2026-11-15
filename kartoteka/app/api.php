@@ -108,7 +108,7 @@ function api_zajem(): void
         "Dobrý den,\n\nděkujeme za zájem o $v[nazev] ($v[popis]). Kdy by se vám hodilo: $pref.\n"
         . ($atmTxt !== '' ? "Atmosféra v tematické masérně: $atmTxt.\n" : '') . "\n"
         . "Termín je potvrzený až ve chvíli, kdy se vám ozveme. Na recepci vám zavoláme nebo napíšeme co nejdřív.\n\n"
-        . "Thajské masáže Most\n+420 778 429 329\n");
+        . "Thajské masáže Most\n+420 778 429 329 · salon@thaimost.cz\nwww.thaimost.cz\n");
 
     api_odpoved(['ok' => true]);
 }

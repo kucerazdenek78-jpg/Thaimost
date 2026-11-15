@@ -12,7 +12,7 @@ Texty a ceny jsou převzaté z původního thaimost.cz (stav 6. 10. 2026).
 
 ## Jak fungují poukazy
 1. Zákazník na webu vybere poukaz (na částku nebo konkrétní masáž), napíše pro koho poukaz je (jméno se vytiskne) a vidí živý náhled na originálním návrhu salonu.
-2. Po odeslání se mu otevře předvyplněný e-mail na `stepanova.hanka@centrum.cz` s číslem objednávky (+ možnost zkopírovat nebo zavolat).
+2. Po odeslání se mu otevře předvyplněný e-mail na `salon@thaimost.cz` s číslem objednávky (+ možnost zkopírovat nebo zavolat).
 3. Salon v `salon.html` poukaz vystaví (kód typu `TM-26-XXXXX`), vytiskne nebo uloží jako PDF a eviduje.
 
 **Vzhled poukazu** (11/2026) je nový návrh ve stylu webu – teak, zlatá, lotosové logo, foto wellness (210 × 100 mm). Zdroj je `assets/poukaz-navrh/poukaz-navrh.html` (vykreslit v Chrome při 4× měřítku → `assets/img/poukaz-pozadi.jpg` a `kartoteka/public/poukaz-pozadi.jpg`; PDF šablona `kartoteka/app/poukaz/sablona.pdf` = ten obrázek na jedné stránce, klasická xref tabulka). Políčka Jméno / Procedura / Platnost, kód i QR jsou na **stejných pozicích** jako v původním návrhu salonu (`kartoteka/app/poukaz/darkovy-poukaz-original.pdf`), takže `voucher.js` i `poukaz_pdf.php` se nemění. Písmo vyplněných políček Gelasio (OFL, `assets/fonts/`). Po změně podkladu přepsat SHA-256 a commit v `POUKAZ_PODKLADY` / `POUKAZ_ZDROJ` v `kartoteka/app/poukaz_pdf.php`. Polohy políček jsou v `assets/js/voucher.js` a v `kartoteka/app/poukaz_pdf.php` (stejné číslo v bodech originálního PDF).

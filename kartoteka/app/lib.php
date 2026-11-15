@@ -367,7 +367,7 @@ function poukaz_email_objednavka(int $pid): void
             "Stačí říct číslo objednávky $cislo.");
     }
     if (!empty($p['platnost_do'])) array_push($r, '', 'Poukaz platí do ' . date('j. n. Y', strtotime((string)$p['platnost_do'])) . ' – do té doby je potřeba se na masáž objednat (telefon 778 429 329).');
-    array_push($r, '', 'Děkujeme a těšíme se na vás.', 'Thajské masáže Most', 'SNP 2654/26, 434 01 Most', '+420 778 429 329');
+    array_push($r, '', 'Děkujeme a těšíme se na vás.', 'Thajské masáže Most', 'SNP 2654/26, 434 01 Most', '+420 778 429 329 · salon@thaimost.cz', 'www.thaimost.cz');
     posli_email($p['objednal_email'], "Thai Most – objednávka dárkového poukazu č. $cislo", implode("\n", $r) . "\n");
 }
 

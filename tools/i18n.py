@@ -36,7 +36,7 @@ META = {("name", "description"), ("property", "og:title"), ("property", "og:desc
         ("property", "og:image:alt"), ("name", "twitter:title"), ("name", "twitter:description")}
 # texty, které se nepřekládají (názvy značek, adresy…)
 UPPER_KEYS = {"VZOR"}                 # českým klíčem je text velkými písmeny (štítek na fotce) → překlad také
-NO_TRANSLATE = {"stepanova.hanka@centrum.cz", "SNP 2654/26, 434 01 Most", "Slovenského národního povstání 2654/26<br/>434 01 Most", "Most", "Nuat phaen boran, นวดแผนโบราณ", "Thai Most", "WhatsApp", "Facebook", "Wat Pho", "Google", "Bezpečné dveře – bezpecne-dvere.cz",
+NO_TRANSLATE = {"stepanova.hanka@centrum.cz", "salon@thaimost.cz", "SNP 2654/26, 434 01 Most", "Slovenského národního povstání 2654/26<br/>434 01 Most", "Most", "Nuat phaen boran, นวดแผนโบราณ", "Thai Most", "WhatsApp", "Facebook", "Wat Pho", "Google", "Bezpečné dveře – bezpecne-dvere.cz",
                 "Jazyk / Language / Sprache", "Thai Most – thajské masáže Most", "Thajské masáže Most"}
 ALT_SUFFIX = " – thajské masáže Most, Thai Most"
 PRICE = re.compile(r"^(\d[\d\s ]*)\s*Kč$")

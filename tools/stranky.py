@@ -145,7 +145,7 @@ def footer(R, sid=None):
         <a href="{R}" class="logo">{LOTUS.replace('aria-hidden="true"', 'aria-hidden="true" style="width:42px;height:28px;color:#c69c5d"')}<span><b>Thai Most</b><small style="color:rgba(248,242,233,.6)">thajské masáže</small></span></a>
         <p style="margin-top:12px;max-width:320px">Thajské masáže a privátní wellness v Mostě od roku 2004. <a href="{GMAPS}" target="_blank" rel="noopener">{RATING} ★ z {REVIEWS} recenzí na Google</a>.</p>
       </div>
-      <div><h4>Kontakt</h4><a href="{TEL_HREF}">{TEL}</a><br>{e(S["adresa"][0])}<br>{e(S["adresa"][1])}<br><br>Po–Pá 9–20 h<br>So–Ne pouze wellness<br><a href="{GMAPS}" target="_blank" rel="noopener">Mapa a recenze</a></div>
+      <div><h4>Kontakt</h4><a href="{TEL_HREF}">{TEL}</a><br><a href="mailto:salon@thaimost.cz">salon@thaimost.cz</a><br>{e(S["adresa"][0])}<br>{e(S["adresa"][1])}<br><br>Po–Pá 9–20 h<br>So–Ne pouze wellness<br><a href="{GMAPS}" target="_blank" rel="noopener">Mapa a recenze</a></div>
       <div><h4>Masáže a rituály</h4><ul class="f-serv">{links}</ul></div>
     </div>
     <div class="f-bottom"><span>© {date.today().year} Thajské masáže Most · IČO {e(S["ico"])}</span><span class="f-links"><a href="{R}">Úvodní stránka</a><a href="{R}sluzby/">Ceník</a></span></div>

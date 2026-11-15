@@ -306,9 +306,9 @@ function poukaz_posli_emailem(array $p, string $komu): array
     if (!empty($t['platnost'])) $radky[] = 'Platnost: ' . $t['platnost']['text'];
     array_push($radky, '',
         'Poukaz si můžete vytisknout. Má rozměr 210 × 100 mm, na papíru A4 zabere horní třetinu a stačí ho vystřihnout.',
-        'Termín masáže si můžete domluvit telefonicky na 778 429 329 nebo na www.thai-most.cz.',
+        'Termín masáže si můžete domluvit telefonicky na 778 429 329, e-mailem na salon@thaimost.cz nebo na www.thaimost.cz.',
         'STORNO: objednanou masáž lze zrušit nejpozději 24 hodin předem, jinak propadá bez náhrady.',
-        '', 'Děkujeme a těšíme se na vás.', 'Thajské masáže Most', 'SNP 2654/26, 434 01 Most', 'www.thai-most.cz');
+        '', 'Děkujeme a těšíme se na vás.', 'Thajské masáže Most', 'SNP 2654/26, 434 01 Most', 'salon@thaimost.cz · www.thaimost.cz');
     try { $pdf = poukaz_pdf($p); } catch (Throwable $e) { return ['PDF poukazu se nepodařilo vytvořit: ' . $e->getMessage(), 'err']; }
     $id = posli_email($komu, 'Thai Most – dárkový poukaz ' . $p['kod'], implode("\n", $radky) . "\n",
         ['nazev' => poukaz_soubor($p), 'mime' => 'application/pdf', 'obsah' => $pdf]);

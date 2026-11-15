@@ -494,7 +494,7 @@ function rez_zmen_stav(array $r, string $novy, bool $poslatEmail = false, string
         posli_email($r['email'], 'Thai Most – k vaší žádosti o termín',
             "Dobrý den,\n\nomlouváme se, ale požadovaný termín ($r[preferovano]) už nemáme volný."
             . ($duvod !== '' ? "\n" . $duvod : '')
-            . "\n\nZavolejte nám prosím na +420 778 429 329, rádi najdeme jiný čas.\n\nThajské masáže Most\n");
+            . "\n\nZavolejte nám prosím na +420 778 429 329, rádi najdeme jiný čas.\n\nThajské masáže Most\n+420 778 429 329 · salon@thaimost.cz\n");
 }
 
 function posli_potvrzeni(int $rid): void
@@ -504,7 +504,7 @@ function posli_potvrzeni(int $rid): void
     posli_email($r['email'], 'Thai Most – potvrzení termínu ' . date('j. n. H:i', strtotime($r['zacatek'])),
         "Dobrý den,\n\npotvrzujeme vám termín:\n\n" . datum_cz($r['zacatek']) . "\n$r[sluzba] – $r[var_popis]"
         . ($r['maserka'] ? "\nMasérka: $r[maserka]" : '') . "\n\nAdresa: Slovenského národního povstání 2654/26, Most\n"
-        . "Když nebudete moct přijít, dejte nám prosím vědět co nejdřív na +420 778 429 329.\n\nTěšíme se na vás,\nThajské masáže Most\n");
+        . "Když nebudete moct přijít, dejte nám prosím vědět co nejdřív na +420 778 429 329.\n\nTěšíme se na vás,\nThajské masáže Most\n+420 778 429 329 · salon@thaimost.cz\n");
 }
 
 function rez_formular(array $v, bool $novy, string $tlacitko, int $rezId = 0): void

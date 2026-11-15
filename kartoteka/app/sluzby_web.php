@@ -150,7 +150,7 @@ h2{font:600 1.6em "EB Garamond",Georgia,serif;color:#6b4a2b;margin:0 0 .3em;padd
 <div class="list" id="list"><div class="obsah" id="obsah">
   <div class="hl">
     <div><h1>Thai Most · <?= h(cenik_t('Ceník', $jz)) ?></h1><div class="pod"><?= h(cenik_t('Thajské masáže Most · od roku 2004', $jz)) ?></div></div>
-    <div class="kontakt"><b>+420 778 429 329</b><br>SNP 2654/26, 434 01 Most<br>www.thaimost.cz</div>
+    <div class="kontakt"><b>+420 778 429 329</b><br>SNP 2654/26, 434 01 Most<br>salon@thaimost.cz · www.thaimost.cz</div>
   </div>
   <?php foreach (['masaze' => 'Masáže', 'wellness' => 'Wellness a rituály'] as $k => $nadpis): if (!$skupiny[$k]) continue; ?>
     <h2><?= h(cenik_t($nadpis, $jz)) ?></h2>
