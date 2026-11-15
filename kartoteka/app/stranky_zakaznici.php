@@ -38,7 +38,7 @@ function stranka_zakaznici(array $u): void
         </tr>
       <?php endforeach ?>
     </table>
-    <p class="muted small">Filtr: <?php foreach (['' => 'vše', 'staly' => '⭐ stálí', 'spici' => '💤 spící', 'nesp' => '⚠️ nespolehliví', 'volny' => '⏱ vezmou volný termín', 'nove' => '🆕 noví'] as $k => $t): ?>
+    <p class="muted small">Filtr: <?php foreach (['' => 'vše', 'staly' => '⭐ stálí', 'spici' => '💤 spící', 'nesp' => '⚠️ nespolehliví', 'volny' => '⏱ vezmou volný termín', 'nove' => '🆕 noví', 'pap' => '📇 papírová kartička'] as $k => $t): ?>
       <a href="/?r=zakaznici&f=<?= $k ?>&q=<?= urlencode($hl) ?>"<?= $filtr === $k ? ' class="on"' : '' ?>><?= $t ?></a> · <?php endforeach ?></p>
     <?php paticka();
 }
@@ -76,6 +76,7 @@ function stranka_zakaznik(array $u): void
     }
     if (!$z) { flash('Zákazník nenalezen.', 'err'); presmeruj('/?r=zakaznici'); }
 
+    if ($_SERVER['REQUEST_METHOD'] === 'POST' && !$novy) pap_post("/?r=zakaznik&id=$id");   // papírová kartička (akce pap_*)
     if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $p = $_POST;
         $tel = telefon_norm($p['telefon'] ?? '');
@@ -177,7 +178,7 @@ function zakaznik_formular(array $z, bool $novy): void
           <div class="grid3">
             <label>Síla tlaku<select name="pref_tlak"><?= moznosti(TLAK, $z['pref_tlak']) ?></select></label>
             <label>Oblíbená masérka<select name="pref_maserka_id"><?= maserky_select($z['pref_maserka_id'] ? (int)$z['pref_maserka_id'] : null, true, '— žádná —') ?></select></label>
-            <label>Razítka z papírové kartičky<input type="number" name="pocatecni_razitka" min="0" value="<?= (int)$z['pocatecni_razitka'] ?>"></label>
+            <label title="Razítka, která zákazník měl už před evidencí v kartotéce (převod ze staré kartičky). Další razítka počítá kartotéka sama.">Razítka převedená z dřívější kartičky<input type="number" name="pocatecni_razitka" min="0" value="<?= (int)$z['pocatecni_razitka'] ?>"></label>
           </div>
           <label>Co má rád / na co se zaměřit / čemu se vyhnout<textarea name="pref_text" rows="3" placeholder="např. na konci strečink, víc šíje, nemá rád šlapání po zádech, olej kokos, raději ticho"><?= h($z['pref_text']) ?></textarea></label>
           <label>🇬🇧 English version for the therapist (tablet) <span class="muted small">– napište ručně anglicky; na tabletu se ukáže místo češtiny</span><textarea name="pref_text_en" rows="2" lang="en" placeholder="e.g. extra stretching at the end, more neck work, no walking on the back, coconut oil, prefers quiet"><?= h($z['pref_text_en']) ?></textarea></label>

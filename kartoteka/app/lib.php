@@ -253,6 +253,7 @@ function zakaznik_stitky(array $z, array $st): array
     if ($st['neprisel'] >= $prahNesp) $out[] = ['⚠️ Nespolehlivý', 'nesp', "$st[neprisel]× nepřišel / pozdní storno za 12 měsíců"];
     if ($z['volny_termin']) $out[] = ['⏱ Vezme i volný termín', 'volny', $z['volny_kdy']];
     if ($z['blokovany']) $out[] = ['⛔ Blokovaný', 'blok', 'online jen žádost, rozhodne recepce'];
+    if (!empty($z['pap_karta_od'])) $out[] = ['📇 Papírová kartička', 'pap', 'po zaplacené masáži orazítkovat kartičku'];
     return $out;
 }
 
@@ -273,13 +274,91 @@ function poukaz_razitko(int $poukazId): ?int
     return $zid;
 }
 
+/** Platby, za které se dává razítko (masáž na poukaz jen když je to v nastavení zapnuté). */
+function bonus_platby(): array
+{
+    $p = ['hotove', 'karta', 'prevod'];
+    if (nastaveni('bonus_pocita_poukaz') === '1') $p[] = 'poukaz';
+    return $p;
+}
+
+/**
+ * Papírová věrnostní kartička (starší zákazníci bez internetu): elektronicky víme, kolik razítek na ní má být.
+ * Vrací položky od vydání kartičky, které recepce ještě na papír nevyznačila:
+ * zaplacené masáže (už začaly / proběhly), koupené dárkové poukazy (razítko kupujícímu) a masáže zdarma (výměna plné kartičky).
+ */
+function pap_neorazitkovane(array $z): array
+{
+    if (empty($z['pap_karta_od'])) return [];
+    $in = "'" . implode("','", bonus_platby()) . "'";
+    $o = [];
+    foreach (q("SELECT r.id, r.zacatek, r.platba, s.nazev AS sluzba, v.popis AS var_popis FROM rezervace r
+        LEFT JOIN varianty v ON v.id=r.varianta_id LEFT JOIN sluzby s ON s.id=v.sluzba_id
+        WHERE r.zakaznik_id=? AND r.pap_razitko IS NULL AND r.zacatek>=? AND r.zacatek<=?
+          AND (r.stav='probehlo' OR r.stav='potvrzeno') AND (r.platba IN ($in) OR r.platba='bonus')
+        ORDER BY r.zacatek", [$z['id'], $z['pap_karta_od'], nyni()])->fetchAll() as $r)
+        $o[] = ['typ' => 'rez', 'id' => (int)$r['id'], 'kdy' => $r['zacatek'], 'zdarma' => $r['platba'] === 'bonus',
+                'popis' => trim(($r['sluzba'] ?? 'masáž') . ' ' . ($r['var_popis'] ?? ''))];
+    try {
+        foreach (q("SELECT id, kod, vytvoreno FROM poukazy WHERE razitko_zak_id=? AND pap_razitko IS NULL
+            AND stav IN ('zaplaceno','vydano','uplatneno') AND vytvoreno>=? ORDER BY vytvoreno", [$z['id'], $z['pap_karta_od']])->fetchAll() as $p)
+            $o[] = ['typ' => 'pk', 'id' => (int)$p['id'], 'kdy' => $p['vytvoreno'], 'zdarma' => false, 'popis' => 'nákup poukazu ' . $p['kod']];
+    } catch (Throwable $e) {}
+    usort($o, fn($a, $b) => strcmp($a['kdy'], $b['kdy']));
+    return $o;
+}
+
+/** Recepce vyznačila položku na papírové kartičce. */
+function pap_orazitkuj(string $typ, int $id): void
+{
+    $t = $typ === 'pk' ? 'poukazy' : 'rezervace';
+    q("UPDATE $t SET pap_razitko=? WHERE id=? AND pap_razitko IS NULL", [nyni(), $id]);
+}
+
+/** Akce s papírovou kartičkou z karty zákazníka / rezervace (POST akce=pap_*). Vrací true, když akci obsloužila. */
+function pap_post(string $zpet): bool
+{
+    $akce = (string)($_POST['akce'] ?? '');
+    if (strncmp($akce, 'pap_', 4) !== 0) return false;
+    $zid = (int)($_POST['zid'] ?? 0);
+    $z = $zid ? q1('SELECT * FROM zakaznici WHERE id=?', [$zid]) : null;
+    if (!$z) { flash('Zákazník nenalezen.', 'err'); presmeruj($zpet); }
+    if ($akce === 'pap_zapnout') {
+        q('UPDATE zakaznici SET pap_karta_od=? WHERE id=? AND pap_karta_od IS NULL', [nyni(), $zid]);
+        if (($_POST['razitka'] ?? '') !== '') q('UPDATE zakaznici SET pocatecni_razitka=? WHERE id=?', [max(0, (int)$_POST['razitka']), $zid]);
+        zapis_log('pap_karta', "zákazník #$zid – má papírovou kartičku");
+        flash('Zapsáno: zákazník má papírovou kartičku. Od teď vám kartotéka připomene, kdy ji orazítkovat.');
+    } elseif ($akce === 'pap_vypnout') {
+        q('UPDATE zakaznici SET pap_karta_od=NULL WHERE id=?', [$zid]);
+        zapis_log('pap_karta', "zákazník #$zid – papírová kartička zrušena");
+        flash('Papírová kartička zrušena (razítka v kartotéce zůstávají).');
+    } elseif ($akce === 'pap_razitko') {
+        pap_orazitkuj((string)($_POST['typ'] ?? ''), (int)($_POST['id'] ?? 0));
+        zapis_log('pap_razitko', "zákazník #$zid");
+        flash('Zapsáno – papírová kartička orazítkována.');
+    } elseif ($akce === 'pap_vse') {
+        $n = 0;
+        foreach (pap_neorazitkovane($z) as $x) { pap_orazitkuj($x['typ'], $x['id']); $n++; }
+        zapis_log('pap_razitko', "zákazník #$zid – vše ($n)");
+        flash("Zapsáno – orazítkováno $n×.");
+    }
+    presmeruj($zpet);
+    return true;
+}
+
+/** Kolik razítek má být teď na papírové kartičce + text pro recepci. */
+function pap_stav(array $b): array
+{
+    // plná kartička čeká na masáž zdarma → na kartičce je všech N razítek
+    $na = $b['zdarma'] > 0 ? $b['po'] : $b['razitka'];
+    return ['na' => $na, 'po' => $b['po'], 'plna' => $b['zdarma'] > 0];
+}
+
 /** Bonus: každá N-tá zaplacená masáž zdarma. */
 function zakaznik_bonus(array $z): array
 {
     $po = max(1, (int)nastaveni('bonus_po', 5));
-    $platby = ['hotove', 'karta', 'prevod'];
-    if (nastaveni('bonus_pocita_poukaz') === '1') $platby[] = 'poukaz';
-    $in = "'" . implode("','", $platby) . "'";
+    $in = "'" . implode("','", bonus_platby()) . "'";
     $zaplacene = (int)qv("SELECT COUNT(*) FROM rezervace WHERE zakaznik_id=? AND stav='probehlo' AND platba IN ($in)", [$z['id']]);
     $vyuzite = (int)qv("SELECT COUNT(*) FROM rezervace WHERE zakaznik_id=? AND stav IN ('probehlo','potvrzeno') AND platba='bonus'", [$z['id']]);
     // nákup dárkového poukazu = razítko kupujícímu (masáž na poukaz pak už razítko nedostane, viz bonus_pocita_poukaz)

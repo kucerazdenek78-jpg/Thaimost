@@ -219,9 +219,31 @@ function stranka_karty(array $u): void
     }
     $nevydane = (int)qv('SELECT COUNT(*) FROM karty WHERE zakaznik_id IS NULL AND aktivni=1');
     $rows = q('SELECT k.*, z.jmeno, z.prijmeni, z.telefon FROM karty k LEFT JOIN zakaznici z ON z.id=k.zakaznik_id ORDER BY k.id DESC LIMIT 300')->fetchAll();
+    $papir = q('SELECT * FROM zakaznici WHERE pap_karta_od IS NOT NULL ORDER BY prijmeni, jmeno LIMIT 1000')->fetchAll();
     hlavicka('Věrnostní karty', 'karty'); ?>
-    <div class="cal-nav"><h1>Věrnostní karty s QR</h1></div>
+    <div class="cal-nav"><h1>Věrnostní karty</h1></div>
     <p class="muted small">Plastová karta má QR kód. Zákazník ho naskenuje telefonem a uvidí svá razítka, počet masáží a poslední masáž (bez přihlášení). Recepce kartu naskenuje svým telefonem (už přihlášena) nebo kód zadá níže a přiřadí ji zákazníkovi + přepíše razítka z papírové kartičky.</p>
+    <section class="card" id="papir">
+      <h2>📇 Papírové kartičky <span class="muted">(<?= count($papir) ?>)</span></h2>
+      <p class="muted small">Pro zákazníky bez internetu. Razítka počítá kartotéka sama ze zaplacených masáží (a nákupu poukazu); recepce jen razí papír a v kartě zákazníka nebo u rezervace klikne „🖋 Orazítkováno“. Tady je vidět, kolik razítek má kdo mít a kde se na papír ještě nerazilo. Papírovou kartičku zapíšete v kartě zákazníka (vpravo „Má papírovou kartičku…“).
+        <a href="/?r=karty_tisk&z=0" target="_blank">🖨 Prázdné kartičky k tisku</a></p>
+      <?php if ($papir): ?>
+      <table class="tbl">
+        <tr><th>Zákazník</th><th>Telefon</th><th>Má mít na kartičce</th><th>Neorazítkováno</th><th>Od</th></tr>
+        <?php foreach ($papir as $z): $ps = pap_stav(zakaznik_bonus($z)); $chybi = count(pap_neorazitkovane($z)); ?>
+          <tr onclick="location='/?r=zakaznik&id=<?= $z['id'] ?>'">
+            <td><a href="/?r=zakaznik&id=<?= $z['id'] ?>"><?= h(jmeno_z($z)) ?></a></td>
+            <td><?= h(telefon_cz($z['telefon'])) ?></td>
+            <td><b><?= $ps['na'] ?> / <?= $ps['po'] ?></b><?= $ps['plna'] ? ' <span class="tag zdarma">🎉 zdarma</span>' : '' ?></td>
+            <td><?= $chybi ? '<b class="warn">' . $chybi . '×</b>' : '<span class="muted">✓</span>' ?></td>
+            <td class="small"><?= h(datum_cz($z['pap_karta_od'], false)) ?></td>
+          </tr>
+        <?php endforeach ?>
+      </table>
+      <?php endif ?>
+    </section>
+
+    <h2>💳 Plastové karty s QR</h2>
     <div class="cols"><div>
       <table class="tbl">
         <tr><th>Kód</th><th>Zákazník</th><th>Stav</th><th>Přiřazeno</th></tr>
@@ -256,6 +278,7 @@ function stranka_karty(array $u): void
 /** Tisková sestava QR kódů nepřiřazených karet (na štítky / plastové karty). */
 function stranka_karty_tisk(array $u): void
 {
+    if (isset($_GET['z'])) { pap_karta_tisk((int)$_GET['z']); return; }
     $rows = q('SELECT kod FROM karty WHERE zakaznik_id IS NULL AND aktivni=1 ORDER BY id LIMIT 200')->fetchAll(PDO::FETCH_COLUMN);
     ?><!doctype html><html lang="cs"><head><meta charset="utf-8"><title>QR karty – tisk</title>
 <style>
@@ -270,6 +293,50 @@ body{margin:0;font:12px sans-serif;color:#000}.top{padding:10px;font-size:14px}
 <?php endforeach ?></div>
 <script src="/qrcode.js"></script>
 <script>document.querySelectorAll('.q').forEach(function(e){var q=qrcode(0,'M');q.addData(e.dataset.qr);q.make();e.innerHTML=q.createSvgTag({cellSize:4,margin:0,scalable:true});var v=e.querySelector('svg');if(v){v.style.width='100%';v.style.height='100%'}})</script>
+</body></html><?php
+    exit;
+}
+
+/**
+ * Papírová věrnostní kartička k vytištění (vizitkový formát 85 × 55 mm) – nová nebo náhradní za ztracenou.
+ * Razítka, která už zákazník má, jsou předtištěná; volná políčka recepce razí. Prázdná kartička: ?r=karty_tisk&z=0.
+ */
+function pap_karta_tisk(int $zid): void
+{
+    $z = $zid ? q1('SELECT * FROM zakaznici WHERE id=?', [$zid]) : null;
+    $po = max(1, (int)nastaveni('bonus_po', 5));
+    $na = 0;
+    if ($z) {
+        $na = pap_stav(zakaznik_bonus($z))['na'];
+        if ($na >= $po) $na = 0;   // plná kartička: tiskne se nová prázdná (masáž zdarma se uplatní ze staré / z kartotéky)
+    }
+    $kusu = max(1, min(10, (int)($_GET['n'] ?? ($z ? 1 : 10))));
+    ?><!doctype html><html lang="cs"><head><meta charset="utf-8"><title>Papírová kartička – tisk</title>
+<style>
+@page{size:A4;margin:12mm}
+body{margin:0;font:12px Georgia,"Times New Roman",serif;color:#2b2520}
+.top{padding:10px;font:14px sans-serif}.top a{margin-left:8px}
+.g{display:grid;grid-template-columns:repeat(2,85mm);gap:6mm;padding:0 0 0 2mm}
+.k{width:85mm;height:55mm;box-sizing:border-box;border:1px dashed #999;padding:4mm 5mm;display:flex;flex-direction:column;break-inside:avoid}
+.k h1{margin:0;font-size:15px;color:#6b4a2b;letter-spacing:.5px}.k h1 small{font-weight:400;font-size:10px;color:#7d7067;margin-left:4px}
+.k .jm{margin:2.5mm 0 0;font-size:12px;border-bottom:1px dotted #999;min-height:5mm}
+.r{display:flex;gap:2mm;margin:3.5mm 0 2.5mm}.r i{width:9.5mm;height:9.5mm;border:1.4px solid #b07a3a;border-radius:50%;display:flex;align-items:center;justify-content:center;font-style:normal;font-size:15px;color:#b07a3a}
+.r i.on{background:#f3e6d6}.r b.dar{align-self:center;font-size:10px;color:#6b4a2b;white-space:nowrap;margin-left:1mm}
+.k p{margin:0;font-size:8.6px;line-height:1.35;color:#5c524b}.k .kon{margin-top:auto;font:8.6px sans-serif;color:#7d7067}
+@media print{.top{display:none}}
+</style></head><body>
+<div class="top"><?= $z ? 'Kartička pro <b>' . h(jmeno_z($z)) . '</b>' . ($na ? " – předtištěná razítka: $na (podle kartotéky)" : ' – bez razítek') . ($z && pap_stav(zakaznik_bonus($z))['plna'] ? ' (nárok na masáž zdarma má zákazník v kartotéce)' : '') : 'Prázdné kartičky' ?>.
+  <button onclick="print()">Tisknout</button> (měřítko 100 %, bez záhlaví) · počet:
+  <?php foreach ([1, 2, 4, 10] as $n): ?><a href="/?r=karty_tisk&z=<?= $zid ?>&n=<?= $n ?>"><?= $n ?></a><?php endforeach ?></div>
+<div class="g"><?php for ($c = 0; $c < $kusu; $c++): ?>
+  <div class="k">
+    <h1>Thai Most <small>věrnostní kartička</small></h1>
+    <div class="jm"><?= $z ? h(jmeno_z($z)) . ' · ' . h(telefon_cz($z['telefon'])) : '' ?></div>
+    <div class="r"><?php for ($i = 0; $i < $po; $i++): ?><i class="<?= $i < $na ? 'on' : '' ?>"><?= $i < $na ? '✓' : '' ?></i><?php endfor ?><b class="dar">→ 🎁 zdarma</b></div>
+    <p>Za každou zaplacenou masáž razítko. Po <?= $po ?> razítkách máte jednu masáž zdarma. Masáž na dárkový poukaz se nezapočítává.</p>
+    <div class="kon">Vydáno <?= date('j. n. Y') ?> · tel. 778 429 329</div>
+  </div>
+<?php endfor ?></div>
 </body></html><?php
     exit;
 }

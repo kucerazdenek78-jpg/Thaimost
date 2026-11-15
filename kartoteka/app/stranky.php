@@ -846,6 +846,7 @@ function stranka_rezervace(array $u): void
     $chyba = null; $kol = [];
 
     if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+        pap_post("/?r=rezervace&id=$id");   // papírová kartička (akce pap_*)
         $akce = $_POST['akce'] ?? '';
         if ($akce === 'naplanovat' || $akce === 'upravit') {
             $res = rez_uloz($_POST, $r, $akce === 'naplanovat');
@@ -999,6 +1000,7 @@ function zakaznik_panel(array $z, array $st, array $bonus, array $poukazy, ?arra
          <a class="btn primary" href="/?r=volno&z=<?= $z['id'] ?>">Najít volný termín</a></p>
       <?php $kt = karta_zakaznika((int)$z['id']); ?>
       <p class="small"><?= $kt ? '💳 Věrnostní karta <a href="/?r=karta&k=' . h($kt['kod']) . '">' . h($kt['kod']) . '</a>' : '<span class="muted">💳 Bez věrnostní karty – naskenujte QR nové karty a přiřaďte ji.</span> <a href="/?r=karty">karty</a>' ?></p>
+      <?php pap_panel($z, $bonus, $r) ?>
       <?php if ($r && $r['stav'] !== 'zadost' && !$r['poukaz_id']): ?>
       <form method="post" class="inline">
         <?= csrf_pole() ?><input type="hidden" name="akce" value="poukaz">
@@ -1011,6 +1013,54 @@ function zakaznik_panel(array $z, array $st, array $bonus, array $poukazy, ?arra
     </section>
 <?php }
 
+/** Papírová věrnostní kartička v bočním panelu: kolik razítek má na ní být a co je potřeba ještě orazítkovat. */
+function pap_panel(array $z, array $bonus, ?array $r = null): void
+{
+    $zid = (int)$z['id'];
+    if (empty($z['pap_karta_od'])): ?>
+      <form method="post" class="pap-box off">
+        <?= csrf_pole() ?><input type="hidden" name="akce" value="pap_zapnout"><input type="hidden" name="zid" value="<?= $zid ?>">
+        <span class="muted small">📇 Papírovou kartičku nemá (nebo není zapsaná).</span>
+        <details><summary class="small">Má papírovou kartičku…</summary>
+          <label class="small">Kolik razítek má teď na kartičce <span class="muted">(jen u první evidence – jinak nechte prázdné)</span>
+            <input type="number" name="razitka" min="0" max="<?= (int)$bonus['po'] ?>" placeholder="<?= (int)pap_stav($bonus)['na'] ?>"></label>
+          <button class="btn small">📇 Zapsat papírovou kartičku</button>
+        </details>
+      </form>
+    <?php return; endif;
+    $ps = pap_stav($bonus);
+    $chybi = pap_neorazitkovane($z);
+    $tahle = null;
+    if ($r) foreach ($chybi as $x) if ($x['typ'] === 'rez' && $x['id'] === (int)$r['id']) $tahle = $x; ?>
+      <div class="pap-box<?= $chybi ? ' warn' : '' ?>">
+        <b>📇 Papírová kartička</b> <span class="muted small">(od <?= h(datum_cz($z['pap_karta_od'], false)) ?>)</span><br>
+        Na kartičce má být <b><?= $ps['na'] ?> / <?= $ps['po'] ?></b> razítek<?= $ps['plna'] ? ' – <b>plná, příští masáž zdarma</b> 🎉' : '' ?><?= $tahle && !$tahle['zdarma'] && $r['stav'] !== 'probehlo' ? ' <span class="muted small">+ razítko za tuto masáž (do počtu se přičte po jejím skončení)</span>' : '' ?>.
+        <?php if ($tahle): ?>
+          <p class="pap-ted"><?= $tahle['zdarma'] ? '🎁 <b>Tahle masáž je zdarma:</b> vezměte plnou kartičku a dejte novou prázdnou.' : '🖋 <b>Orazítkujte kartičku za tuto masáž.</b>' ?></p>
+        <?php endif ?>
+        <?php if ($chybi): ?>
+          <ul class="pap-list">
+          <?php foreach ($chybi as $x): ?>
+            <li><form method="post" class="inline"><?= csrf_pole() ?><input type="hidden" name="akce" value="pap_razitko"><input type="hidden" name="zid" value="<?= $zid ?>">
+              <input type="hidden" name="typ" value="<?= h($x['typ']) ?>"><input type="hidden" name="id" value="<?= $x['id'] ?>">
+              <span class="small"><?= h(datum_cz($x['kdy'], false)) ?> · <?= h($x['popis']) ?><?= $x['zdarma'] ? ' · <b>zdarma – vyměnit kartičku</b>' : '' ?></span>
+              <button class="btn small"><?= $x['zdarma'] ? '✓ Vyměněno' : '🖋 Orazítkováno' ?></button></form></li>
+          <?php endforeach ?>
+          </ul>
+          <?php if (count($chybi) > 1): ?>
+            <form method="post" class="inline"><?= csrf_pole() ?><input type="hidden" name="akce" value="pap_vse"><input type="hidden" name="zid" value="<?= $zid ?>">
+              <button class="btn small">✓ Vše vyznačeno na kartičce</button></form>
+          <?php endif ?>
+        <?php else: ?>
+          <span class="muted small">✓ Kartička odpovídá kartotéce.</span>
+        <?php endif ?>
+        <p class="small" style="margin:6px 0 0">
+          <a href="/?r=karty_tisk&z=<?= $zid ?>" target="_blank">🖨 Vytisknout kartičku</a> <span class="muted">(nová / ztracená – s aktuálními razítky)</span>
+          · <form method="post" class="inline"><?= csrf_pole() ?><input type="hidden" name="akce" value="pap_vypnout"><input type="hidden" name="zid" value="<?= $zid ?>">
+            <button class="linkbtn" data-confirm="Zákazník už papírovou kartičku nepoužívá? Razítka v kartotéce zůstanou.">zrušit</button></form>
+        </p>
+      </div>
+<?php }
 
 /** Termín se uvolnil (storno / nepřišel a ještě neskončil): komu zavolat. */
 function uvolneny_termin(array $r): void

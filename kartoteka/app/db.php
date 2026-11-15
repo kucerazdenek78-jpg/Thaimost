@@ -26,7 +26,7 @@ function q(string $sql, array $p = []): PDOStatement
 function q1(string $sql, array $p = []): ?array { $r = q($sql, $p)->fetch(); return $r ?: null; }
 function qv(string $sql, array $p = []) { $r = q($sql, $p)->fetchColumn(); return $r === false ? null : $r; }
 
-const DB_VERZE = 19;
+const DB_VERZE = 20;
 
 /** Migrace běží v jedné transakci a po získání zámku se verze ověří znovu (souběžné první požadavky). */
 function migrate(PDO $pdo): void
@@ -54,6 +54,11 @@ function migrate(PDO $pdo): void
         if ($ver < 17) $pdo->exec("UPDATE poukazy SET vs = CAST(id AS TEXT)");   // v17: VS poukazu = číslo poukazu (id), i u starších
         if ($ver < 18) $pdo->exec("ALTER TABLE poukazy ADD COLUMN motiv TEXT NOT NULL DEFAULT 'darkovy'");   // v18: motiv poukazu (darkovy / vanocni)
         if ($ver < 19) $pdo->exec('ALTER TABLE poukazy ADD COLUMN razitko_zak_id INTEGER');   // v19: kdo dostal razítko za nákup poukazu (kupující)
+        if ($ver < 20) {   // v20: papírová věrnostní kartička – od kdy ji zákazník má a co už recepce na papír vyznačila
+            $pdo->exec('ALTER TABLE zakaznici ADD COLUMN pap_karta_od TEXT');
+            $pdo->exec('ALTER TABLE rezervace ADD COLUMN pap_razitko TEXT');
+            $pdo->exec('ALTER TABLE poukazy ADD COLUMN pap_razitko TEXT');
+        }
         $pdo->exec('PRAGMA user_version = ' . DB_VERZE);
         $pdo->exec('COMMIT');
     } catch (Throwable $e) {

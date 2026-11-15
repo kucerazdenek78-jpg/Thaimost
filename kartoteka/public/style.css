@@ -264,3 +264,11 @@ details.rozbal>summary h3{display:inline;margin:0}.posta-ucet details.rozbal{mar
 .motiv-prazdny{aspect-ratio:2.1;display:grid;place-items:center;border:1.5px dashed #d8c7ad;border-radius:6px;color:#9a8670;font-size:.85rem;text-align:center;padding:8px}
 .pk-motiv{margin-bottom:12px}
 @media print{body.tisk-seznam header.top,body.tisk-seznam .subnav,body.tisk-seznam .cal-nav form,body.tisk-seznam .cal-nav .btn,body.tisk-seznam .flash,body.tisk-seznam p.muted.small,body.tisk-seznam .aipom-btn,body.tisk-seznam .aipom-okno{display:none!important}body.tisk-seznam .tbl{font-size:10pt}body.tisk-seznam .tbl tr{break-inside:avoid}}
+
+/* papírová věrnostní kartička */
+.pap-box{margin:10px 0;padding:9px 11px;border:1px solid #e3d6c4;border-radius:10px;background:#fbf7f1;font-size:.92rem}
+.pap-box.warn{background:#fff6dc;border-color:#d9b25c}.pap-box.off{background:none;border-style:dashed}
+.pap-box details{margin-top:4px}.pap-box details label{margin:6px 0}.pap-box .pap-ted{margin:6px 0;padding:6px 9px;background:#fff;border-radius:8px;border-left:4px solid #c8952c}
+.pap-list{list-style:none;margin:6px 0;padding:0}.pap-list li{margin:3px 0}.pap-list form{display:flex;gap:8px;align-items:center;justify-content:space-between;margin:0}.pap-list button{white-space:nowrap}
+.linkbtn{background:none;border:0;padding:0;color:#8a5a2b;text-decoration:underline;cursor:pointer;font:inherit}
+.tag.pap{background:#f3e6d6}

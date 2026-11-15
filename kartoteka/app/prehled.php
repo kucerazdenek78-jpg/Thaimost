@@ -178,7 +178,7 @@ function stranka_prehled(array $u): void
     <?php if ($nevesel): ?>
       <div class="flash warn">⚠ <b><?= count($nevesel) ?> dnešní rezervace se nevejde do žádné masérny</b> (např. <?= h(date('H:i', strtotime($nevesel[0]['zacatek']))) ?> <?= h(jmeno_z($nevesel[0])) ?>). <a class="btn small" href="/?r=kalendar&pohled=masterny">Otevřít kalendář masérn</a></div>
     <?php endif ?>
-    <?php ukoncene_dnes_banner(); ?>
+    <?php ukoncene_dnes_banner(); pap_dnes_banner(); ?>
 
     <?php if ($zadosti): ?>
     <section class="card" id="zadosti">
@@ -548,3 +548,19 @@ function stranka_prehled(array $u): void
     </script>
     <?php paticka();
 }
+
+/** Dnešní masáže zákazníků s papírovou kartičkou, kde se ještě nerazilo (masáž už začala / proběhla). */
+function pap_dnes_banner(): void
+{
+    try {
+        $in = "'" . implode("','", bonus_platby()) . "'";
+        $rows = q("SELECT r.id, r.zacatek, r.platba, z.jmeno, z.prijmeni, z.telefon FROM rezervace r JOIN zakaznici z ON z.id=r.zakaznik_id
+            WHERE z.pap_karta_od IS NOT NULL AND r.pap_razitko IS NULL AND r.zacatek>=z.pap_karta_od AND r.zacatek<=? AND r.zacatek>=?
+              AND r.stav IN ('probehlo','potvrzeno') AND (r.platba IN ($in) OR r.platba='bonus') ORDER BY r.zacatek",
+            [nyni(), date('Y-m-d 00:00:00')])->fetchAll();
+    } catch (Throwable $e) { return; }
+    if (!$rows) return; ?>
+    <div class="flash warn">📇 <b>Orazítkovat papírovou kartičku:</b>
+      <?php foreach ($rows as $i => $r): ?><?= $i ? ', ' : ' ' ?><a href="/?r=rezervace&id=<?= (int)$r['id'] ?>"><?= h(date('H:i', strtotime($r['zacatek']))) ?> <?= h(jmeno_z($r)) ?></a><?= $r['platba'] === 'bonus' ? ' (zdarma – vyměnit kartičku)' : '' ?><?php endforeach ?>
+    </div>
+<?php }
