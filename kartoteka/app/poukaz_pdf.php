@@ -21,34 +21,52 @@ const POUKAZ_POLE_Y = [210.2, 238.9];         // horní a dolní okraj políček
 const POUKAZ_ZAKLADNI_LINKA = 235.0;          // na které výšce (od horního okraje) leží písmo ve vyplněném políčku
 const POUKAZ_VELIKOST = 11.0;                 // největší a nejmenší velikost písma v políčku (pt)
 const POUKAZ_VELIKOST_MIN = 6.5;
-const POUKAZ_BARVA_TEXTU = [0.38, 0.14, 0.04]; // tmavě hnědá k oranžovému návrhu salonu (dárkový)
-const POUKAZ_BARVA_VANOCNI = [0.17, 0.12, 0.09]; // teak hnědá (#2b1e16) k vánočnímu návrhu
+const POUKAZ_BARVA_TEXTU = [0.38, 0.14, 0.04]; // tmavě hnědá k oranžovému návrhu salonu
 /** QR s kódem v rámečku ve spodním pásu: [x, y shora, strana] včetně bílého okraje (pt). */
 const POUKAZ_QR = [214.0, 147.0, 33.0];
 /** Řádek o platnosti: [x, základní linka shora, velikost, na střed, barva]. Stejně ve voucher.js.
- *  Vánoční: pod políčky (pod „Storno“). Dárkový (oranžový návrh salonu má dole kontakty): světle úplně dole, na střed pod kontakty. */
-const POUKAZ_INFO = ['vanocni' => [25.4, 273.0, 6.8, false, null], 'darkovy' => [282.0, 279.4, 5.3, true, [0.973, 0.925, 0.863]]];
+ *  Oranžový návrh salonu (dárkový i vánoční) má dole kontakty, proto světle úplně dole, na střed pod kontakty. */
+const POUKAZ_INFO = [282.0, 279.4, 5.3, true, [0.973, 0.925, 0.863]];
 function poukaz_info_text(string $datum): string { return "Poukaz platí do $datum – do tohoto data je potřeba se objednat, zavolejte na 778 429 329. Masáž na poukaz se nezapočítává do věrnostní kartičky."; }
 /** Kód poukazu bílým písmem na tmavém pruhu: konec textu zprava (x), základní linka od shora, velikost. */
 const POUKAZ_KOD = [518.0, 188.7, 6.8];
-const POUKAZ_KOD_VANOCNI = [515.0, 192.9, 6.8];   // vánoční návrh: na střed tmavého pruhu „Kód poukazu“
 
 function poukaz_dir(): string { return __DIR__ . '/poukaz'; }
 
 // ---------- Motivy poukazu: dárkový (výchozí návrh) a vánoční, podklady nahrané v Nastavení ----------
 const POUKAZ_MOTIVY = ['darkovy' => 'Dárkový', 'vanocni' => 'Vánoční'];
 
-/** Připravený vánoční návrh v repozitáři (assets/poukaz-navrh/poukaz-vanocni.html) – stáhne se, dokud salon nenahraje vlastní. */
-const POUKAZ_VANOCNI_VYCHOZI = ['https://raw.githubusercontent.com/kucerazdenek78-jpg/thaimost/4133308f92377d4111f0c57e3ff283f92906d14b/assets/img/poukaz-pozadi-vanocni.jpg',
-    'c1767b1a5b97d320b788be9bf631a3c7c9f9a34ff482c9329ee363a1b0063121'];
+/** Připravený vánoční návrh (oranžový návrh salonu s vánočním nápisem a ozdobami, tools/poukaz-vanocni-oranzovy.py) – stáhne se, dokud salon nenahraje vlastní. */
+const POUKAZ_VANOCNI_VYCHOZI = ['https://raw.githubusercontent.com/kucerazdenek78-jpg/thaimost/8780a2eca264c6f5a7ada8b0ba76f4892c359fa8/assets/img/poukaz-pozadi-vanocni.jpg',
+    'c9673e26c7ba4c5c6d66ba023a98fcedd71241db882d9435826661ad51d039a9'];
+/** Dřívější připravené vánoční návrhy: pokud je salon pořád má (nenahrál vlastní), nahradí se aktuálním. */
+const POUKAZ_VANOCNI_STARE = ['c1767b1a5b97d320b788be9bf631a3c7c9f9a34ff482c9329ee363a1b0063121'];
 
 /** Podklad motivu (JPEG 210 × 100 mm, políčka na stejných místech jako výchozí návrh) v data/, nebo null. */
 function poukaz_motiv_jpg(string $m): ?string
 {
     if (!isset(POUKAZ_MOTIVY[$m])) return null;
     $f = dirname(cfg()['db_path']) . "/poukaz-$m.jpg";
+    if ($m === 'vanocni' && is_file($f)) poukaz_vanocni_obnov($f);
     if (!is_file($f) && $m === 'vanocni') poukaz_vanocni_stahni($f);
     return is_file($f) ? $f : null;
+}
+
+/** Jednou po změně připraveného návrhu: starý připravený vánoční podklad smaže (stáhne se nový); vlastní nahraný salonem nechá. */
+function poukaz_vanocni_obnov(string $f): void
+{
+    static $hotovo = false;
+    if ($hotovo) return;
+    $hotovo = true;
+    try {
+        $verze = POUKAZ_VANOCNI_VYCHOZI[1];
+        if ((string)nastaveni('vanocni_vychozi_verze', '') === $verze) return;
+        if (in_array((string)hash_file('sha256', $f), POUKAZ_VANOCNI_STARE, true)) {
+            @unlink($f);
+            q("DELETE FROM nastaveni WHERE klic='vanocni_pokus'");
+        }
+        q('INSERT INTO nastaveni(klic,hodnota) VALUES(?,?) ON CONFLICT(klic) DO UPDATE SET hodnota=excluded.hodnota', ['vanocni_vychozi_verze', $verze]);
+    } catch (Throwable $e) { error_log('vánoční poukaz: ' . $e->getMessage()); }
 }
 
 /** Vánoční návrh z GitHubu (kontrola SHA-256). Ne, když ho salon smazal; při chybě další pokus nejdřív za hodinu. */
@@ -266,8 +284,7 @@ function poukaz_texty(array $p): array
     $platnost = !empty($p['platnost_do']) && strtotime((string)$p['platnost_do']) ? 'do ' . date('j. n. Y', strtotime((string)$p['platnost_do'])) : '';
     $pole = ['jmeno' => trim((string)($p['pro_koho'] ?? '')), 'procedura' => $procedura, 'platnost' => $platnost];
     $out = [];
-    $vanocni = poukaz_motiv($p) === 'vanocni';
-    $barva = $vanocni ? POUKAZ_BARVA_VANOCNI : POUKAZ_BARVA_TEXTU;
+    $barva = POUKAZ_BARVA_TEXTU;
     foreach (POUKAZ_POLE as $k => [$x0, $x1]) {
         if ($pole[$k] === '') continue;
         [$t, $v] = poukaz_vlozit($pole[$k], ($x1 - $x0) - 2 * 5.5);
@@ -275,7 +292,7 @@ function poukaz_texty(array $p): array
     }
     // do data platnosti je potřeba se objednat (poloha podle návrhu)
     if ($platnost !== '') {
-        [$ix, $iy, $iv, $stred, $ib] = POUKAZ_INFO[$vanocni ? 'vanocni' : 'darkovy'];
+        [$ix, $iy, $iv, $stred, $ib] = POUKAZ_INFO;
         $t = poukaz_ocisti(poukaz_info_text(date('j. n. Y', strtotime((string)$p['platnost_do']))));
         if ($stred) $ix -= poukaz_sirka($t, $iv) / 2;
         $out['info'] = ['text' => $t, 'x' => $ix, 'y' => $iy, 'velikost' => $iv, 'barva' => $ib ?? $barva];
@@ -323,7 +340,7 @@ function poukaz_vrstva(array $p): string
     $kod = trim((string)($p['kod'] ?? ''));
     if ($kod !== '') {
         $kod = poukaz_ocisti($kod);
-        [$kx, $ky, $kv] = poukaz_motiv($p) === 'vanocni' ? POUKAZ_KOD_VANOCNI : POUKAZ_KOD;
+        [$kx, $ky, $kv] = POUKAZ_KOD;
         $text = 'KÓD  ' . $kod;
         $s .= sprintf("BT /FT0 %s Tf 1 1 1 rg 1 0 0 1 %s %s Tm <%s> Tj ET\n", poukaz_cislo($kv), poukaz_cislo($kx - poukaz_sirka($text, $kv)),
             poukaz_cislo($h - $ky), poukaz_hex($text));
@@ -459,7 +476,7 @@ function poukaz_html(array $p): string
     }
     $kod = poukaz_ocisti((string)($p['kod'] ?? ''));
     if ($kod !== '') {
-        [$kx, $ky, $kv] = poukaz_motiv($p) === 'vanocni' ? POUKAZ_KOD_VANOCNI : POUKAZ_KOD;
+        [$kx, $ky, $kv] = POUKAZ_KOD;
         $s .= '<span class="pk-k" style="right:' . $pct(POUKAZ_SIRKA - $kx, POUKAZ_SIRKA) . ';top:' . $pct($horni($ky, $kv), POUKAZ_VYSKA) . ';font-size:'
             . poukaz_cislo($kv / POUKAZ_SIRKA * 100) . 'cqw">KÓD&nbsp; ' . htmlspecialchars($kod, ENT_QUOTES, 'UTF-8') . '</span>';
         [$qx, $qy, $qs] = POUKAZ_QR;

@@ -1,5 +1,5 @@
 /* Sdílené vykreslení dárkového poukazu (web i stránka pro salon).
-   Podklad dárkového poukazu je originální návrh salonu (assets/img/poukaz-pozadi.jpg), vánoční je ve stylu webu; do políček
+   Podklad je originální návrh salonu (assets/img/poukaz-pozadi.jpg), vánoční z něj (motiv z kartotéky); do políček
    Jméno / Procedura / Platnost se doplní text, dole kód a QR. Rozměry jsou stejné jako v kartotéce
    (kartoteka/app/poukaz_pdf.php), polohy v bodech originálního PDF (595,276 × 283,465 pt). */
 (function () {
@@ -17,14 +17,10 @@
   const W = 595.276, H = 283.465;
   const POLE = { jmeno: [25.4, 169.9], procedura: [184.3, 329.3], platnost: [343.7, 488.2] };
   const ZAKLADNI_LINKA = 235.0, VELIKOST = 11, VELIKOST_MIN = 6.5, ODSAZENI = 5.5;
-  const KOD = { right: 518.0, top: 188.7, size: 6.8 };      // bílý kód na zeleném pruhu (dárkový)
-  const KOD_VANOCNI = { right: 515.0, top: 192.9, size: 6.8 }; // vánoční: na střed tmavého pruhu
-  // řádek o platnosti (stejně jako POUKAZ_INFO v kartotéce): vánoční návrh pod políčky; oranžový dárkový návrh salonu
-  // má dole kontakty, proto světlým písmem úplně dole na hnědém pásu, na střed pod kontakty
-  const INFO = {
-    vanocni: { x: 25.4, top: 273.0, size: 6.8, stred: false },
-    darkovy: { x: 282.0, top: 279.4, size: 5.3, stred: true, barva: "#f8ecdc" },
-  };
+  const KOD = { right: 518.0, top: 188.7, size: 6.8 };      // bílý kód na zeleném pruhu
+  // řádek o platnosti (stejně jako POUKAZ_INFO v kartotéce): oranžový návrh salonu (dárkový i vánoční) má dole kontakty,
+  // proto světlým písmem úplně dole na hnědém pásu, na střed pod kontakty
+  const INFO = { x: 282.0, top: 279.4, size: 5.3, stred: true, barva: "#f8ecdc" };
   const QR = { x: 214.0, y: 147.0, size: 33.0 };            // QR v rámečku ve spodním pásu
   // řádek s line-height:1 má základní linku 0,793 výšky písma pod horním okrajem (metriky Gelasio: ascent 1900, descent 700, 2048 j./em)
   const NAD_LINKOU = 0.793;
@@ -50,10 +46,10 @@
       const [x0, x1] = POLE[k], max = x1 - x0 - 2 * ODSAZENI;
       h += `<span class="pk-t" data-max="${max}" style="left:${pct(x0 + ODSAZENI, W)};top:${pct(ZAKLADNI_LINKA - NAD_LINKOU * VELIKOST, H)};font-size:${cq(VELIKOST)};max-width:${pct(max, W)}">${esc(t[k])}</span>`;
     }
-    const I = INFO[d.motiv === "vanocni" ? "vanocni" : "darkovy"];
+    const I = INFO;
     if (d.platnost) h += `<span class="pk-t pk-info" style="left:${pct(I.x, W)};top:${pct(I.top - NAD_LINKOU * I.size, H)};font-size:${cq(I.size)}${I.stred ? ";transform:translateX(-50%)" : ""}${I.barva ? ";color:" + I.barva : ""}">${esc("Poukaz platí do " + d.platnost + " – do tohoto data je potřeba se objednat, zavolejte na 778 429 329. Masáž na poukaz se nezapočítává do věrnostní kartičky.")}</span>`;
     if (d.kod) {
-      const K = d.motiv === "vanocni" ? KOD_VANOCNI : KOD;
+      const K = KOD;
       h += `<span class="pk-k" style="right:${pct(W - K.right, W)};top:${pct(K.top - NAD_LINKOU * K.size, H)};font-size:${cq(K.size)}">KÓD&nbsp; ${esc(d.kod)}</span>`;
       const qr = qrSvg(d.kod, 120);
       if (qr) h += `<div class="pk-qr" style="left:${pct(QR.x, W)};top:${pct(QR.y, H)};width:${pct(QR.size, W)};padding:${pct(2, W)}">${qr}</div>`;
