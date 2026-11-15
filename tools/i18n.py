@@ -397,6 +397,9 @@ def build_page(lang, d, missing):
     if btn and cur:
         btn.find("img")["src"] = cur.find("img")["src"]
         btn.find("span").string = lang.upper()
+    # odkazy na české podstránky (sluzba/…, sluzby/ …) jsou jen v české verzi
+    for n in soup.select(".cs-only, a.sv-more"):
+        n.decompose()
     # poznámka u recenzí (v české verzi skrytá)
     for n in soup.select("p.rv-note"):
         del n["hidden"]

@@ -116,6 +116,15 @@ header.nav{position:sticky;top:0;z-index:50;background:rgba(248,242,233,.88);bac
 .prices li b{white-space:nowrap;color:var(--teak)}
 .sv-cta{margin-top:14px;font-size:.88rem;font-weight:700;color:var(--jade);background:none;border:0;cursor:pointer;text-align:left;font-family:inherit;padding:0}
 .sv-cta:hover{text-decoration:underline}
+.sv-more{margin-top:14px;font-size:.88rem;font-weight:700;color:var(--bark);text-decoration:none;display:inline-block;padding:6px 0}
+.sv-more:hover{text-decoration:underline}
+.sv-more+.sv-cta{margin-top:2px}
+.sv-cta{padding:6px 0}
+.f-more{border-top:1px solid rgba(255,255,255,.12);padding:18px 0;margin-bottom:4px;font-size:.84rem;display:flex;flex-wrap:wrap;gap:6px 18px;align-items:center}
+.f-more b{color:var(--gold-l);font-weight:700}
+.f-more a{padding:6px 0}
+.why-card a{padding:8px 0;display:inline-block}
+.lang-btn{min-width:44px;min-height:44px}
 .sv-extra{margin-top:30px;font-size:.92rem;color:var(--muted);text-align:center}
 
 /* bonus */

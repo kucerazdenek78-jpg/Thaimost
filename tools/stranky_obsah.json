@@ -1,0 +1,246 @@
+{
+ "_pozn": "Texty podstránek /sluzba/<slug>/. Ceny, název, krátký popis a fotka se berou z assets/js/data.js. Po úpravě spusť: python3 tools/stranky.py",
+ "tradicni": {
+  "slug": "tradicni-thajska-masaz",
+  "h1": "Tradiční thajská masáž v Mostě",
+  "title": "Tradiční thajská masáž Most – Thai Most",
+  "desc": "Tradiční thajská masáž v Mostě: akupresura a protažení bez oleje, na matraci, v pohodlném oblečení. Rodilé Thajky s certifikací Wat Pho. Objednání 778 429 329.",
+  "sekce": [
+   ["Jak tradiční thajská masáž probíhá", ["Tradiční thajská masáž (nuat phaen boran) se provádí na matraci na zemi a bez oleje. Zůstáváte oblečeni – doporučujeme spodní prádlo nebo slabé legíny a tričko. Masérka pracuje dlaněmi, palci, předloktím i vlastní vahou: postupně stlačuje body podél energetických drah a tělo protahuje do pozic podobných józe.", "Tlak vždy přizpůsobíme vám. Stačí říct, jestli chcete masáž jemnější, nebo silnější, a které partie potřebují víc pozornosti."]],
+   ["Pro koho je vhodná", ["Pro každého, kdo má ztuhlá záda, šíji a nohy ze sezení, stání nebo sportu, a pro ty, kdo se chtějí pořádně protáhnout. Po masáži se většina klientů cítí lehčí a pohyblivější.", "Masáž není vhodná při horečce, akutním zánětu, čerstvém úrazu nebo krátce po operaci. Pokud máte zdravotní potíže, řekněte to prosím masérce předem."]],
+   ["Jakou délku zvolit", ["60 minut stačí na celé tělo v základním rozsahu. 90 minut doporučujeme poprvé – je čas na záda, nohy, ruce i hlavu bez spěchu. 120 minut je plná verze s důkladným protažením."]]
+  ],
+  "faq": [
+   ["Bolí thajská masáž?", "Thajská masáž je důkladná, ale neměla by bolet. Tlak se řídí vaším přáním – masérce stačí říct, kdy přidat a kdy ubrat."],
+   ["Co si mám vzít na sebe?", "Spodní prádlo nebo slabé legíny a tričko. Masáž probíhá bez oleje, takže se nemusíte svlékat."],
+   ["Kdo v Thai Most masíruje?", "Rodilé Thajky a Filipínky s certifikací chrámové školy Wat Pho. Salon v Mostě funguje od roku 2004."]
+  ]
+ },
+ "hlava": {
+  "slug": "masaz-hlavicky",
+  "h1": "Masáž hlavy a šíje v Mostě",
+  "title": "Masáž hlavy a šíje Most – Thai Most",
+  "desc": "Masáž hlavy, šíje a ramen v Mostě. Probíhá nasucho, akupresurou uvolňuje ztuhlou krční páteř. 30 nebo 60 minut. Thai Most, tel. 778 429 329.",
+  "sekce": [
+   ["Jak masáž probíhá", ["Masáž se soustředí na krční páteř, hlavu a ramena. Probíhá nasucho, bez oleje – masérka stlačuje akupresurní body a uvolňuje ztuhlé svaly šíje a trapézů. Zakončuje ji masáž hlavy."]],
+   ["Pro koho je vhodná", ["Pro ty, kdo sedí u počítače nebo za volantem a cítí napětí za krkem a v ramenou. Třicet minut se dá stihnout i během polední pauzy, hodinová verze jde víc do hloubky."]]
+  ],
+  "faq": [
+   ["Stačí 30 minut?", "Na uvolnění šíje a hlavy ano. Pokud máte ztuhlá i záda, zvolte 60 minut nebo masáž zad a krku."]
+  ]
+ },
+ "zada": {
+  "slug": "masaz-zad-a-krku",
+  "h1": "Masáž zad a krku v Mostě",
+  "title": "Masáž zad a krku Most – Thai Most",
+  "desc": "Masáž zad a krku v Mostě: šíje, ramena, bedra a kříž. Úleva pro záda ztuhlá ze sezení. 30 nebo 60 minut, termíny často i tentýž den. Tel. 778 429 329.",
+  "sekce": [
+   ["Na co se masáž zaměřuje", ["Masáž zad a krku pracuje se šíjí, rameny, bederní a křížovou oblastí – tedy s místy, která trpí při sedavém zaměstnání nejvíc. Masérka kombinuje tlakové techniky thajské masáže s uvolňováním svalů podél páteře.", "Pravidelné opakování může zmírnit bolesti zad ze sezení u počítače nebo za volantem. Mnoho stálých klientů chodí jednou za dva až čtyři týdny."]],
+   ["30, nebo 60 minut?", ["Třicet minut je rychlá pomoc pro šíji a horní část zad. Hodinová masáž projde celá záda od krku po kříž a zbude čas i na ramena a lopatky."]],
+   ["Kdy masáž není vhodná", ["Při akutním zánětu, horečce, čerstvém úrazu nebo vyhřezlé ploténce v akutní fázi. Při dlouhodobých nebo silných bolestech zad se nejdřív poraďte s lékařem a masérce o nich řekněte."]]
+  ],
+  "faq": [
+   ["Jak často na masáž zad chodit?", "Při sedavé práci se osvědčuje jednou za dva až čtyři týdny. S věrnostní kartičkou je každá šestá masáž zdarma."],
+   ["Dá se objednat na dnešek?", "Často ano – v salonu je pět masérek a tři masérny. Zavolejte na +420 778 429 329."],
+   ["Je lepší masáž zad, nebo tradiční thajská?", "Masáž zad a krku cílí jen na záda a šíji. Tradiční thajská masáž projde celé tělo včetně nohou a protažení."]
+  ]
+ },
+ "olej": {
+  "slug": "thajska-olejova-masaz",
+  "h1": "Thajská olejová masáž v Mostě",
+  "title": "Thajská olejová masáž Most – Thai Most",
+  "desc": "Thajská olejová masáž v Mostě – relaxační masáž celého těla s aromatickými oleji z thajských bylin, jemná až střední technika. 60 nebo 90 min. Tel. 778 429 329.",
+  "sekce": [
+   ["Jak olejová masáž probíhá", ["Thajská olejová masáž je nejvíc relaxační forma thajské masáže. Probíhá na lehátku, masérka používá teplý aromatický olej z thajských bylin a jemnou až střední techniku s dlouhými plynulými tahy. Tlak upraví podle vašeho přání."]],
+   ["Pro koho je vhodná", ["Pro ty, kdo si chtějí hlavně odpočinout a vypnout hlavu, a pro každého, komu je tradiční thajská masáž s protahováním příliš intenzivní. Je to také nejčastější volba na dárkový poukaz."]],
+   ["60, nebo 90 minut?", ["Za hodinu projde masérka celé tělo. Devadesát minut dává víc času na záda, nohy a chodidla a na opravdu klidné tempo."]]
+  ],
+  "faq": [
+   ["Jaký je rozdíl mezi olejovou a tradiční thajskou masáží?", "Olejová masáž je jemnější, na lehátku a s olejem. Tradiční thajská masáž probíhá bez oleje, v oblečení na matraci a zahrnuje protahování."],
+   ["Hodí se olejová masáž jako dárek?", "Ano, patří k nejoblíbenějším. Poukaz vystavíme na konkrétní masáž nebo na libovolnou částku."]
+  ]
+ },
+ "aroma": {
+  "slug": "aroma-masaz",
+  "h1": "Aroma masáž v Mostě",
+  "title": "Aroma masáž Most – Thai Most",
+  "desc": "Aroma masáž v Mostě: olejová masáž celého těla s vonnými oleji a inhalací esencí. Limetka + bambus nebo citronová tráva + pomeranč. Tel. 778 429 329.",
+  "sekce": [
+   ["Jak aroma masáž probíhá", ["Aroma masáž je olejová masáž celého těla s vonnými oleji podle vašeho výběru, doplněná inhalací esencí. Vybrat si můžete kombinaci limetka a bambus, nebo citronová tráva a pomeranč."]],
+   ["Pro koho je vhodná", ["Pro ty, kdo hledají klidnou relaxační masáž a mají rádi vůně. Hodí se po náročném týdnu nebo jako dárek."]]
+  ],
+  "faq": []
+ },
+ "detska": {
+  "slug": "detska-masaz",
+  "h1": "Dětská masáž v Mostě",
+  "title": "Dětská masáž Most – Thai Most",
+  "desc": "Dětská masáž v Mostě pro děti od 2 do 10 let: jemná olejová masáž celého těla přizpůsobená věku dítěte, 40 minut. Thai Most, tel. 778 429 329.",
+  "sekce": [
+   ["Jak dětská masáž probíhá", ["Jemná olejová masáž celého těla pro děti od 2 do 10 let. Masérka přizpůsobí tlak i tempo věku a fyzickému stavu dítěte. Masáž trvá 40 minut."]],
+   ["Dobré vědět", ["Doporučujeme, aby byl rodič po celou dobu u dítěte. Pokud má dítě zdravotní potíže nebo kožní problém, řekněte to prosím předem."]]
+  ],
+  "faq": []
+ },
+ "lymfa-oblicej": {
+  "slug": "lymfaticka-masaz-obliceje",
+  "h1": "Lymfatická masáž obličeje a dekoltu v Mostě",
+  "title": "Lymfatická masáž obličeje Most – Thai Most",
+  "desc": "Lymfatická masáž obličeje a dekoltu v Mostě: velmi jemné pomalé hmaty na suchou pokožku, bez olejů a krémů. 30 nebo 60 minut. Thai Most, tel. 778 429 329.",
+  "sekce": [
+   ["Jak masáž probíhá", ["Lymfatická masáž obličeje a dekoltu se provádí velmi jemnými a pomalými hmaty na suchou pokožku, bez olejů a krémů. Cílem je podpořit odtok lymfy – zbavit podkoží přebytečné tekutiny a podpořit regeneraci pleti."]],
+   ["Pro koho je vhodná", ["Pro ty, kdo mívají po ránu oteklý obličej nebo váčky pod očima, a pro každého, kdo hledá velmi klidnou a jemnou proceduru."]],
+   ["Kdy masáž není vhodná", ["Při horečce, akutní infekci nebo zánětu v oblasti obličeje a krku. Při onemocnění štítné žlázy, srdce nebo při onkologické léčbě se nejdřív poraďte s lékařem."]]
+  ],
+  "faq": [
+   ["Používá se při lymfatické masáži obličeje olej?", "Ne. Masáž se provádí na suchou pokožku, bez olejů a krémů."]
+  ]
+ },
+ "poporodni": {
+  "slug": "poporodni-masaz",
+  "h1": "Poporodní masáž v Mostě",
+  "title": "Poporodní masáž Most – Thai Most",
+  "desc": "Poporodní masáž v Mostě: tradiční thajská masáž spojená s přikládáním teplých bylinných váčků na namáhané partie těla po porodu. 60 min. Tel. 778 429 329.",
+  "sekce": [
+   ["Jak poporodní masáž probíhá", ["Poporodní masáž spojuje tradiční thajskou masáž s bylinnou péčí: masérka přikládá nahřáté bylinné váčky na partie, které těhotenství a porod zatížily nejvíc."]],
+   ["Dobré vědět", ["Kdy po porodu s masáží začít, konzultujte se svým lékařem – zvlášť po císařském řezu nebo při komplikacích. Masérce řekněte, jak dlouho jste po porodu a jestli kojíte."]]
+  ],
+  "faq": []
+ },
+ "oblicej": {
+  "slug": "masaz-obliceje",
+  "h1": "Masáž obličeje v Mostě",
+  "title": "Masáž obličeje Most – Thai Most",
+  "desc": "Masáž obličeje v Mostě: kosmetické ošetření pleti a akupresurní masáž – peeling, pleťová maska, regenerační krémy a masáž krční páteře. Tel. 778 429 329.",
+  "sekce": [
+   ["Jak masáž obličeje probíhá", ["Spojení kosmetického ošetření pleti a akupresurní masáže: peeling, pleťová maska a regenerační krémy. Zatímco maska působí, masérka masíruje krční páteř."]],
+   ["Pro koho je vhodná", ["Pro ty, kdo chtějí spojit péči o pleť s odpočinkem. Pokud máte citlivou pleť nebo alergii na kosmetiku, řekněte to prosím předem."]]
+  ],
+  "faq": []
+ },
+ "nohy": {
+  "slug": "masaz-nohou",
+  "h1": "Masáž nohou v Mostě",
+  "title": "Masáž nohou Most – reflexní masáž | Thai Most",
+  "desc": "Masáž nohou v Mostě pro unavené a opuchlé nohy, kombinovaná s reflexologií. S thajským balzámem nebo nahřívanými bylinnými sáčky. Tel. 778 429 329.",
+  "sekce": [
+   ["Jak masáž nohou probíhá", ["Masáž nohou je součást tradiční thajské masáže zaměřená na chodidla, lýtka a stehna, kombinovaná s reflexologií – tlakem na body na chodidlech. Provádí se s thajským balzámem, nebo ve variantě s nahřívanými bylinnými sáčky."]],
+   ["Pro koho je vhodná", ["Pro ty, kdo celý den stojí nebo hodně chodí, a při pocitu těžkých a opuchlých nohou. V těhotenství reflexní masáž chodidel neprovádíme – pro budoucí maminky je určena těhotenská masáž."]]
+  ],
+  "faq": [
+   ["Jaký je rozdíl mezi variantami?", "Základní varianta se provádí s thajským balzámem. Varianta s bylinnými sáčky přidává teplo nahřátých bylin pro hlubší uvolnění."]
+  ]
+ },
+ "bylinna": {
+  "slug": "bylinna-masaz",
+  "h1": "Bylinná masáž v Mostě",
+  "title": "Bylinná masáž Most – thajská herbal massage | Thai Most",
+  "desc": "Bylinná masáž v Mostě: tradiční thajská masáž doplněná horkými bylinnými houbičkami pro hlubší uvolnění svalů. 90 nebo 120 minut. Tel. 778 429 329.",
+  "sekce": [
+   ["Jak bylinná masáž probíhá", ["Bylinná masáž (herbal massage) začíná tradiční thajskou masáží a pokračuje přikládáním horkých bylinných houbiček napařených nad vodou. Teplo a vůně bylin pomáhají svalům uvolnit se víc do hloubky."]],
+   ["Pro koho je vhodná", ["Pro ty, kdo mají hodně ztuhlé svaly a chtějí intenzivnější zážitek než při běžné masáži. Oblíbená je hlavně v chladných měsících."]]
+  ],
+  "faq": []
+ },
+ "siam": {
+  "slug": "siam-massage",
+  "h1": "Siam massage v Mostě",
+  "title": "Siam massage Most – horká bylinná masáž | Thai Most",
+  "desc": "Siam massage v Mostě: dvouhodinová horká bylinná masáž z tradiční thajské medicíny. Nahřáté bylinné váčky uvolňují svaly a změkčují pokožku. Tel. 778 429 329.",
+  "sekce": [
+   ["Jak Siam massage probíhá", ["Siam massage je horká bylinná masáž vycházející z tradiční thajské medicíny. Masérka pracuje s nahřátými bylinnými váčky, které uvolňují svalovou bolest a změkčují pokožku. Trvá 120 minut a patří k nejoblíbenějším rituálům salonu."]],
+   ["Pro koho je vhodná", ["Pro ty, kdo si chtějí dopřát dlouhou masáž bez spěchu, a jako výjimečný dárek."]]
+  ],
+  "faq": []
+ },
+ "ventosa": {
+  "slug": "ventosa-masaz-bankovni",
+  "h1": "Ventosa masáž – baňkování v Mostě",
+  "title": "Baňkování Most – Ventosa masáž | Thai Most",
+  "desc": "Ventosa masáž v Mostě: tradiční filipínská masáž – olejová masáž celého těla, skleněné baňky vytvářející podtlak a ušní svíčky. 90 min. Tel. 778 429 329.",
+  "sekce": [
+   ["Jak Ventosa masáž probíhá", ["Ventosa je tradiční filipínská masáž. Začíná olejovou masáží celého těla, pokračuje přikládáním skleněných baněk, které vytvářejí podtlak, a končí ušními svíčkami."]],
+   ["Dobré vědět", ["Po baňkách mohou na kůži zůstat kruhové stopy, které obvykle během několika dnů zmizí. Baňkování není vhodné při poruchách srážlivosti krve, užívání léků na ředění krve, v těhotenství a na poraněnou kůži."]]
+  ],
+  "faq": [
+   ["Zůstávají po baňkování stopy?", "Mohou zůstat kruhové otisky, které obvykle během několika dnů samy zmizí."]
+  ]
+ },
+ "lava": {
+  "slug": "masaze-obliceje-teplymi-lavovymi-kameny",
+  "h1": "Masáž obličeje lávovými kameny v Mostě",
+  "title": "Masáž obličeje lávovými kameny Most – Thai Most",
+  "desc": "Masáž obličeje teplými lávovými kameny v Mostě: teplo kamenů pro regeneraci pleti a uvolnění. Pro všechny typy pokožky, 30 nebo 60 min. Tel. 778 429 329.",
+  "sekce": [
+   ["Jak masáž probíhá", ["Masérka pracuje s hladkými nahřátými lávovými kameny, kterými jemně přejíždí po obličeji. Teplo a vibrace kamenů podporují regeneraci pleti, relaxaci a uvolnění. Masáž je vhodná pro všechny typy pokožky."]]
+  ],
+  "faq": []
+ },
+ "lymfa-telo": {
+  "slug": "rucni-lymfaticka-masaz-celeho-tela",
+  "h1": "Ruční lymfatická masáž celého těla v Mostě",
+  "title": "Lymfatická masáž Most – ruční, celé tělo | Thai Most",
+  "desc": "Ruční lymfatická masáž celého těla v Mostě: pomalé jemné hmaty podporující odtok lymfy. 60 minut. Thai Most, SNP 2654/26, tel. 778 429 329.",
+  "sekce": [
+   ["Jak lymfatická masáž probíhá", ["Ruční lymfatická masáž se provádí pomalými, jemnými hmaty směrem k lymfatickým uzlinám. Na rozdíl od klasické masáže nejde o tlak na svaly, ale o podporu odtoku lymfy."]],
+   ["Pro koho je vhodná", ["Při pocitu těžkých nohou a zadržování vody. Účinek se obvykle projeví při opakování v kratších odstupech."]],
+   ["Kdy masáž není vhodná", ["Při horečce, akutní infekci, zánětu žil, trombóze, neléčeném onemocnění srdce nebo při onkologické léčbě. V případě pochybností se poraďte s lékařem."]]
+  ],
+  "faq": []
+ },
+ "tehotenska": {
+  "slug": "tehotenska-masaz",
+  "h1": "Těhotenská masáž v Mostě",
+  "title": "Těhotenská masáž Most – Thai Most",
+  "desc": "Těhotenská masáž v Mostě: jemná tlaková masáž vleže na boku, od 4. do 8. měsíce. Při bolestech zad, otocích nohou a únavě. Thai Most, tel. 778 429 329.",
+  "sekce": [
+   ["Jak těhotenská masáž probíhá", ["Těhotenská masáž je jemná tlaková masáž pro budoucí maminky. Záda a boky masérka masíruje, když ležíte na boku; nohy, ruce, šíji a hlavu vleže na zádech s podloženými koleny. Na břiše se neleží.", "Na sebe si vezměte spodní prádlo nebo pohodlné šortky."]],
+   ["Od kdy a do kdy", ["Masáž provádíme od začátku 4. do konce 8. měsíce těhotenství. Reflexní masáž chodidel v těhotenství neděláme.", "Při rizikovém těhotenství nebo zdravotních komplikacích se prosím nejdřív poraďte se svým lékařem."]],
+   ["S čím může pomoci", ["S bolestí zad a hlavy, otoky nohou, únavou, nespavostí a stresem. Pro mnoho maminek je to hlavně hodina klidu jen pro sebe."]]
+  ],
+  "faq": [
+   ["Od kterého měsíce je těhotenská masáž možná?", "V Thai Most ji provádíme od začátku 4. měsíce do konce 8. měsíce těhotenství."],
+   ["V jaké poloze se masíruje?", "Na boku a na zádech s podloženými koleny. Na břiše se neleží."],
+   ["Dá se těhotenská masáž darovat?", "Ano. Dárkový poukaz vystavíme přímo na těhotenskou masáž nebo na libovolnou částku."]
+  ]
+ },
+ "whirlpool": {
+  "slug": "whirlpool-a-sauna",
+  "h1": "Privátní wellness v Mostě – whirlpool a sauna",
+  "title": "Wellness Most – privátní whirlpool a sauna | Thai Most",
+  "desc": "Privátní wellness v Mostě: whirlpool a sauna jen pro vás, i o víkendu. Samostatně, nebo jako párový balíček s masáží a šampaňským. Thai Most, tel. 778 429 329.",
+  "sekce": [
+   ["Wellness jen pro vás", ["Whirlpool a saunu v Thai Most máte po celou dobu jen pro sebe – žádní další hosté. Ke každé proceduře je karafa vody zdarma, šampaňské si můžete přiobjednat za 150 Kč.", "Wellness je otevřeno i o víkendu. Termín si prosím domluvte předem telefonicky."]],
+   ["Párový balíček: masáž, whirlpool a sauna", ["Nejoblíbenější je dvouhodinový párový balíček: masáž pro dva se dvěma masérkami zároveň, šampaňské a potom privátní whirlpool a sauna. Hodí se k výročí, k narozeninám nebo jako dárek pro dva."]],
+   ["Dobré vědět", ["Před vstupem do whirlpoolu se prosím osprchujte. Co si vzít s sebou, vám recepce řekne při objednání. Saunu a horkou vířivku nedoporučujeme v těhotenství, při horečce a při onemocnění srdce nebo vysokém tlaku bez porady s lékařem."]]
+  ],
+  "faq": [
+   ["Je wellness opravdu privátní?", "Ano. Whirlpool a saunu máte po celou zaplacenou dobu jen pro sebe."],
+   ["Je wellness otevřené o víkendu?", "Ano, o víkendu je otevřeno právě wellness. Termín je potřeba domluvit předem na +420 778 429 329."],
+   ["Dá se wellness spojit s masáží?", "Ano. Párový balíček na 120 minut zahrnuje masáž pro dva, šampaňské, whirlpool a saunu."],
+   ["Dá se wellness darovat?", "Ano, dárkový poukaz platí i na wellness a párový balíček."]
+  ]
+ },
+ "fiji": {
+  "slug": "fiji-ritual",
+  "h1": "Fiji rituál v Mostě",
+  "title": "Fiji rituál Most – peeling, zábal a masáž | Thai Most",
+  "desc": "Fiji rituál v Mostě: kokosový krémový peeling, zábal s tělovým máslem, teplé lávové kameny a lehká olejová masáž. 90 minut. Thai Most, tel. 778 429 329.",
+  "sekce": [
+   ["Jak Fiji rituál probíhá", ["Devadesátiminutový rituál má čtyři části: kokosový krémový peeling celého těla, zábal s tělovým máslem, přikládání teplých lávových kamenů a na závěr lehká olejová masáž."]],
+   ["Pro koho je vhodný", ["Pro ty, kdo chtějí spojit péči o pokožku s relaxací. Pokožka je po rituálu hladká a hydratovaná. Patří k nejčastěji darovaným procedurám."]]
+  ],
+  "faq": []
+ },
+ "cukr": {
+  "slug": "cukrovy-vanek-z-raje",
+  "h1": "Cukrový vánek z ráje – cukrový peeling v Mostě",
+  "title": "Cukrový peeling Most – Cukrový vánek z ráje | Thai Most",
+  "desc": "Cukrový vánek z ráje v Mostě: luxusní peeling cukrovou třtinou z Fidži s tropickými oleji a kokosovým mlékem. Hluboká hydratace, 90 min. Tel. 778 429 329.",
+  "sekce": [
+   ["Jak rituál probíhá", ["Luxusní celotělový peeling cukrovou třtinou z Fidži s tropickými oleji a kokosovým mlékem. Jemně odstraní odumřelé buňky pokožky a hluboce ji hydratuje."]],
+   ["Pro koho je vhodný", ["Pro suchou a unavenou pokožku, před dovolenou i po ní. Peeling není vhodný na spálenou nebo poraněnou kůži."]]
+  ],
+  "faq": []
+ }
+}

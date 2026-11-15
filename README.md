@@ -39,6 +39,12 @@ Veřejný web (`index.html`) je i anglicky (`/en/`) a německy (`/de/`). Zdrojem
 - Za běhu skripty používají `assets/js/i18n.js`: `T("český text")` vrací překlad podle `<html lang>`. Údaje pro salon (e-mail s objednávkou, odesílaná data do kartotéky) jsou vždy česky; k poznámce se připíše „[English]“ / „[Deutsch]“. Ceny se v en/de píšou jako CZK. Náhled poukazu zůstává česky (poukaz vystavuje salon česky).
 - Mapa webu (`sitemap.xml`) a `<link rel="alternate" hreflang>` propojují všechny tři jazyky; přepínač CS / EN / DE je v hlavičce.
 
+## Podstránky pro vyhledávače (11/2026)
+- `python3 tools/stranky.py` vygeneruje z `assets/js/data.js` a `tools/stranky_obsah.json` statické stránky: `sluzba/<slug>/` (19 služeb, **stejné adresy jako starý web thaimost.cz**, aby po přepnutí domény nepadaly na 404 a držely pozice), `sluzby/` (přehled a ceník), `darkove-poukazy/`, `parova-masaz/`, přesměrování starých `o-nas/`, `kontakt/`, `bonusovy-program/`, dále `404.html`, `sitemap.xml` a `assets/js/stranky.js` (odkazy „Více informací“ na úvodní stránce).
+- **Spusť ho po každé změně cen, názvů nebo popisů služeb** (i po změně ceníku ve `firma.html`). Ceny na stránkách služeb se v prohlížeči berou živě z `data.js`, statický text a strukturovaná data se ale obnoví až generátorem. Nová služba = doplnit záznam do `tools/stranky_obsah.json` (slug, h1, title, desc, sekce, faq).
+- Texty stránek (jak masáž probíhá, pro koho, FAQ) jsou v `tools/stranky_obsah.json`. Podstránky jsou jen česky; v en/de se odkazy na ně nezobrazují.
+- Písma (Cormorant Garamond, Manrope) a knihovna QR jsou uložené lokálně (`assets/fonts/`, `assets/css/fonts.css`, `assets/js/qrcode.js`) – web nenačítá nic z Google Fonts ani CDN.
+
 ## Co je potřeba doplnit / rozhodnout
 - **Číslo účtu** pro platbu poukazů převodem se nastavuje v kartotéce: Nastavení → 🎁 Poukazy a platba převodem (kontrola modulo 11, IBAN se dopočítá). Web si ho bere z `/api/stav`; bez účtu se nabízí jen platba v salonu. Po odeslání objednávky dostane zákazník QR platbu s **VS = číslo poukazu** (id v kartotéce, vrací `/api/poukaz`) a platba se spáruje v Platbách.
 - **Platnost poukazů**: v kartotéce Nastavení → Platnost poukazu (výchozí 6 měsíců od nákupu). Nastaví se při objednávce (web i recepce), je vytištěná v políčku Platnost a pod políčky („do tohoto data je potřeba se objednat, zavolejte…“), web ji ukazuje u platby i po odeslání.

@@ -1,0 +1,64 @@
+/* Podstránky (sluzba/…, sluzby/, darkove-poukazy/, parova-masaz/) – generuje tools/stranky.py */
+.crumbs{font-size:.82rem;color:var(--muted);padding:18px 0 0}
+.crumbs a{text-decoration:none;color:var(--bark);font-weight:600}
+.crumbs a:hover{text-decoration:underline}
+.crumbs span{margin:0 6px;opacity:.6}
+.sub-hero{padding:26px 0 56px}
+.sub-hero .wrap{display:grid;grid-template-columns:1.05fr 1fr;gap:44px;align-items:center}
+.sub-hero h1{font-size:clamp(2.2rem,4.6vw,3.6rem);margin-bottom:16px}
+.sub-hero .lead{max-width:none;color:#4a3c31}
+.sub-hero .note{font-size:.9rem;color:var(--bark);margin-top:10px}
+.sub-btns{display:flex;gap:12px;flex-wrap:wrap;margin-top:24px}
+.sub-btns .btn-ghost{color:var(--teak)}
+.sub-facts{display:flex;gap:18px;flex-wrap:wrap;margin-top:22px;font-size:.88rem;color:var(--muted)}
+.sub-facts b{color:var(--teak)}
+.sub-facts a{color:inherit}
+.sub-img{position:relative;border-radius:var(--r);overflow:hidden;box-shadow:var(--shadow);aspect-ratio:3/2;background:linear-gradient(135deg,var(--sand),#e2d2bb)}
+.sub-img img{width:100%;height:100%;object-fit:cover}
+.sub-img .sv-ilu{position:absolute;right:10px;bottom:10px}
+.sub-body{background:var(--paper);padding:64px 0;border-top:1px solid var(--line)}
+.sub-body .wrap{display:grid;grid-template-columns:1.5fr 1fr;gap:48px;align-items:start}
+.sub-text h2{font-size:clamp(1.6rem,2.6vw,2.1rem);margin:30px 0 10px}
+.sub-text h2:first-child{margin-top:0}
+.sub-text p{margin-bottom:12px;color:#3d3028}
+.sub-text ul{margin:0 0 14px 20px;color:#3d3028}
+.sub-text li{margin-bottom:6px}
+.sub-side{display:grid;gap:18px;position:sticky;top:96px}
+.sub-card{background:var(--cream);border:1px solid var(--line);border-radius:var(--r);padding:24px}
+.sub-card h2,.sub-card h3{font-size:1.45rem;margin-bottom:10px}
+.sub-card .prices{border-top:0;padding-top:0;margin-top:0}
+.sub-card .prices li{border-top:1px dashed var(--line);padding:10px 0}
+.sub-card .prices li:first-child{border-top:0}
+.sub-card .btn{width:100%;margin-top:14px}
+.sub-card p{font-size:.92rem;color:#4a3c31;margin-bottom:8px}
+.sub-card .c-big{font-family:"Cormorant Garamond",serif;font-size:1.7rem;font-weight:700;text-decoration:none;color:var(--teak);display:block;margin-bottom:6px}
+.sub-faq{padding:64px 0;background:var(--cream)}
+.sub-faq .faq-grid{margin-top:22px}
+.rel{padding:64px 0;background:var(--sand)}
+.rel-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:18px;margin-top:24px}
+.rel-card{display:flex;flex-direction:column;background:var(--paper);border:1px solid var(--line);border-radius:var(--r);overflow:hidden;text-decoration:none;transition:.25s}
+.rel-card:hover{transform:translateY(-3px);box-shadow:var(--shadow)}
+.rel-card img{aspect-ratio:16/10;object-fit:cover;width:100%;height:auto}
+.rel-card div{padding:14px 16px 16px}
+.rel-card b{font-family:"Cormorant Garamond",serif;font-size:1.25rem;display:block;line-height:1.15}
+.rel-card span{font-size:.85rem;color:var(--muted)}
+.hub{padding:30px 0 80px}
+.hub h1{font-size:clamp(2.2rem,4.6vw,3.6rem);margin-bottom:14px}
+.hub h2{font-size:clamp(1.7rem,3vw,2.3rem);margin:44px 0 6px}
+.hub .lead{max-width:760px;color:#4a3c31}
+.hub .rel-grid{grid-template-columns:repeat(auto-fill,minmax(260px,1fr))}
+.hub .rel-card span{display:block;margin-top:4px}
+.hub .rel-card em{font-style:normal;font-weight:700;color:var(--teak);font-size:.9rem;display:block;margin-top:8px}
+.f-serv{columns:2;column-gap:24px;list-style:none;font-size:.86rem}
+.f-serv li{margin-bottom:4px;break-inside:avoid}
+footer .f-grid.f-sub{grid-template-columns:1.1fr 1fr 1.6fr}
+body.sub .callbar{z-index:40}
+.e404{min-height:60vh;display:grid;place-items:center;text-align:center;padding:60px 0}
+.e404 h1{font-size:clamp(2.4rem,6vw,4rem);margin-bottom:12px}
+@media (max-width:900px){
+  .sub-hero .wrap,.sub-body .wrap{grid-template-columns:1fr;gap:28px}
+  .sub-side{position:static}
+  .sub-hero .sub-img{order:-1}
+  footer .f-grid.f-sub{grid-template-columns:1fr}
+}
+@media (max-width:560px){.f-serv{columns:1}.sub-btns .btn{flex:1 1 100%}}

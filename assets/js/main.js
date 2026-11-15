@@ -55,7 +55,7 @@
       const od = Math.min(...s.ceny.map(c => c[1]));
       const nazev = tx(s, "nazev");
       const img = s.foto
-        ? `<img src="${/^https?:/.test(s.foto) ? s.foto : T.root + D.img + s.foto}" alt="${V.esc(T("{nazev} – thajské masáže Most, Thai Most", { nazev }))}" loading="lazy" onerror="this.remove()">${!s.vlastni && !/^https?:/.test(s.foto) ? '<span class="sv-ilu">' + V.esc(T("Ilustrační foto")) + "</span>" : ""}`
+        ? `<img src="${/^https?:/.test(s.foto) ? s.foto : T.root + D.img + s.foto}" alt="${V.esc(T("{nazev} – thajské masáže Most, Thai Most", { nazev }))}" loading="lazy" width="1200" height="800" onerror="this.remove()">${!s.vlastni && !/^https?:/.test(s.foto) ? '<span class="sv-ilu">' + V.esc(T("Ilustrační foto")) + "</span>" : ""}`
         : "";
       return `<article class="sv reveal in">
         <div class="sv-img"><div class="ph">${LOTUS}</div>${img}${s.top ? '<span class="sv-tag">' + V.esc(T("Oblíbené")) + "</span>" : ""}</div>
@@ -64,6 +64,7 @@
           <p>${V.esc(tx(s, "popis"))}</p>
           ${s.pozn ? `<div class="sv-note">${V.esc(tx(s, "pozn"))}</div>` : ""}
           <ul class="prices">${s.ceny.map(c => `<li><span>${V.esc(T(c[0]))}</span><b>${V.kc(c[1])}</b></li>`).join("")}</ul>
+          ${T.lang === "cs" && window.THAI_STRANKY && THAI_STRANKY[s.id] ? `<a class="sv-more" href="${THAI_STRANKY[s.id]}">Více informací →</a>` : ""}
           <button class="sv-cta" data-poukaz="${s.id}">${V.esc(T("Darovat jako poukaz →"))}</button>
         </div></article>`;
     }).join("");
