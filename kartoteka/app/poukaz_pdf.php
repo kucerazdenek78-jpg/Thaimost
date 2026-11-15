@@ -90,12 +90,12 @@ function poukaz_motiv(array $p): string { $m = (string)($p['motiv'] ?? 'darkovy'
 function poukaz_motiv_url(string $m): string
 {
     $jpg = poukaz_motiv_jpg($m);
-    if (!$jpg) return '/poukaz-pozadi.jpg';
+    if (!$jpg) { try { poukaz_podklady(); } catch (Throwable $e) {} return '/poukaz-pozadi.jpg?v=' . substr(POUKAZ_PODKLADY['public/poukaz-pozadi.jpg'], 0, 8); }
     $jmeno = "poukaz-motiv-$m-" . filemtime($jpg) . '.jpg';
     $pub = dirname(__DIR__) . "/public/$jmeno";
     if (!is_file($pub)) {
         foreach (glob(dirname(__DIR__) . "/public/poukaz-motiv-$m-*.jpg") ?: [] as $stary) @unlink($stary);
-        if (!@copy($jpg, $pub)) return '/poukaz-pozadi.jpg';
+        if (!@copy($jpg, $pub)) return '/poukaz-pozadi.jpg?v=' . substr(POUKAZ_PODKLADY['public/poukaz-pozadi.jpg'], 0, 8);
     }
     return "/$jmeno";
 }
@@ -185,9 +185,13 @@ function poukaz_podklady(): void
     static $hotovo = false;
     if ($hotovo) return;
     $koren = dirname(__DIR__);
+    // po změně podkladů (jiný commit) se soubory na disku jednou ověří a staré (jiný součet) se stáhnou znovu
+    $znacka = "$koren/app/poukaz/.zdroj";
+    $overit = @file_get_contents($znacka) !== POUKAZ_ZDROJ;
+    $zapsat = $overit;
     foreach (POUKAZ_PODKLADY as $cesta => $hash) {
         $f = "$koren/$cesta";
-        if (is_file($f)) continue;
+        if (is_file($f) && (!$overit || hash_equals($hash, (string)hash_file('sha256', $f)))) continue;
         $url = POUKAZ_ZDROJ . $cesta;
         $data = false;
         if (function_exists('curl_init')) {
@@ -200,12 +204,15 @@ function poukaz_podklady(): void
             $data = @file_get_contents($url, false, stream_context_create(['http' => ['timeout' => 40, 'user_agent' => 'kartoteka-thaimost']]));
         }
         $ruka = "Nahrajte ho ručně do složky kartotéky na NAS (je v repozitáři kucerazdenek78-jpg/thaimost jako kartoteka/$cesta).";
+        $ok = is_string($data) && $data !== '' && hash_equals($hash, hash('sha256', $data));
+        if (!$ok && is_file($f)) { $zapsat = false; continue; }   // starší verze na disku zůstane, zkusí se příště
         if (!is_string($data) || $data === '') throw new RuntimeException("Podklad poukazu $cesta chybí a nepodařilo se ho stáhnout z GitHubu. $ruka");
         if (!hash_equals($hash, hash('sha256', $data))) throw new RuntimeException("Podklad poukazu $cesta se stáhl poškozený (nesedí kontrolní součet). $ruka");
         if (!is_dir(dirname($f)) && !@mkdir(dirname($f), 0775, true)) throw new RuntimeException("Nejde vytvořit složku pro $cesta. $ruka");
         $tmp = $f . '.tmp' . getmypid();
         if (@file_put_contents($tmp, $data) !== strlen($data) || !@rename($tmp, $f)) { @unlink($tmp); throw new RuntimeException("Podklad poukazu $cesta se nepodařilo uložit na disk. $ruka"); }
     }
+    if ($zapsat && is_dir("$koren/app/poukaz")) @file_put_contents($znacka, POUKAZ_ZDROJ);
     $hotovo = true;
 }
 
