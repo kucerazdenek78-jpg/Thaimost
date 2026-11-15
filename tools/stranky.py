@@ -52,6 +52,7 @@ def load_data():
 D = load_data()
 OBSAH = json.loads((ROOT / "tools/stranky_obsah.json").read_text(encoding="utf-8"))
 S = D["salon"]
+PROVOZOVATEL = S["provozovatel"].split(",")[0]
 TEL, TEL_HREF = S["telefon"], S["telefonHref"]
 SLUZBY = D["sluzby"]
 for s in SLUZBY:
@@ -148,7 +149,7 @@ def footer(R, sid=None):
       <div><h4>Kontakt</h4><a href="{TEL_HREF}">{TEL}</a><br><a href="mailto:salon@thaimost.cz">salon@thaimost.cz</a><br>{e(S["adresa"][0])}<br>{e(S["adresa"][1])}<br><br>Po–Pá 9–20 h<br>So–Ne pouze wellness<br><a href="{GMAPS}" target="_blank" rel="noopener">Mapa a recenze</a></div>
       <div><h4>Masáže a rituály</h4><ul class="f-serv">{links}</ul></div>
     </div>
-    <div class="f-bottom"><span>© {date.today().year} Thajské masáže Most · IČO {e(S["ico"])}</span><span class="f-links"><a href="{R}">Úvodní stránka</a><a href="{R}sluzby/">Ceník</a></span></div>
+    <div class="f-bottom"><span>© {date.today().year} Thajské masáže Most · IČO {e(S["ico"])}</span><span class="f-links"><a href="{R}">Úvodní stránka</a><a href="{R}sluzby/">Ceník</a><a href="{R}ochrana-osobnich-udaju/">Ochrana osobních údajů</a></span></div>
   </div>
 </footer>
 <div class="callbar">
@@ -394,6 +395,55 @@ def page_parova():
     write(path, head(R, title, desc, path, "assets/img/ai/parova.jpg", graph) + header(R) + body + footer(R))
 
 
+def page_osobni_udaje():
+    """Zásady ochrany osobních údajů (GDPR) – odkaz v patičce a pro přihlášení Googlem v kartotéce."""
+    R, path = "../", "ochrana-osobnich-udaju/"
+    title = "Ochrana osobních údajů – Thai Most, thajské masáže Most"
+    desc = "Jak Thai Most – thajské masáže Most zpracovává osobní údaje zákazníků: objednávky, dárkové poukazy, věrnostní karty, kartotéka a vaše práva."
+    crumbs = [("Ochrana osobních údajů", path)]
+    def sec(h, html): return f"<h2>{h}</h2>\n{html}\n"
+    t = "".join([
+        f"<p>Tady popisujeme, jaké osobní údaje v salonu Thai Most zpracováváme, proč, jak dlouho a jaká máte práva. Platí od {date.today().strftime('%-d. %-m. %Y')}.</p>",
+        sec("Kdo údaje zpracovává (správce)", f"<p>{e(PROVOZOVATEL)} · IČO {e(S['ico'])}<br>Provozovna: {e(S['adresa'][0])}, {e(S['adresa'][1])}<br>Kontakt pro otázky k osobním údajům: <a href=\"mailto:salon@thaimost.cz\">salon@thaimost.cz</a>, <a href=\"{TEL_HREF}\">{TEL}</a></p>"),
+        sec("Jaké údaje a proč", """<ul>
+<li><b>Objednávka termínu</b> (formulář na webu, telefon, osobně): jméno, příjmení, telefon, případně e-mail, vybraná masáž, kdy se vám hodí a vaše poznámka. Účel: domluvit a připravit termín, poslat potvrzení. Právní základ: jednání o smlouvě a její plnění.</li>
+<li><b>Dárkový poukaz</b>: jméno, telefon a e-mail objednatele, jméno obdarovaného, věnování, způsob převzetí a platby. Účel: vystavit a doručit poukaz, spárovat platbu převodem. Právní základ: plnění smlouvy; údaje o platbě a dokladech uchováváme kvůli účetním a daňovým povinnostem.</li>
+<li><b>Kartotéka zákazníků</b>: historie návštěv a rezervací, oblíbená masérka, síla tlaku a další přání k masáži, věrnostní razítka a karta. Účel: poskytnout masáž podle vašich přání a vést věrnostní program. Právní základ: plnění smlouvy a náš oprávněný zájem na kvalitní péči o stálé zákazníky.</li>
+<li><b>Zdravotní omezení</b> (např. těhotenství, bolesti zad, alergie na oleje) zapisujeme jen s vaším výslovným souhlasem, aby masérka věděla, na co dát pozor. Souhlas můžete kdykoli odvolat a záznam smažeme.</li>
+<li><b>Věrnostní karta s QR kódem</b>: kód karty propojený s vaším záznamem. Po naskenování karty uvidíte počet razítek a návštěv, bez dalších osobních údajů.</li>
+</ul>"""),
+        sec("Komu údaje předáváme", """<p>Údaje neprodáváme ani nepoužíváme k reklamě. Pracují s nimi jen pracovníci salonu a tito zpracovatelé, kteří pro nás zajišťují techniku:</p>
+<ul>
+<li>Seznam.cz, a.s. – e-mailová schránka salonu (Email Profi),</li>
+<li>Cloudflare, Inc. – zabezpečené připojení ke kartotéce, která běží na vlastním serveru v České republice,</li>
+<li>Google LLC – kontakty v telefonu salonu (jméno, telefon a krátká poznámka, abychom věděli, kdo volá),</li>
+<li>Anthropic PBC – pomocník při plánování rezervací v kartotéce,</li>
+<li>GitHub, Inc. – provoz tohoto webu (formuláře odesílají údaje přímo do kartotéky salonu),</li>
+<li>banka salonu – příjem plateb za poukazy převodem.</li>
+</ul>
+<p>Někteří z těchto zpracovatelů sídlí mimo EU (USA); předání probíhá na základě standardních smluvních doložek nebo rámce EU–USA pro ochranu údajů.</p>"""),
+        sec("Jak dlouho údaje uchováváme", """<ul>
+<li>Kartotéku zákazníka po dobu, kdy k nám chodíte, a nejdéle 3 roky od poslední návštěvy; potom údaje smažeme nebo anonymizujeme.</li>
+<li>Nepotvrzené žádosti o termín nejdéle 1 rok.</li>
+<li>Údaje o poukazech a platbách po dobu stanovenou účetními a daňovými předpisy.</li>
+<li>Zdravotní omezení do odvolání souhlasu, nejdéle s kartotékou.</li>
+</ul>"""),
+        sec("Vaše práva", f"""<p>Máte právo na přístup ke svým údajům, jejich opravu, výmaz, omezení zpracování, přenesení a vznést námitku. Souhlas (např. se zápisem zdravotních omezení) můžete kdykoli odvolat. Stačí napsat na <a href=\"mailto:salon@thaimost.cz\">salon@thaimost.cz</a>, zavolat na <a href=\"{TEL_HREF}\">{TEL}</a> nebo se zastavit v salonu.</p>
+<p>Pokud si myslíte, že s údaji nezacházíme správně, můžete se obrátit na Úřad pro ochranu osobních údajů (<a href=\"https://uoou.gov.cz\" target=\"_blank\" rel=\"noopener\">uoou.gov.cz</a>).</p>"""),
+        sec("Cookies a měření na webu", """<p>Web nepoužívá reklamní ani analytické cookies. V prohlížeči si ukládá jen drobná nastavení (např. zda jste vypnuli zvuk videa nebo zavřeli upozornění), která nikam neodesílá.</p>"""),
+    ])
+    body = f"""{crumbs_html(R, crumbs)}<main>
+<section class="sub-body"><div class="wrap">
+  <div class="sub-text" style="max-width:820px">
+    <h1>Ochrana osobních údajů</h1>
+    {t}
+  </div>
+</div></section>
+</main>
+"""
+    write(path, head(R, title, desc, path, graph=[crumbs_ld(crumbs)]) + header(R) + body + footer(R))
+
+
 def page_redirect(path, target, nazev):
     """Staré adresy původního webu → kotva na úvodní stránce (GitHub Pages neumí přesměrování 301)."""
     write(path, f"""<!doctype html>
@@ -452,6 +502,8 @@ def main():
     page_sluzby()
     page_poukazy()
     page_parova()
+    page_osobni_udaje()
+    paths.append(("ochrana-osobnich-udaju/", "0.3"))
     page_redirect("o-nas/", "#o-nas", "O nás")
     page_redirect("kontakt/", "#kontakt", "Kontakt")
     page_redirect("bonusovy-program/", "#bonus", "Bonusový program")

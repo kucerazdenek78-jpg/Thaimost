@@ -10,7 +10,7 @@ window.THAI = {
     telefonHref: "tel:+420778429329",
     email: "salon@thaimost.cz",
     adresa: ["Slovenského národního povstání 2654/26", "434 01 Most"],
-    provozovatel: "Hana Follprechtová, J. A. Komenského 534/3, 434 01 Most",
+    provozovatel: "Hana Kučerová, J. A. Komenského 534/3, 434 01 Most",
     ico: "87149931",
     oteviraci: [
       ["Po–Pá", "9:00–20:00"],
