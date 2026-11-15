@@ -177,7 +177,7 @@ function sezeni_payload(array $m, ?array $s): array
     $r = q1('SELECT * FROM rezervace WHERE id=?', [$s['rezervace_id']]);
     $z = q1('SELECT * FROM zakaznici WHERE id=?', [$r['zakaznik_id']]);
     $mas = q1('SELECT * FROM maserky WHERE id=?', [$s['maserka_id']]);
-    $v = $r['varianta_id'] ? q1('SELECT v.popis, v.minuty, s.nazev, s.kod FROM varianty v JOIN sluzby s ON s.id=v.sluzba_id WHERE v.id=?', [$r['varianta_id']]) : null;
+    $v = $r['varianta_id'] ? q1('SELECT v.popis, v.minuty, s.nazev, s.kod, s.preklady FROM varianty v JOIN sluzby s ON s.id=v.sluzba_id WHERE v.id=?', [$r['varianta_id']]) : null;
     $out = array_merge($out, [
         'stav' => $s['stav'], 'sezeni_id' => (int)$s['id'], 'maserka' => $mas['jmeno'] ?? '', 'minuty' => (int)$s['minuty'],
         'potvrzeno' => (bool)$s['potvrzeno'], 'neni_ona' => (bool)$s['neni_ona'],
@@ -187,7 +187,7 @@ function sezeni_payload(array $m, ?array $s): array
         $out = array_merge($out, [
             'prijmeni' => trim($z['prijmeni']) !== '' ? $z['prijmeni'] : trim($z['jmeno']),
             'masaz' => $v ? trim($v['nazev'] . ($v['popis'] ? ' – ' . $v['popis'] : '')) : 'Masáž',
-            'masaz_en' => $v ? trim((MASAZ_EN[$v['kod']] ?? $v['nazev']) . ($v['popis'] ? ' – ' . strtr($v['popis'], VARIANTA_EN) : '')) : 'Massage',
+            'masaz_en' => $v ? trim((MASAZ_EN[$v['kod']] ?? ((json_decode((string)($v['preklady'] ?? ''), true)['en']['nazev'] ?? '') ?: $v['nazev'])) . ($v['popis'] ? ' – ' . strtr($v['popis'], VARIANTA_EN) : '')) : 'Massage',
         ]);
         $out['foto'] = $v ? masaz_foto((string)$v['kod']) : '';
         // atmosféra tematické masérny (projekce + hudba): masérka ji před masáží zapne

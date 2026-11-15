@@ -31,6 +31,27 @@ function sluzby_web_vychozi(): array
     ];
 }
 
+/** Kód nové služby z názvu (bez diakritiky, malá písmena, pomlčky) – jedinečný. */
+function sluzba_novy_kod(string $nazev): string
+{
+    $k = strtolower(trim(preg_replace('~[^a-z0-9]+~i', '-', strtr($nazev, ['á'=>'a','č'=>'c','ď'=>'d','é'=>'e','ě'=>'e','í'=>'i','ň'=>'n','ó'=>'o','ř'=>'r','š'=>'s','ť'=>'t','ú'=>'u','ů'=>'u','ý'=>'y','ž'=>'z',
+        'Á'=>'a','Č'=>'c','Ď'=>'d','É'=>'e','Ě'=>'e','Í'=>'i','Ň'=>'n','Ó'=>'o','Ř'=>'r','Š'=>'s','Ť'=>'t','Ú'=>'u','Ů'=>'u','Ý'=>'y','Ž'=>'z'])), '-'));
+    $k = substr($k !== '' ? $k : 'sluzba', 0, 30);
+    $z = $k; $i = 2;
+    while (qv('SELECT 1 FROM sluzby WHERE kod=?', [$z])) $z = $k . '-' . $i++;
+    return $z;
+}
+
+/** Přidá položku ceníku ke službě (prázdný popis = nic). */
+function sluzba_pridej_variantu(int $sid, string $popis, $minuty, $cena): bool
+{
+    $popis = mb_substr(trim($popis), 0, 120);
+    if ($popis === '' || (int)$cena <= 0) return false;
+    q('INSERT INTO varianty(sluzba_id,popis,minuty,cena,poradi) VALUES(?,?,?,?,(SELECT COALESCE(MAX(poradi),0)+1 FROM varianty WHERE sluzba_id=?))',
+        [$sid, $popis, (string)$minuty !== '' ? max(0, (int)$minuty) : null, (int)$cena, $sid]);
+    return true;
+}
+
 /** Překlady služby: ['en' => ['nazev' => …, 'popis' => …, 'pozn' => …], 'de' => …]. */
 function sluzba_preklady(array $s): array
 {
@@ -47,7 +68,7 @@ function sluzby_web(): array
     foreach (q('SELECT sluzba_id, popis, cena FROM varianty WHERE aktivni=1 ORDER BY poradi, id')->fetchAll() as $v) $var[$v['sluzba_id']][] = [$v['popis'], (int)$v['cena']];
     $o = [];
     foreach (q('SELECT * FROM sluzby WHERE kod IS NOT NULL ORDER BY poradi, id')->fetchAll() as $s) {
-        $o[$s['kod']] = ['aktivni' => (int)$s['aktivni'] === 1 && !empty($var[$s['id']]), 'nazev' => $s['nazev'], 'popis' => $s['popis_web'] ?? '', 'pozn' => $s['pozn_web'] ?? '',
+        $o[$s['kod']] = ['aktivni' => (int)$s['aktivni'] === 1 && !empty($var[$s['id']]), 'kat' => $s['kat'] === 'wellness' ? 'wellness' : 'masaze', 'nazev' => $s['nazev'], 'popis' => $s['popis_web'] ?? '', 'pozn' => $s['pozn_web'] ?? '',
             'preklady' => sluzba_preklady($s), 'ceny' => $var[$s['id']] ?? []];
     }
     return $o;

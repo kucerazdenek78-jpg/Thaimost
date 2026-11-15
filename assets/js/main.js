@@ -132,6 +132,15 @@
         if (Array.isArray(k.ceny) && k.ceny.length) { s.ceny = k.ceny.map(c => [String(c[0]), +c[1]]); zmena = true; }
         return true;
       });
+      /* nové služby přidané v kartotéce (nejsou v data.js): na konec své kategorie, bez fotky se ukáže lotos */
+      Object.keys(r.sluzby).forEach(id => {
+        const k = r.sluzby[id];
+        if (!k || !k.aktivni || D.sluzby.some(s => s.id === id) || !Array.isArray(k.ceny) || !k.ceny.length) return;
+        const tr = (k.preklady && k.preklady[T.lang]) || {}, s = { id, kat: k.kat === "wellness" ? "wellness" : "masaze", nazev: k.nazev, popis: k.popis || "", pozn: k.pozn || "", ceny: k.ceny.map(c => [String(c[0]), +c[1]]), tr: {} };
+        for (const f of ["nazev", "popis", "pozn"]) if (tr[f]) s.tr[f] = tr[f];
+        const posl = D.sluzby.map(x => x.kat).lastIndexOf(s.kat);
+        D.sluzby.splice(posl + 1, 0, s); zmena = true;
+      });
     }
     if (r.fotky && typeof r.fotky === "object") {
       D.sluzby.forEach(s => { const u = r.fotky[s.id]; if (u && /^https:\/\//.test(u)) { s.foto = u; s.vlastni = true; zmena = true; } });

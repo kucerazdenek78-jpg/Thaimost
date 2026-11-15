@@ -71,6 +71,27 @@ function stranka_nastaveni(array $u): void
                     if ($a !== $b) foreach (array_keys(SLUZBY_WEB_JAZYKY) as $jz) if ($b !== '' && $pr[$jz][$f] === $stare[$jz][$f]) $bezPrekladu[$nazev] = true;
                 q('UPDATE sluzby SET nazev=?, popis_web=?, pozn_web=?, preklady=? WHERE id=?', [mb_substr($nazev, 0, 120), mb_substr($popis, 0, 1200), mb_substr($pozn, 0, 400), json_encode($pr, JSON_UNESCAPED_UNICODE), (int)$id]);
             }
+            // nové položky u existujících služeb
+            foreach ($_POST['nv'] ?? [] as $sid => $nv)
+                if (sluzba_pridej_variantu((int)$sid, (string)($nv['popis'] ?? ''), $nv['minuty'] ?? '', $nv['cena'] ?? 0))
+                    flash('Přidána položka ceníku „' . trim($nv['popis']) . '“ k „' . qv('SELECT nazev FROM sluzby WHERE id=?', [(int)$sid]) . '“.');
+            // nová služba (masáž / wellness)
+            $ns = $_POST['nova'] ?? [];
+            if (trim((string)($ns['nazev'] ?? '')) !== '') {
+                $nazev = mb_substr(trim($ns['nazev']), 0, 120);
+                $polozky = array_filter($ns['v'] ?? [], fn($x) => trim((string)($x['popis'] ?? '')) !== '' && (int)($x['cena'] ?? 0) > 0);
+                if (!$polozky) flash("Novou službu „{$nazev}“ jsem nepřidal – vyplňte aspoň jednu položku ceníku (např. „60 min“ a cenu).", 'err');
+                else {
+                    $kod = sluzba_novy_kod($nazev);
+                    q("INSERT INTO sluzby(kod,nazev,kat,aktivni,poradi,popis_web,pozn_web,preklady) VALUES(?,?,?,1,(SELECT COALESCE(MAX(poradi),0)+1 FROM sluzby),?,?,'{}')",
+                        [$kod, $nazev, ($ns['kat'] ?? '') === 'wellness' ? 'wellness' : 'masaze', mb_substr(trim(preg_replace('~\s+~u', ' ', (string)($ns['popis'] ?? ''))), 0, 1200),
+                         mb_substr(trim((string)($ns['pozn'] ?? '')), 0, 400)]);
+                    $sid = (int)db()->lastInsertId();
+                    foreach ($polozky as $x) sluzba_pridej_variantu($sid, (string)$x['popis'], $x['minuty'] ?? '', $x['cena']);
+                    zapis_log('sluzba_nova', "$kod $nazev");
+                    flash("Přidána nová služba „{$nazev}“ – na webu se ukáže do minuty. Fotku a překlady doplníte u ní v ceníku.");
+                }
+            }
             // fotky služeb
             foreach (array_keys($_POST['smazat_foto'] ?? []) as $kod) { sluzba_foto_smaz((string)$kod); flash('Fotka smazána – na webu je zase ilustrační.'); }
             foreach ($_FILES['foto']['name'] ?? [] as $kod => $jm) {
@@ -206,7 +227,7 @@ function stranka_nastaveni(array $u): void
               <div class="cs-hlava">
                 <?php if ($sc['kod']): ?>
                 <div class="sf">
-                  <div class="sf-img"><img src="<?= h($furl ?: REKLAMY_WEB . 'assets/img/ai/' . $sc['kod'] . '.jpg') ?>" alt="" loading="lazy"><span class="<?= $furl ? 'sf-ok' : 'sf-ilu' ?>"><?= $furl ? '✓ vlastní' : 'ilustrační' ?></span></div>
+                  <div class="sf-img"><img src="<?= h($furl ?: REKLAMY_WEB . 'assets/img/ai/' . $sc['kod'] . '.jpg') ?>" alt="" loading="lazy" onerror="this.style.visibility='hidden'"><span class="<?= $furl ? 'sf-ok' : 'sf-ilu' ?>"><?= $furl ? '✓ vlastní' : 'ilustrační' ?></span></div>
                   <input type="file" name="foto[<?= h($sc['kod']) ?>]" accept="image/*" class="sf-in"><span class="muted small sf-st"></span>
                   <?php if ($furl): ?><label class="check small"><input type="checkbox" name="smazat_foto[<?= h($sc['kod']) ?>]" value="1"> smazat fotku (zpět ilustrační)</label><?php endif ?>
                 </div>
@@ -237,9 +258,32 @@ function stranka_nastaveni(array $u): void
                       <td><input type="checkbox" name="v[<?= $c['id'] ?>][wellness_mistnost]" value="1" <?= $c['wellness_mistnost'] ? 'checked' : '' ?>></td>
                       <td><input type="checkbox" name="v[<?= $c['id'] ?>][aktivni]" value="1" <?= $c['aktivni'] ? 'checked' : '' ?>></td></tr>
                 <?php endforeach ?>
+                <tr class="cs-nova"><td><input name="nv[<?= $sid ?>][popis]" placeholder="+ nová položka, např. 90 min" maxlength="120" style="min-width:9em"></td>
+                    <td><input type="number" name="nv[<?= $sid ?>][minuty]" placeholder="min" style="width:4.5em"></td>
+                    <td><input type="number" name="nv[<?= $sid ?>][cena]" placeholder="Kč" style="width:5.5em"></td><td colspan="4" class="muted small">vyplňte a uložte ceník</td></tr>
               </table>
             </details>
           <?php endforeach ?>
+          <details class="cs-blok cs-nova-sl"<?= ($_GET['nova'] ?? '') === '1' ? ' open' : '' ?>>
+            <summary><b>➕ Přidat novou masáž / službu</b></summary>
+            <div style="padding:12px">
+              <div class="grid3">
+                <label>Název *<input name="nova[nazev]" maxlength="120" placeholder="např. Thajská masáž s horkými kameny"></label>
+                <label>Kategorie<select name="nova[kat]"><option value="masaze">Masáže</option><option value="wellness">Wellness a rituály</option></select></label>
+              </div>
+              <label>Popis na webu<textarea name="nova[popis]" rows="3" maxlength="1200" placeholder="co masáž obnáší, pro koho je vhodná…"></textarea></label>
+              <label>Poznámka <span class="muted small">(nepovinné)</span><input name="nova[pozn]" maxlength="400"></label>
+              <table class="tbl plain cs-var" style="margin:6px 0">
+                <tr><th>Položka ceníku</th><th>Minut</th><th>Kč</th></tr>
+                <?php for ($i = 0; $i < 3; $i++): ?>
+                  <tr><td><input name="nova[v][<?= $i ?>][popis]" placeholder="<?= ['60 min', '90 min', '120 min'][$i] ?>" maxlength="120"></td>
+                      <td><input type="number" name="nova[v][<?= $i ?>][minuty]" style="width:4.5em"></td>
+                      <td><input type="number" name="nova[v][<?= $i ?>][cena]" style="width:5.5em"></td></tr>
+                <?php endfor ?>
+              </table>
+              <p class="muted small">Stačí vyplnit jednu položku. Po uložení se služba objeví v ceníku – tam pak doplníte fotku, překlady a počet masérek. Na webu bude zařazená na konec své kategorie; dokud nemá fotku, ukáže se místo ní lotos.</p>
+            </div>
+          </details>
           <p><button class="btn primary">Uložit ceník</button></p>
           </details>
         </form>
