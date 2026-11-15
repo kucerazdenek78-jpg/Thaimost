@@ -78,7 +78,8 @@ function stranka_hledej_zak(array $u): void
         }
         // poukazy podle kódu / jména
         $like = '%' . $hl . '%';
-        foreach (q("SELECT * FROM poukazy WHERE kod LIKE ? OR pro_koho LIKE ? OR objednal_jmeno LIKE ? ORDER BY vytvoreno DESC LIMIT 4", [$like, $like, $like])->fetchAll() as $p) {
+        $klic = '%' . preg_replace('~[^A-Z0-9]~', '', strtoupper($hl)) . '%';   // kód i bez pomlček a mezer
+        foreach (q("SELECT * FROM poukazy WHERE kod LIKE ? OR (? <> '%%' AND REPLACE(REPLACE(UPPER(kod),'-',''),' ','') LIKE ?) OR pro_koho LIKE ? OR objednal_jmeno LIKE ? ORDER BY vytvoreno DESC LIMIT 4", [$like, $klic, $klic, $like, $like])->fetchAll() as $p) {
             $out[] = ['typ' => 'poukaz', 'nazev' => '🎁 ' . $p['kod'], 'tel' => '', 'info' => (STAVY_POUKAZU[$p['stav']] ?? $p['stav']) . ' · zůstatek ' . kc($p['zustatek']) . ($p['pro_koho'] ? ' · pro ' . $p['pro_koho'] : ''),
                       'url' => '/?r=poukaz&id=' . $p['id']];
         }

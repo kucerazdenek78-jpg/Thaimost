@@ -256,3 +256,4 @@ details.rozbal>summary h3{display:inline;margin:0}.posta-ucet details.rozbal{mar
 .pk-typ label{display:flex;align-items:center;gap:8px;padding:9px 16px;border:1.5px solid #e1d3bf;border-radius:999px;background:#fff;cursor:pointer;font-weight:600}
 .pk-typ label:has(input:checked){border-color:#6b4a2b;background:#f3e8d6}
 .pk-typ input{width:auto;height:auto;margin:0;padding:0;accent-color:#6b4a2b}
+.pk-uplatnit{display:flex;flex-direction:column;gap:6px;margin-bottom:14px}

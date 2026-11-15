@@ -7,6 +7,8 @@ function stranka_poukazy(array $u): void
     $kde = ['aktivni' => "stav IN ('objednano','zaplaceno','vydano')", 'objednano' => "stav='objednano'", 'vse' => '1=1',
             'uplatnene' => "stav IN ('uplatneno','propadle','zruseno')"][$f] ?? "stav IN ('objednano','zaplaceno','vydano')";
     $hl = trim($_GET['q'] ?? '');
+    // přesný kód (opsaný z vytištěného poukazu) → rovnou karta poukazu
+    if ($hl !== '' && ($nal = poukaz_podle_kodu($hl))) presmeruj("/?r=poukaz&id=$nal[id]");
     $p = [];
     if ($hl !== '') { $kde .= ' AND (kod LIKE ? OR objednal_jmeno LIKE ? OR pro_koho LIKE ? OR objednal_tel LIKE ?)'; $p = ["%$hl%", "%$hl%", "%$hl%", '%' . preg_replace('~\D~', '', $hl) . '%']; }
     $rows = q("SELECT * FROM poukazy WHERE $kde ORDER BY vytvoreno DESC LIMIT 300", $p)->fetchAll();
@@ -16,7 +18,7 @@ function stranka_poukazy(array $u): void
     hlavicka('Poukazy', 'poukazy'); ?>
     <div class="cal-nav">
       <h1>Dárkové poukazy</h1>
-      <form class="grow"><input type="hidden" name="r" value="poukazy"><input type="hidden" name="f" value="<?= h($f) ?>"><input name="q" value="<?= h($hl) ?>" placeholder="kód, jméno, telefon"></form>
+      <form class="grow"><input type="hidden" name="r" value="poukazy"><input type="hidden" name="f" value="<?= h($f) ?>"><input name="q" value="<?= h($hl) ?>" placeholder="kód poukazu, jméno, telefon" autocapitalize="characters"></form>
       <a class="btn primary" href="/?r=poukaz_novy">+ Vystavit poukaz</a>
     </div>
     <?php if ($nPlateb = platby_ke_sparovani()): ?><p class="flash warn">💳 <?= $nPlateb ?> platb<?= $nPlateb === 1 ? 'a čeká' : ($nPlateb < 5 ? 'y čekají' : ' čeká') ?> na spárování s poukazem – <a href="/?r=nastaveni&amp;sekce=platby">otevřít Platby</a></p><?php endif ?>
@@ -53,7 +55,11 @@ function stranka_poukaz_novy(array $u): void
             $p['sluzba_text'] = $v['nazev'] . ' – ' . $v['popis'];
         } else $p['sluzba_text'] = '';
         if ($hodnota < 1) { flash('Zadejte hodnotu poukazu.', 'err'); presmeruj('/?r=poukaz_novy'); }
-        $kod = poukaz_kod();
+        // kód: z předtištěného poukazu (recepce ho opíše), jinak vygeneruje kartotéka
+        $kod = poukaz_kod_norm((string)($p['kod'] ?? ''));
+        if ($kod !== '' && strlen($kod) < 3) { flash('Kód poukazu je moc krátký.', 'err'); presmeruj('/?r=poukaz_novy'); }
+        if ($kod !== '' && ($jiny = poukaz_podle_kodu($kod))) { flash("Poukaz s kódem $jiny[kod] už v kartotéce je.", 'err'); presmeruj("/?r=poukaz&id=$jiny[id]"); }
+        if ($kod === '') $kod = poukaz_kod();
         $platnost = preg_match('~^\d{4}-\d{2}-\d{2}$~', $p['platnost_do'] ?? '') ? $p['platnost_do'] : null;
         $stav = !empty($p['zaplaceno']) ? 'vydano' : 'objednano';
         q("INSERT INTO poukazy(kod,hodnota,zustatek,sluzba_text,platnost_do,stav,objednal_jmeno,objednal_tel,objednal_email,pro_koho,od_koho,venovani,prevzeti,platba,poznamka,zdroj)
@@ -78,6 +84,8 @@ function stranka_poukaz_novy(array $u): void
     <form method="post" class="card">
       <?= csrf_pole() ?>
       <?php $vars = q("SELECT v.id, v.popis, v.cena, s.nazev FROM varianty v JOIN sluzby s ON s.id=v.sluzba_id WHERE v.aktivni=1 AND s.aktivni=1 AND v.cena>0 ORDER BY s.poradi, v.poradi")->fetchAll(); ?>
+      <label>Kód z vytištěného poukazu <span class="muted small">(opište kód z poukazu; prázdné = kartotéka vytvoří nový a poukaz vytisknete z kartotéky)</span>
+        <input name="kod" maxlength="40" autocapitalize="characters" autocomplete="off" placeholder="např. TM-0123" style="text-transform:uppercase"></label>
       <div class="seg pk-typ" role="radiogroup">
         <label><input type="radio" name="typ" value="castka" checked> Na částku</label>
         <label><input type="radio" name="typ" value="masaz"> Na konkrétní masáž</label>
@@ -133,6 +141,11 @@ function stranka_poukaz(array $u): void
     if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $akce = $_POST['akce'] ?? '';
         if ($akce === 'stav' && isset(STAVY_POUKAZU[$_POST['stav'] ?? ''])) {
+            // uplatněný celý: zbytek se odepíše (pohyb s datem a kdo), aby kartotéka věděla, kdy a kdo ho uplatnil
+            if ($_POST['stav'] === 'uplatneno' && (int)$p['zustatek'] > 0) {
+                q('INSERT INTO poukaz_pohyby(poukaz_id,castka,poznamka,kdo) VALUES(?,?,?,?)', [$id, -(int)$p['zustatek'], 'uplatněn celý' . (trim($_POST['pozn'] ?? '') !== '' ? ' – ' . trim($_POST['pozn']) : ''), kdo()]);
+                q('UPDATE poukazy SET zustatek=0 WHERE id=?', [$id]);
+            }
             q('UPDATE poukazy SET stav=? WHERE id=?', [$_POST['stav'], $id]);
             zapis_log('poukaz_stav', "$p[kod] $_POST[stav]");
             flash('Stav změněn.');
@@ -220,10 +233,17 @@ function stranka_poukaz(array $u): void
       </div>
       <div>
         <section class="card side">
+          <?php if (in_array($p['stav'], ['zaplaceno', 'vydano'], true)): ?>
+          <form method="post" class="pk-uplatnit">
+            <?= csrf_pole() ?><input type="hidden" name="akce" value="stav"><input type="hidden" name="stav" value="uplatneno">
+            <input name="pozn" placeholder="poznámka (např. masáž 15. 11., Masérka 2)">
+            <button class="btn primary" data-confirm="Označit poukaz <?= h($p['kod']) ?> jako uplatněný? Zůstatek <?= h(kc($p['zustatek'])) ?> se odepíše.">✓ Uplatnit celý poukaz</button>
+          </form>
+          <?php endif ?>
           <h3>Stav</h3>
           <form method="post" class="stav-btns">
             <?= csrf_pole() ?><input type="hidden" name="akce" value="stav">
-            <?php foreach (['zaplaceno', 'vydano', 'uplatneno', 'zruseno'] as $s): if ($s === $p['stav']) continue; ?>
+            <?php foreach (['zaplaceno', 'vydano', 'uplatneno', 'zruseno'] as $s): if ($s === $p['stav'] || ($s === 'uplatneno' && in_array($p['stav'], ['zaplaceno', 'vydano'], true))) continue; ?>
               <button name="stav" value="<?= $s ?>" class="btn<?= $s === 'zruseno' ? ' danger' : '' ?>"><?= h(STAVY_POUKAZU[$s]) ?></button>
             <?php endforeach ?>
           </form>
@@ -245,8 +265,9 @@ function stranka_poukaz(array $u): void
 /** Uplatnění poukazu na rezervaci. Vrací text chyby nebo null. */
 function uplatni_poukaz(array $r, string $kod, int $castka): ?string
 {
-    $p = q1('SELECT * FROM poukazy WHERE kod=?', [$kod]);
-    if (!$p) return "Poukaz $kod neexistuje.";
+    $p = poukaz_podle_kodu($kod);
+    $kod = $p['kod'] ?? poukaz_kod_norm($kod);
+    if (!$p) return "Poukaz $kod v kartotéce není (vytištěný poukaz je potřeba nejdřív zapsat: Poukazy → Vystavit poukaz).";
     if (!in_array($p['stav'], ['zaplaceno', 'vydano'])) return 'Poukaz není platný (' . STAVY_POUKAZU[$p['stav']] . ').';
     if ($p['platnost_do'] && $p['platnost_do'] < date('Y-m-d')) return 'Poukaz propadl ' . date('j. n. Y', strtotime($p['platnost_do'])) . '.';
     if ($castka < 1) $castka = (int)$r['cena'];

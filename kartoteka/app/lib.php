@@ -340,6 +340,19 @@ function poukaz_kod(): string
     } while (qv('SELECT 1 FROM poukazy WHERE kod=?', [$k]));
     return $k;
 }
+/** Hledání poukazu podle kódu bez ohledu na pomlčky, mezery a velikost písmen („tm 0123“ = „TM-0123“). Vrací řádek nebo null. */
+function poukaz_podle_kodu(string $k): ?array
+{
+    $klic = preg_replace('~[^A-Z0-9]~', '', strtoupper($k));
+    if ($klic === '') return null;
+    return q1("SELECT * FROM poukazy WHERE REPLACE(REPLACE(REPLACE(REPLACE(UPPER(kod),'-',''),' ',''),'/',''),'.','')=? ORDER BY id LIMIT 1", [$klic]);
+}
+
+/** Kód poukazu tak, jak se ukládá a hledá: velká písmena, bez mezer (i ručně opsané kódy z vytištěných poukazů). */
+function poukaz_kod_norm(string $k): string
+{
+    return mb_substr(preg_replace('~[^A-Z0-9/._-]~', '', strtoupper(preg_replace('~\s+~', '', $k))), 0, 40);
+}
 const STAVY_POUKAZU = [
     'objednano' => 'Objednáno (čeká na platbu)',
     'zaplaceno' => 'Zaplaceno',
