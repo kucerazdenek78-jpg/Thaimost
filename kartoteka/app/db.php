@@ -26,7 +26,7 @@ function q(string $sql, array $p = []): PDOStatement
 function q1(string $sql, array $p = []): ?array { $r = q($sql, $p)->fetch(); return $r ?: null; }
 function qv(string $sql, array $p = []) { $r = q($sql, $p)->fetchColumn(); return $r === false ? null : $r; }
 
-const DB_VERZE = 20;
+const DB_VERZE = 21;
 
 /** Migrace běží v jedné transakci a po získání zámku se verze ověří znovu (souběžné první požadavky). */
 function migrate(PDO $pdo): void
@@ -58,6 +58,15 @@ function migrate(PDO $pdo): void
             $pdo->exec('ALTER TABLE zakaznici ADD COLUMN pap_karta_od TEXT');
             $pdo->exec('ALTER TABLE rezervace ADD COLUMN pap_razitko TEXT');
             $pdo->exec('ALTER TABLE poukazy ADD COLUMN pap_razitko TEXT');
+        }
+        if ($ver < 21) {   // v21: texty služeb pro web (popis, poznámka, překlady EN/DE) – editují se v Nastavení → Ceník
+            $pdo->exec("ALTER TABLE sluzby ADD COLUMN popis_web TEXT NOT NULL DEFAULT ''");
+            $pdo->exec("ALTER TABLE sluzby ADD COLUMN pozn_web TEXT NOT NULL DEFAULT ''");
+            $pdo->exec("ALTER TABLE sluzby ADD COLUMN preklady TEXT NOT NULL DEFAULT '{}'");
+            require_once __DIR__ . '/sluzby_web.php';
+            $st = $pdo->prepare("UPDATE sluzby SET popis_web=?, pozn_web=?, preklady=? WHERE kod=? AND popis_web=''");
+            foreach (sluzby_web_vychozi() as $kod => $t)
+                $st->execute([$t['popis'], $t['pozn'], json_encode(['en' => $t['en'], 'de' => $t['de']], JSON_UNESCAPED_UNICODE), $kod]);
         }
         $pdo->exec('PRAGMA user_version = ' . DB_VERZE);
         $pdo->exec('COMMIT');

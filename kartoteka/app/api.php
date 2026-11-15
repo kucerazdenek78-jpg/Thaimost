@@ -1,5 +1,6 @@
 <?php
-require_once __DIR__ . '/poukaz_pdf.php';   // motivy poukazu (dárkový / vánoční)
+require_once __DIR__ . '/poukaz_pdf.php';
+require_once __DIR__ . '/sluzby_web.php';   // texty a ceny služeb pro web   // motivy poukazu (dárkový / vánoční)
 // Veřejné API pro web (GitHub Pages). Jen to, co web potřebuje – nic z kartotéky nevrací.
 
 function api_odpoved(array $data, int $kod = 200): void
@@ -48,12 +49,15 @@ function api_route(string $cesta): void
             'motivy' => array_filter(['darkovy' => poukaz_motiv_jpg('darkovy') ? rtrim(cfg()['url'], '/') . poukaz_motiv_url('darkovy') : '',
                                       'vanocni' => poukaz_motiv_jpg('vanocni') ? rtrim(cfg()['url'], '/') . poukaz_motiv_url('vanocni') : ''], fn($x) => true),
             'motiv' => poukaz_motiv_vychozi(),
-            'fotky' => (object)sluzby_fotky_web()]);   // vlastní fotky služeb (Nastavení → Ceník) místo ilustračních
+            'fotky' => (object)sluzby_fotky_web(),
+            'sluzby' => (object)sluzby_web()]);   // texty (cs + en/de) a ceny služeb z Nastavení → Ceník   // vlastní fotky služeb (Nastavení → Ceník) místo ilustračních
     }
 
     if ($cesta === '/api/sluzby' && $m === 'GET') {
-        $rows = q("SELECT v.id, v.popis, v.minuty, v.cena, s.nazev, s.kat FROM varianty v JOIN sluzby s ON s.id=v.sluzba_id
+        $rows = q("SELECT v.id, v.popis, v.minuty, v.cena, s.nazev, s.kat, s.preklady FROM varianty v JOIN sluzby s ON s.id=v.sluzba_id
             WHERE v.aktivni=1 AND s.aktivni=1 ORDER BY s.poradi, v.poradi")->fetchAll();
+        foreach ($rows as &$r) { $pr = sluzba_preklady($r); $r['nazev_t'] = ['en' => $pr['en']['nazev'], 'de' => $pr['de']['nazev']]; unset($r['preklady']); }
+        unset($r);
         api_odpoved(['ok' => true, 'varianty' => $rows]);
     }
 

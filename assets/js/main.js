@@ -27,14 +27,15 @@
   const vid = document.querySelector(".hero video");
   if (vid) vid.addEventListener("error", () => vid.remove(), true);
 
-  /* služby */
+  /* služby; tx = text služby v jazyce stránky (překlad z kartotéky, jinak slovník webu); s.nazev/popis/pozn zůstávají česky (salon, poukaz) */
+  const tx = (s, f) => (T.lang !== "cs" && s.tr && s.tr[f]) || T(s[f] || "");
   const grid = $("#svGrid");
   let katAkt = "vse";
   function renderSluzby(kat) {
     katAkt = kat;
     grid.innerHTML = D.sluzby.filter(s => kat === "vse" || s.kat === kat).map(s => {
       const od = Math.min(...s.ceny.map(c => c[1]));
-      const nazev = T(s.nazev);
+      const nazev = tx(s, "nazev");
       const img = s.foto
         ? `<img src="${/^https?:/.test(s.foto) ? s.foto : T.root + D.img + s.foto}" alt="${V.esc(T("{nazev} – thajské masáže Most, Thai Most", { nazev }))}" loading="lazy" onerror="this.remove()">${!s.vlastni && !/^https?:/.test(s.foto) ? '<span class="sv-ilu">' + V.esc(T("Ilustrační foto")) + "</span>" : ""}`
         : "";
@@ -42,8 +43,8 @@
         <div class="sv-img"><div class="ph">${LOTUS}</div>${img}${s.top ? '<span class="sv-tag">' + V.esc(T("Oblíbené")) + "</span>" : ""}</div>
         <div class="sv-body">
           <h3>${V.esc(nazev)}</h3>
-          <p>${V.esc(T(s.popis))}</p>
-          ${s.pozn ? `<div class="sv-note">${V.esc(T(s.pozn))}</div>` : ""}
+          <p>${V.esc(tx(s, "popis"))}</p>
+          ${s.pozn ? `<div class="sv-note">${V.esc(tx(s, "pozn"))}</div>` : ""}
           <ul class="prices">${s.ceny.map(c => `<li><span>${V.esc(T(c[0]))}</span><b>${V.kc(c[1])}</b></li>`).join("")}</ul>
           <button class="sv-cta" data-poukaz="${s.id}">${V.esc(T("Darovat jako poukaz →"))}</button>
         </div></article>`;
@@ -97,12 +98,27 @@
         const radio = document.querySelector('input[name="motiv"][value="' + st.motiv + '"]'); if (radio) radio.checked = true;
       }
     }
-    /* vlastní fotky služeb nahrané v kartotéce (Nastavení → Fotky služeb) – místo ilustračních, bez štítku */
-    if (r.fotky && typeof r.fotky === "object") {
-      let zmena = false;
-      D.sluzby.forEach(s => { const u = r.fotky[s.id]; if (u && /^https:\/\//.test(u)) { s.foto = u; s.vlastni = true; zmena = true; } });
-      if (zmena) renderSluzby(katAkt);
+    /* služby z kartotéky (Nastavení → Ceník): texty, překlady, ceny a vlastní fotky místo data.js */
+    let zmena = false;
+    if (r.sluzby && typeof r.sluzby === "object") {
+      D.sluzby = D.sluzby.filter(s => {
+        const k = r.sluzby[s.id]; if (!k) return true;
+        if (!k.aktivni) { zmena = true; return false; }
+        const tr = (k.preklady && k.preklady[T.lang]) || {};
+        s.tr = {};
+        for (const f of ["nazev", "popis", "pozn"]) {
+          if (typeof k[f] === "string" && (k[f] || f === "pozn")) s[f] = k[f];   // česky (pro salon a poukaz)
+          if (tr[f]) s.tr[f] = tr[f];                                              // bez překladu se ukáže česky
+        }
+        zmena = true;
+        if (Array.isArray(k.ceny) && k.ceny.length) { s.ceny = k.ceny.map(c => [String(c[0]), +c[1]]); zmena = true; }
+        return true;
+      });
     }
+    if (r.fotky && typeof r.fotky === "object") {
+      D.sluzby.forEach(s => { const u = r.fotky[s.id]; if (u && /^https:\/\//.test(u)) { s.foto = u; s.vlastni = true; zmena = true; } });
+    }
+    if (zmena) { renderSluzby(katAkt); naplnSluzbyPoukazu(); }
     platnostInfo(); update();
   }).catch(() => {});
 
@@ -114,16 +130,21 @@
   const PLATBA_CS = { salon: TK("Hotově v salonu při vyzvednutí"), prevod: TK("Převodem / QR platbou předem") };
 
   $("#chips").innerHTML = HODNOTY.map(h => `<button type="button" data-h="${h}">${V.kc(h)}</button>`).join("") + `<button type="button" data-h="x">${V.esc(T("Jiná částka"))}</button>`;
-  $("#selSluzba").innerHTML = ["masaze", "wellness"].map(k =>
-    `<optgroup label="${k === "masaze" ? V.esc(T("Masáže")) : V.esc(T("Wellness a rituály"))}">` +
-    D.sluzby.filter(s => s.kat === k).map(s => `<option value="${s.id}">${V.esc(T(s.nazev))}</option>`).join("") + "</optgroup>").join("");
+  function naplnSluzbyPoukazu() {
+    if (!D.sluzby.some(s => s.id === st.sluzbaId)) st.sluzbaId = D.sluzby[0].id;
+    $("#selSluzba").innerHTML = ["masaze", "wellness"].map(k =>
+      `<optgroup label="${k === "masaze" ? V.esc(T("Masáže")) : V.esc(T("Wellness a rituály"))}">` +
+      D.sluzby.filter(s => s.kat === k).map(s => `<option value="${s.id}">${V.esc(tx(s, "nazev"))}</option>`).join("") + "</optgroup>").join("");
+    $("#selSluzba").value = st.sluzbaId;
+    if (typeof fillVar === "function" && $("#selVar")) { const i = st.varIdx; fillVar(); if (sluzba().ceny[i]) { st.varIdx = i; $("#selVar").value = i; } }
+  }
 
   const sluzba = () => D.sluzby.find(s => s.id === st.sluzbaId);
   function fillVar() {
     $("#selVar").innerHTML = sluzba().ceny.map((c, i) => `<option value="${i}">${V.esc(T(c[0]))} – ${V.kc(c[1])}</option>`).join("");
     st.varIdx = 0;
   }
-  fillVar();
+  naplnSluzbyPoukazu();
 
   function cena() {
     if (st.typ === "sluzba") return sluzba().ceny[st.varIdx][1];
@@ -297,14 +318,14 @@
   function naplnZData() {
     D.sluzby.forEach(s => s.ceny.forEach(([pop, c], i) => {
       const o = document.createElement("option"); o.value = ""; o.dataset.local = s.id + ":" + i;
-      o.textContent = `${T(s.nazev)} – ${T(pop)} – ${T.money(c)}`; sel.appendChild(o);
+      o.textContent = `${(T.lang !== "cs" && s.tr && s.tr.nazev) || T(s.nazev)} – ${T(pop)} – ${T.money(c)}`; sel.appendChild(o);
     }));
   }
   window.ThaiApi.get("/api/sluzby").then(r => {
     if (!r.ok) throw 0;
     r.varianty.forEach(v => {
       const o = document.createElement("option"); o.value = v.id;
-      o.textContent = `${T(v.nazev)} – ${T(v.popis)} – ${T.money(v.cena)}`; sel.appendChild(o);
+      o.textContent = `${(v.nazev_t && v.nazev_t[T.lang]) || T(v.nazev)} – ${T(v.popis)} – ${T.money(v.cena)}`; sel.appendChild(o);
     });
   }).catch(() => { naplnZData(); form.dataset.offline = "1"; });
 

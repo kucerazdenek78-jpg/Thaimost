@@ -279,3 +279,11 @@ details.rozbal>summary h3{display:inline;margin:0}.posta-ucet details.rozbal{mar
 .sf-img{position:relative;aspect-ratio:3/2;border-radius:8px;overflow:hidden;background:#eee}.sf-img img{width:100%;height:100%;object-fit:cover;display:block}
 .sf-img span{position:absolute;right:6px;bottom:6px;font-size:.72rem;padding:2px 8px;border-radius:999px;color:#fff;background:rgba(20,13,8,.6)}.sf-img .sf-ok{background:#2e7d4f}
 .sf input[type=file]{font-size:.8rem;max-width:100%}
+
+/* ceník a služby na webu */
+.cs-blok{border:1px solid #e8dccb;border-radius:10px;margin:8px 0;background:#fffdf9}
+.cs-blok>summary{cursor:pointer;padding:10px 12px;list-style-position:inside}.cs-blok[open]>summary{border-bottom:1px solid #eee3d3}
+.cs-hlava{display:grid;grid-template-columns:220px 1fr;gap:16px;padding:12px}.cs-texty label{margin:0 0 8px}
+.cs-preklad{margin-top:4px;background:#f7f1e8;border-radius:8px;padding:6px 10px}.cs-preklad summary{cursor:pointer}
+.cs-var{margin:0 12px 12px;width:calc(100% - 24px)}.cs-var input{margin:0}
+@media (max-width:700px){.cs-hlava{grid-template-columns:1fr}.cs-var{display:block;overflow-x:auto}}

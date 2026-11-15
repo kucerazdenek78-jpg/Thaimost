@@ -2,6 +2,7 @@
 // Nastavení: masérky, ceník, prahy štítků, uživatelé, fronta e-mailů.
 
 require_once __DIR__ . '/stranky_reklamy.php';
+require_once __DIR__ . '/sluzby_web.php';   // texty služeb pro web (ceník)
 // poukaz_pdf.php (motivy poukazu) načítá public/index.php – tady ho znovu nenačítat (index ho bere přes require)
 
 function stranka_nastaveni(array $u): void
@@ -45,26 +46,43 @@ function stranka_nastaveni(array $u): void
             if (trim($_POST['nova_maserka'] ?? '') !== '')
                 q('INSERT INTO maserky(jmeno,poradi) VALUES(?, (SELECT COALESCE(MAX(poradi),0)+1 FROM maserky))', [trim($_POST['nova_maserka'])]);
             flash('Masérky uloženy.');
-        } elseif ($akce === 'fotky_sluzeb') {
-            // vlastní fotky služeb pro web
-            $n = 0;
-            foreach (array_keys($_POST['smazat_foto'] ?? []) as $kod) { sluzba_foto_smaz((string)$kod); $n++; flash('Fotka smazána – na webu je zase ilustrační.'); }
+        } elseif ($akce === 'cenik') {
+            // varianty: název varianty, minuty, cena, masérky…
+            foreach ($_POST['v'] ?? [] as $id => $v) {
+                $pop = trim((string)($v['popis'] ?? ''));
+                q('UPDATE varianty SET cena=?, minuty=?, aktivni=?, maserky=?, maserky_min=?, wellness_mistnost=?' . ($pop !== '' ? ', popis=?' : '') . ' WHERE id=?',
+                    array_merge([(int)$v['cena'], ($v['minuty'] ?? '') !== '' ? (int)$v['minuty'] : null, !empty($v['aktivni']) ? 1 : 0,
+                    max(0, min(2, (int)($v['maserky'] ?? 1))), ($v['maserky_min'] ?? '') !== '' ? (int)$v['maserky_min'] : null, !empty($v['wellness_mistnost']) ? 1 : 0],
+                    $pop !== '' ? [mb_substr($pop, 0, 120)] : [], [(int)$id]));
+            }
+            // texty služeb pro web (česky + překlady)
+            $bezPrekladu = [];
+            foreach ($_POST['s'] ?? [] as $id => $t) {
+                $sl = q1('SELECT * FROM sluzby WHERE id=?', [(int)$id]);
+                if (!$sl) continue;
+                $nazev = trim((string)($t['nazev'] ?? '')) ?: $sl['nazev'];
+                $popis = trim(preg_replace('~\s+~u', ' ', (string)($t['popis'] ?? '')));
+                $pozn = trim(preg_replace('~\s+~u', ' ', (string)($t['pozn'] ?? '')));
+                $stare = sluzba_preklady($sl); $pr = [];
+                foreach (array_keys(SLUZBY_WEB_JAZYKY) as $jz) foreach (SLUZBY_WEB_POLE as $f) $pr[$jz][$f] = trim(preg_replace('~\s+~u', ' ', (string)($t[$jz][$f] ?? '')));
+                // změnil se český text a překlad zůstal stejný → upozornit
+                foreach (['nazev' => [$sl['nazev'], $nazev], 'popis' => [$sl['popis_web'], $popis], 'pozn' => [$sl['pozn_web'], $pozn]] as $f => [$a, $b])
+                    if ($a !== $b) foreach (array_keys(SLUZBY_WEB_JAZYKY) as $jz) if ($b !== '' && $pr[$jz][$f] === $stare[$jz][$f]) $bezPrekladu[$nazev] = true;
+                q('UPDATE sluzby SET nazev=?, popis_web=?, pozn_web=?, preklady=? WHERE id=?', [mb_substr($nazev, 0, 120), mb_substr($popis, 0, 1200), mb_substr($pozn, 0, 400), json_encode($pr, JSON_UNESCAPED_UNICODE), (int)$id]);
+            }
+            // fotky služeb
+            foreach (array_keys($_POST['smazat_foto'] ?? []) as $kod) { sluzba_foto_smaz((string)$kod); flash('Fotka smazána – na webu je zase ilustrační.'); }
             foreach ($_FILES['foto']['name'] ?? [] as $kod => $jm) {
                 if ($jm === '' || $jm === null) continue;
                 $f = ['name' => $jm, 'tmp_name' => $_FILES['foto']['tmp_name'][$kod], 'error' => $_FILES['foto']['error'][$kod], 'size' => $_FILES['foto']['size'][$kod]];
                 $chyba = sluzba_foto_nahraj((string)$kod, $f);
-                $nazev = (string)qv('SELECT nazev FROM sluzby WHERE kod=?', [(string)$kod]);
-                $chyba ? flash("$nazev: $chyba", 'err') : flash("$nazev: fotka nahrána, na webu se ukáže do minuty.");
-                $n++;
+                $nz = (string)qv('SELECT nazev FROM sluzby WHERE kod=?', [(string)$kod]);
+                $chyba ? flash("$nz: $chyba", 'err') : flash("$nz: fotka nahrána.");
             }
-            if (!$n) flash('Nevybrali jste žádnou fotku.', 'err');
-            zapis_log('sluzby_fotky', (string)$n);
-            presmeruj('/?r=nastaveni#fotky');
-        } elseif ($akce === 'cenik') {
-            foreach ($_POST['v'] ?? [] as $id => $v)
-                q('UPDATE varianty SET cena=?, minuty=?, aktivni=?, maserky=?, maserky_min=?, wellness_mistnost=? WHERE id=?', [(int)$v['cena'], $v['minuty'] !== '' ? (int)$v['minuty'] : null, !empty($v['aktivni']) ? 1 : 0,
-                    max(0, min(2, (int)($v['maserky'] ?? 1))), ($v['maserky_min'] ?? '') !== '' ? (int)$v['maserky_min'] : null, !empty($v['wellness_mistnost']) ? 1 : 0, (int)$id]);
-            flash('Ceník uložen.');
+            zapis_log('cenik', '');
+            flash('Ceník uložen – na webu se změny ukážou do minuty.');
+            if ($bezPrekladu) flash('Změnili jste český text u: ' . implode(', ', array_keys($bezPrekladu)) . '. Upravte i anglický a německý překlad (rozbalte „Překlady“), jinak web v angličtině a němčině ukáže starý text.', 'err');
+            presmeruj('/?r=nastaveni&c=1#cenik');
         } elseif ($akce === 'uzivatel' && $u['role'] === 'admin') {
             $login = trim($_POST['login'] ?? ''); $heslo = $_POST['heslo'] ?? '';
             if ($login !== '' && strlen($heslo) >= 8) {
@@ -169,42 +187,58 @@ function stranka_nastaveni(array $u): void
              <a class="btn" href="/?r=masterny">🚪 Masérny a tablety</a> <a class="btn" href="/?r=dostupnost">🌴 Volna a přesčasy</a><?php if (($u['role'] ?? '') === 'admin'): ?> <a class="btn" href="/?r=uzivatele">🔑 Uživatelé</a><?php endif ?></p>
         </section>
 
-        <form method="post" class="card">
+        <?php
+        $sluzbyC = q('SELECT * FROM sluzby ORDER BY poradi, id')->fetchAll();
+        $varC = []; foreach ($cenik as $c) $varC[$c['sluzba_id']][] = $c;
+        $vlastnich = 0; foreach ($sluzbyC as $sc) if ($sc['kod'] && sluzba_foto_soubor($sc['kod'])) $vlastnich++;
+        ?>
+        <form method="post" class="card" id="cenik" enctype="multipart/form-data">
           <?= csrf_pole() ?><input type="hidden" name="akce" value="cenik">
-          <details class="rozbal"><summary><h2>Ceník <span class="muted small">(<?= count($cenik) ?> položek – klepnutím rozbalíte; názvy a popisy se mění na webu v data.js)</span></h2></summary>
-          <p class="muted small">Masérek: 0 = bez masérky (whirlpool, sauna), 2 = párová. „Masérky min“ = jak dlouho jsou masérky potřeba (balíček párová + whirlpool: 60, zbytek jsou zákazníci sami – klidně i po zavírací době s recepční). „Celá wellness masérna“ = zabere obě lůžka dvoulůžkové masérny.</p>
-          <table class="tbl plain">
-            <tr><th>Služba</th><th>Varianta</th><th>Minut</th><th>Kč</th><th title="Kolik masérek služba potřebuje">Masérek</th><th title="Jak dlouho od začátku jsou masérky potřeba – prázdné = celou dobu (párová + whirlpool: 60)">Masérky min</th><th title="Zabírá celou dvoulůžkovou / wellness masérnu">Celá wellness masérna</th><th>Aktivní</th></tr>
-            <?php foreach ($cenik as $c): ?>
-              <tr><td><?= h($c['nazev']) ?></td><td><?= h($c['popis']) ?></td>
-                  <td><input type="number" name="v[<?= $c['id'] ?>][minuty]" value="<?= h($c['minuty'] ?? '') ?>" style="width:4.5em"></td>
-                  <td><input type="number" name="v[<?= $c['id'] ?>][cena]" value="<?= $c['cena'] ?>" style="width:5.5em"></td>
-                  <td><select name="v[<?= $c['id'] ?>][maserky]"><?= moznosti([0 => '0', 1 => '1', 2 => '2'], (int)$c['maserky']) ?></select></td>
-                  <td><input type="number" name="v[<?= $c['id'] ?>][maserky_min]" value="<?= h($c['maserky_min'] ?? '') ?>" style="width:4.5em" placeholder="celou"></td>
-                  <td><input type="checkbox" name="v[<?= $c['id'] ?>][wellness_mistnost]" value="1" <?= $c['wellness_mistnost'] ? 'checked' : '' ?>></td>
-                  <td><input type="checkbox" name="v[<?= $c['id'] ?>][aktivni]" value="1" <?= $c['aktivni'] ? 'checked' : '' ?>></td></tr>
-            <?php endforeach ?>
-          </table>
-          <button class="btn">Uložit ceník</button>
-          </details>
-        </form>
-
-        <?php $sluzbyF = q('SELECT kod, nazev FROM sluzby WHERE kod IS NOT NULL AND aktivni=1 ORDER BY poradi')->fetchAll(); $vlastnich = 0; foreach ($sluzbyF as $sf) if (sluzba_foto_soubor($sf['kod'])) $vlastnich++; ?>
-        <form method="post" class="card" id="fotky" enctype="multipart/form-data">
-          <?= csrf_pole() ?><input type="hidden" name="akce" value="fotky_sluzeb">
-          <details class="rozbal"<?= ($_GET['f'] ?? '') === '1' ? ' open' : '' ?>><summary><h2>📷 Fotky služeb na webu <span class="muted small">(vlastních <?= $vlastnich ?> z <?= count($sluzbyF) ?> – klepnutím rozbalíte)</span></h2></summary>
-          <p class="muted small">Dokud služba nemá vlastní fotku, je na webu ilustrační se štítkem „Ilustrační foto“. Nahrajte fotku ze salonu (nejlépe na šířku, 3 : 2) – štítek zmizí. Fotku z telefonu stačí vybrat, před odesláním se sama zmenší.</p>
-          <div class="sf-grid">
-            <?php foreach ($sluzbyF as $sf): $url = sluzba_foto_url($sf['kod']); ?>
-              <div class="sf">
-                <div class="sf-img"><img src="<?= h($url ?: REKLAMY_WEB . 'assets/img/ai/' . $sf['kod'] . '.jpg') ?>" alt="" loading="lazy"><span class="<?= $url ? 'sf-ok' : 'sf-ilu' ?>"><?= $url ? '✓ vlastní' : 'ilustrační' ?></span></div>
-                <b><?= h($sf['nazev']) ?></b>
-                <input type="file" name="foto[<?= h($sf['kod']) ?>]" accept="image/jpeg,image/png,image/webp,image/heic,image/*" class="sf-in">
-                <?php if ($url): ?><label class="check small"><input type="checkbox" name="smazat_foto[<?= h($sf['kod']) ?>]" value="1"> smazat (zpět ilustrační)</label><?php endif ?>
+          <details class="rozbal"<?= ($_GET['c'] ?? '') === '1' ? ' open' : '' ?>><summary><h2>Ceník a služby na webu <span class="muted small">(<?= count($sluzbyC) ?> služeb, <?= count($cenik) ?> položek · vlastních fotek <?= $vlastnich ?> – klepnutím rozbalíte)</span></h2></summary>
+          <p class="muted small">U každé služby upravíte název, popis a poznámku na webu (i anglicky a německy), fotku a jednotlivé položky ceníku. Změny se na webu ukážou do minuty po uložení.<br>
+            Masérek: 0 = bez masérky (whirlpool, sauna), 2 = párová. „Masérky min“ = jak dlouho jsou masérky potřeba (balíček párová + whirlpool: 60, zbytek jsou zákazníci sami). „Celá wellness“ = zabere obě lůžka dvoulůžkové masérny.</p>
+          <?php foreach ($sluzbyC as $sc): $sid = (int)$sc['id']; $pr = sluzba_preklady($sc); $furl = $sc['kod'] ? sluzba_foto_url($sc['kod']) : null;
+                $ceny = array_map(fn($c) => kc($c['cena']), array_filter($varC[$sid] ?? [], fn($c) => $c['aktivni'])); ?>
+            <details class="cs-blok">
+              <summary><b><?= h($sc['nazev']) ?></b> <span class="muted small"><?= h(implode(' · ', $ceny)) ?></span><?= $furl ? ' <span class="tag zdarma">📷 vlastní fotka</span>' : '' ?></summary>
+              <div class="cs-hlava">
+                <?php if ($sc['kod']): ?>
+                <div class="sf">
+                  <div class="sf-img"><img src="<?= h($furl ?: REKLAMY_WEB . 'assets/img/ai/' . $sc['kod'] . '.jpg') ?>" alt="" loading="lazy"><span class="<?= $furl ? 'sf-ok' : 'sf-ilu' ?>"><?= $furl ? '✓ vlastní' : 'ilustrační' ?></span></div>
+                  <input type="file" name="foto[<?= h($sc['kod']) ?>]" accept="image/*" class="sf-in"><span class="muted small sf-st"></span>
+                  <?php if ($furl): ?><label class="check small"><input type="checkbox" name="smazat_foto[<?= h($sc['kod']) ?>]" value="1"> smazat fotku (zpět ilustrační)</label><?php endif ?>
+                </div>
+                <?php endif ?>
+                <div class="cs-texty">
+                  <label>Název<input name="s[<?= $sid ?>][nazev]" value="<?= h($sc['nazev']) ?>" maxlength="120" required></label>
+                  <label>Popis na webu<textarea name="s[<?= $sid ?>][popis]" rows="3" maxlength="1200"><?= h($sc['popis_web']) ?></textarea></label>
+                  <label>Poznámka <span class="muted small">(nepovinné, např. doporučené oblečení)</span><input name="s[<?= $sid ?>][pozn]" value="<?= h($sc['pozn_web']) ?>" maxlength="400"></label>
+                  <details class="cs-preklad"><summary class="small">🇬🇧 🇩🇪 Překlady pro anglickou a německou verzi webu</summary>
+                    <?php foreach (SLUZBY_WEB_JAZYKY as $jz => $jn): ?>
+                      <p class="small" style="margin:8px 0 2px"><b><?= h($jn) ?></b></p>
+                      <label class="small">Název<input name="s[<?= $sid ?>][<?= $jz ?>][nazev]" value="<?= h($pr[$jz]['nazev']) ?>" lang="<?= $jz ?>"></label>
+                      <label class="small">Popis<textarea name="s[<?= $sid ?>][<?= $jz ?>][popis]" rows="3" lang="<?= $jz ?>"><?= h($pr[$jz]['popis']) ?></textarea></label>
+                      <label class="small">Poznámka<input name="s[<?= $sid ?>][<?= $jz ?>][pozn]" value="<?= h($pr[$jz]['pozn']) ?>" lang="<?= $jz ?>"></label>
+                    <?php endforeach ?>
+                    <p class="muted small">Prázdný překlad = web v tom jazyce ukáže český text.</p>
+                  </details>
+                </div>
               </div>
-            <?php endforeach ?>
-          </div>
-          <button class="btn primary">Nahrát vybrané fotky</button> <span class="muted small" id="sfStav"></span>
+              <table class="tbl plain cs-var">
+                <tr><th>Položka ceníku</th><th>Minut</th><th>Kč</th><th title="Kolik masérek služba potřebuje">Masérek</th><th title="Jak dlouho od začátku jsou masérky potřeba – prázdné = celou dobu">Masérky min</th><th title="Zabírá celou dvoulůžkovou / wellness masérnu">Celá wellness</th><th>Aktivní</th></tr>
+                <?php foreach ($varC[$sid] ?? [] as $c): ?>
+                  <tr><td><input name="v[<?= $c['id'] ?>][popis]" value="<?= h($c['popis']) ?>" maxlength="120" style="min-width:9em"></td>
+                      <td><input type="number" name="v[<?= $c['id'] ?>][minuty]" value="<?= h($c['minuty'] ?? '') ?>" style="width:4.5em"></td>
+                      <td><input type="number" name="v[<?= $c['id'] ?>][cena]" value="<?= $c['cena'] ?>" style="width:5.5em"></td>
+                      <td><select name="v[<?= $c['id'] ?>][maserky]"><?= moznosti([0 => '0', 1 => '1', 2 => '2'], (int)$c['maserky']) ?></select></td>
+                      <td><input type="number" name="v[<?= $c['id'] ?>][maserky_min]" value="<?= h($c['maserky_min'] ?? '') ?>" style="width:4.5em" placeholder="celou"></td>
+                      <td><input type="checkbox" name="v[<?= $c['id'] ?>][wellness_mistnost]" value="1" <?= $c['wellness_mistnost'] ? 'checked' : '' ?>></td>
+                      <td><input type="checkbox" name="v[<?= $c['id'] ?>][aktivni]" value="1" <?= $c['aktivni'] ? 'checked' : '' ?>></td></tr>
+                <?php endforeach ?>
+              </table>
+            </details>
+          <?php endforeach ?>
+          <p><button class="btn primary">Uložit ceník</button></p>
           </details>
         </form>
         <script>
@@ -212,7 +246,7 @@ function stranka_nastaveni(array $u): void
         document.querySelectorAll('.sf-in').forEach(function (inp) {
           inp.addEventListener('change', function () {
             var f = inp.files && inp.files[0]; if (!f || !window.DataTransfer) return;
-            var st = document.getElementById('sfStav'), img = new Image(), url = URL.createObjectURL(f);
+            var st = inp.parentElement.querySelector('.sf-st'), img = new Image(), url = URL.createObjectURL(f);
             st.textContent = 'Připravuji fotku…';
             img.onload = function () {
               var k = Math.min(1, 1600 / Math.max(img.naturalWidth, img.naturalHeight)), c = document.createElement('canvas');
@@ -222,11 +256,11 @@ function stranka_nastaveni(array $u): void
                 if (!b) { st.textContent = ''; return; }
                 var dt = new DataTransfer(); dt.items.add(new File([b], f.name.replace(/\.[^.]+$/, '') + '.jpg', { type: 'image/jpeg' }));
                 inp.files = dt.files;
-                var nah = inp.closest('.sf').querySelector('img'); nah.src = URL.createObjectURL(b);
-                st.textContent = 'Fotka připravena (' + Math.round(b.size / 1024) + ' kB) – klepněte na „Nahrát vybrané fotky“.';
+                inp.parentElement.querySelector('img').src = URL.createObjectURL(b);
+                st.textContent = 'Připraveno (' + Math.round(b.size / 1024) + ' kB) – nahraje se tlačítkem „Uložit ceník“.';
               }, 'image/jpeg', 0.85);
             };
-            img.onerror = function () { URL.revokeObjectURL(url); st.textContent = 'Fotku se nepodařilo načíst v prohlížeči – zkuste JPG.'; };
+            img.onerror = function () { URL.revokeObjectURL(url); st.textContent = 'Fotku se nepodařilo načíst – zkuste JPG.'; };
             img.src = url;
           });
         });
