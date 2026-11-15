@@ -13,28 +13,28 @@ const SEZENI_STAVY = ['cekani' => 'čeká na masérku', 'bezi' => 'masáž běž
 /* ---------- pomocné funkce ---------- */
 
 /** Anglické názvy služeb pro masérky na tabletu (klíč = sluzby.kod). Co tu chybí, zůstane česky. */
-/** Fotka masáže na pozadí tabletu (poloprůhledně) – stejné fotky jako na webu (assets/js/data.js).
+/** Fotka masáže na pozadí tabletu (poloprůhledně) – původní fotky salonu z repa webu (assets/img/sluzby; ze starého webu thaimost.cz/media, který po přechodu domény zanikne).
  *  Jiná fotka: přepsat adresu tady, nebo nahrát public/foto-<kod>.jpg (má přednost). */
 const MASAZ_FOTO = [
-    "tradicni" => "https://www.thaimost.cz/media/tradicni-3.jpg",
-    "hlava" => "https://www.thaimost.cz/media/hlava-3.jpg",
-    "zada" => "https://www.thaimost.cz/media/zada-special-1.jpg",
-    "olej" => "https://www.thaimost.cz/media/olej-1.jpg",
-    "aroma" => "https://www.thaimost.cz/media/aroma-1.jpg",
+    "tradicni" => "https://kucerazdenek78-jpg.github.io/Thaimost/assets/img/sluzby/tradicni-3.jpg",
+    "hlava" => "https://kucerazdenek78-jpg.github.io/Thaimost/assets/img/sluzby/hlava-3.jpg",
+    "zada" => "https://kucerazdenek78-jpg.github.io/Thaimost/assets/img/sluzby/zada-special-1.jpg",
+    "olej" => "https://kucerazdenek78-jpg.github.io/Thaimost/assets/img/sluzby/olej-1.jpg",
+    "aroma" => "https://kucerazdenek78-jpg.github.io/Thaimost/assets/img/sluzby/aroma-1.jpg",
     "detska" => "https://images.unsplash.com/photo-1611073615830-9f76902c10fe?auto=format&fit=crop&w=900&q=75",
     "lymfa-oblicej" => "https://images.unsplash.com/photo-1598901986949-f593ff2a31a6?auto=format&fit=crop&w=900&q=75",
     "poporodni" => "https://images.pexels.com/photos/6187421/pexels-photo-6187421.jpeg?auto=compress&cs=tinysrgb&w=900",
-    "oblicej" => "https://www.thaimost.cz/media/masaz-obliceje-1.jpg",
-    "nohy" => "https://www.thaimost.cz/media/cinska-nohy-1.jpg",
-    "bylinna" => "https://www.thaimost.cz/media/bylinna-1.jpg",
-    "siam" => "https://www.thaimost.cz/media/masaz-siam-1.jpg",
+    "oblicej" => "https://kucerazdenek78-jpg.github.io/Thaimost/assets/img/sluzby/masaz-obliceje-1.jpg",
+    "nohy" => "https://kucerazdenek78-jpg.github.io/Thaimost/assets/img/sluzby/cinska-nohy-1.jpg",
+    "bylinna" => "https://kucerazdenek78-jpg.github.io/Thaimost/assets/img/sluzby/bylinna-1.jpg",
+    "siam" => "https://kucerazdenek78-jpg.github.io/Thaimost/assets/img/sluzby/masaz-siam-1.jpg",
     "ventosa" => "https://images.pexels.com/photos/6188042/pexels-photo-6188042.jpeg?auto=compress&cs=tinysrgb&w=900",
     "lava" => "https://images.unsplash.com/photo-1600334129128-685c5582fd35?auto=format&fit=crop&w=900&q=75",
     "lymfa-telo" => "https://images.pexels.com/photos/6186747/pexels-photo-6186747.jpeg?auto=compress&cs=tinysrgb&w=900",
     "tehotenska" => "https://images.pexels.com/photos/6186763/pexels-photo-6186763.jpeg?auto=compress&cs=tinysrgb&w=900",
-    "whirlpool" => "https://www.thaimost.cz/media/was2.jpg",
-    "fiji" => "https://www.thaimost.cz/media/fiji-1.jpg",
-    "cukr" => "https://www.thaimost.cz/media/cukr-1.jpg",
+    "whirlpool" => "https://kucerazdenek78-jpg.github.io/Thaimost/assets/img/sluzby/was2.jpg",
+    "fiji" => "https://kucerazdenek78-jpg.github.io/Thaimost/assets/img/sluzby/fiji-1.jpg",
+    "cukr" => "https://kucerazdenek78-jpg.github.io/Thaimost/assets/img/sluzby/cukr-1.jpg",
 ];
 
 const MASAZ_EN = [
@@ -167,6 +167,8 @@ function masaz_foto(string $kod): string
         $f = __DIR__ . "/../public/foto-$kod.$p";
         if (is_file($f)) return "/foto-$kod.$p?v=" . filemtime($f);
     }
+    // vlastní fotka služby nahraná v Nastavení → Ceník
+    if (function_exists('sluzba_foto_url') && ($u = sluzba_foto_url($kod))) return $u;
     return MASAZ_FOTO[$kod] ?? '';
 }
 
