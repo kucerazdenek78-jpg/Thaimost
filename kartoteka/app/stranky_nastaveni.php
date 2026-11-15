@@ -116,7 +116,7 @@ function stranka_nastaveni(array $u): void
           <h2>Bonus</h2>
           <div class="grid3">
             <label>Zdarma po kolika zaplacených<input type="number" name="bonus_po" value="<?= h($n['bonus_po']) ?>"></label>
-            <label>Masáž na poukaz se počítá<select name="bonus_pocita_poukaz"><?= moznosti(['0' => 'ne', '1' => 'ano'], $n['bonus_pocita_poukaz']) ?></select></label>
+            <label>Masáž na poukaz se počítá<select name="bonus_pocita_poukaz"><?= moznosti(['0' => 'ne', '1' => 'ano'], $n['bonus_pocita_poukaz']) ?></select><span class="muted small">Razítko dostane kupující poukazu – jedno za každý zaplacený poukaz.</span></label>
           </div>
           <button class="btn primary">Uložit</button>
         </form>

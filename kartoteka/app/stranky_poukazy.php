@@ -78,7 +78,8 @@ function stranka_poukaz_novy(array $u): void
             q('UPDATE poukazy SET zakaznik_id=? WHERE id=?', [zakaznik_najdi_nebo_zaloz($tel, $parts[0] ?? '', $parts[1] ?? '', trim($p['objednal_email'] ?? '')), $id]);
         }
         zapis_log('poukaz_novy', $kod);
-        flash("Poukaz $kod vystaven.");
+        $razZ = poukaz_razitko($id);   // zaplacený poukaz = razítko kupujícímu
+        flash("Poukaz $kod vystaven." . ($razZ ? ' Kupující dostal razítko na věrnostní kartičku.' : ''));
         presmeruj("/?r=poukaz&id=$id");
     }
     hlavicka('Nový poukaz', 'poukazy'); ?>
@@ -154,6 +155,7 @@ function stranka_poukaz(array $u): void
                 q('UPDATE poukazy SET zustatek=0 WHERE id=?', [$id]);
             }
             q('UPDATE poukazy SET stav=? WHERE id=?', [$_POST['stav'], $id]);
+            if (in_array($_POST['stav'], ['zaplaceno', 'vydano'], true) && poukaz_razitko($id) && empty($p['razitko_zak_id'])) flash('Kupující dostal razítko na věrnostní kartičku za nákup poukazu.');
             zapis_log('poukaz_stav', "$p[kod] $_POST[stav]");
             flash('Stav změněn.');
         } elseif ($akce === 'uprava') {
@@ -209,6 +211,7 @@ function stranka_poukaz(array $u): void
             <?php if ($p['venovani']): ?><dt>Věnování</dt><dd>„<?= h($p['venovani']) ?>“</dd><?php endif ?>
             <dt>Objednal</dt><dd><?= h($p['objednal_jmeno']) ?> · <a href="tel:<?= h($p['objednal_tel']) ?>"><?= h(telefon_cz($p['objednal_tel'])) ?></a><?= $p['objednal_email'] ? ' · ' . h($p['objednal_email']) : '' ?></dd>
             <dt>Převzetí / platba</dt><dd><?= h($p['prevzeti'] ?: '—') ?> / <?= h($p['platba'] ?: '—') ?></dd>
+            <dt>Razítko za nákup</dt><dd><?php if ($p['razitko_zak_id'] ?? null): $rz = q1('SELECT id, jmeno, prijmeni FROM zakaznici WHERE id=?', [$p['razitko_zak_id']]); ?>✓ <a href="/?r=zakaznik&amp;id=<?= (int)$p['razitko_zak_id'] ?>"><?= h(trim(($rz['jmeno'] ?? '') . ' ' . ($rz['prijmeni'] ?? ''))) ?></a> <span class="muted small">(kupující)</span><?php else: ?><span class="muted small"><?= in_array($p['stav'], ['objednano'], true) ? 'dostane kupující po zaplacení' : 'bez razítka (kupující nemá telefon)' ?></span><?php endif ?></dd>
             <dt>VS pro platbu převodem</dt><dd><b><?= h($p['vs'] ?: '—') ?></b> <span class="muted small">(částka <?= kc($p['hodnota']) ?>)</span>
               <?php foreach (q("SELECT id, prijato, castka_hal FROM platby WHERE poukaz_id=? AND stav='sparovano'", [$p['id']])->fetchAll() as $pl): ?>
                 <br>💳 <a href="/?r=nastaveni&amp;sekce=platby&amp;f=sparovano">platba <?= h(number_format($pl['castka_hal'] / 100, 0, ',', ' ')) ?> Kč z <?= h(date('j. n. Y', strtotime($pl['prijato']))) ?></a>

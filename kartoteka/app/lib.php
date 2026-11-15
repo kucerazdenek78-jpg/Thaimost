@@ -256,6 +256,23 @@ function zakaznik_stitky(array $z, array $st): array
     return $out;
 }
 
+/**
+ * Razítko za nákup poukazu: dostane ho kupující (podle telefonu objednatele; když v kartotéce není, založí se),
+ * a to jednou, jakmile je poukaz zaplacený. Vrací id zákazníka nebo null.
+ */
+function poukaz_razitko(int $poukazId): ?int
+{
+    $p = q1('SELECT * FROM poukazy WHERE id=?', [$poukazId]);
+    if (!$p || !empty($p['razitko_zak_id']) || !in_array($p['stav'], ['zaplaceno', 'vydano', 'uplatneno'], true)) return $p['razitko_zak_id'] ?? null;
+    $tel = telefon_norm((string)$p['objednal_tel']);
+    if ($tel === '') return null;
+    $jm = preg_split('~\s+~', trim((string)$p['objednal_jmeno']), 2);
+    $zid = zakaznik_najdi_nebo_zaloz($tel, $jm[0] ?? '', $jm[1] ?? '', (string)$p['objednal_email']);
+    if (!$zid) return null;
+    q('UPDATE poukazy SET razitko_zak_id=? WHERE id=? AND razitko_zak_id IS NULL', [$zid, $poukazId]);
+    return $zid;
+}
+
 /** Bonus: každá N-tá zaplacená masáž zdarma. */
 function zakaznik_bonus(array $z): array
 {
@@ -265,6 +282,8 @@ function zakaznik_bonus(array $z): array
     $in = "'" . implode("','", $platby) . "'";
     $zaplacene = (int)qv("SELECT COUNT(*) FROM rezervace WHERE zakaznik_id=? AND stav='probehlo' AND platba IN ($in)", [$z['id']]);
     $vyuzite = (int)qv("SELECT COUNT(*) FROM rezervace WHERE zakaznik_id=? AND stav IN ('probehlo','potvrzeno') AND platba='bonus'", [$z['id']]);
+    // nákup dárkového poukazu = razítko kupujícímu (masáž na poukaz pak už razítko nedostane, viz bonus_pocita_poukaz)
+    try { $zaplacene += (int)qv("SELECT COUNT(*) FROM poukazy WHERE razitko_zak_id=? AND stav IN ('zaplaceno','vydano','uplatneno')", [$z['id']]); } catch (Throwable $e) {}
     $razitka = (int)$z['pocatecni_razitka'] + $zaplacene;
     $zdarma = max(0, intdiv($razitka, $po) - $vyuzite);
     return ['razitka' => $razitka % $po, 'po' => $po, 'zdarma' => $zdarma, 'celkem' => $razitka];

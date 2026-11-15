@@ -201,6 +201,7 @@ function platby_potvrd(int $platbaId, int $poukazId, ?string $kdo = null): ?stri
     if ($pk['stav'] === 'objednano') q("UPDATE poukazy SET stav='zaplaceno', platnost_do=COALESCE(platnost_do, ?), poznamka=TRIM(poznamka || ' ' || ?) WHERE id=?", [poukaz_platnost_od(), $pozn, $poukazId]);
     else q("UPDATE poukazy SET poznamka=TRIM(poznamka || ' ' || ?) WHERE id=?", [$pozn, $poukazId]);
     q('INSERT INTO log(kdo,akce,detail) VALUES(?,?,?)', [$kdo, 'platba_sparovana', "platba #$platbaId → poukaz $pk[kod]"]);   // bez session (běží i na pozadí)
+    try { poukaz_razitko($poukazId); } catch (Throwable $e) { error_log('razítko za poukaz: ' . $e->getMessage()); }   // zaplacený poukaz = razítko kupujícímu
     return null;
 }
 
