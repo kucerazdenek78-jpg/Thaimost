@@ -32,6 +32,137 @@ const POUKAZ_KOD = [518.0, 188.7, 6.8];
 
 function poukaz_dir(): string { return __DIR__ . '/poukaz'; }
 
+// ---------- Motivy poukazu: dárkový (výchozí návrh) a vánoční, podklady nahrané v Nastavení ----------
+const POUKAZ_MOTIVY = ['darkovy' => 'Dárkový', 'vanocni' => 'Vánoční'];
+
+/** Připravený vánoční návrh v repozitáři (assets/poukaz-navrh/poukaz-vanocni.html) – stáhne se, dokud salon nenahraje vlastní. */
+const POUKAZ_VANOCNI_VYCHOZI = ['https://raw.githubusercontent.com/kucerazdenek78-jpg/thaimost/4133308f92377d4111f0c57e3ff283f92906d14b/assets/img/poukaz-pozadi-vanocni.jpg',
+    'c1767b1a5b97d320b788be9bf631a3c7c9f9a34ff482c9329ee363a1b0063121'];
+
+/** Podklad motivu (JPEG 210 × 100 mm, políčka na stejných místech jako výchozí návrh) v data/, nebo null. */
+function poukaz_motiv_jpg(string $m): ?string
+{
+    if (!isset(POUKAZ_MOTIVY[$m])) return null;
+    $f = dirname(cfg()['db_path']) . "/poukaz-$m.jpg";
+    if (!is_file($f) && $m === 'vanocni') poukaz_vanocni_stahni($f);
+    return is_file($f) ? $f : null;
+}
+
+/** Vánoční návrh z GitHubu (kontrola SHA-256). Ne, když ho salon smazal; při chybě další pokus nejdřív za hodinu. */
+function poukaz_vanocni_stahni(string $cil): void
+{
+    static $zkouseno = false;
+    if ($zkouseno) return;
+    $zkouseno = true;
+    try {
+        if ((string)nastaveni('vanocni_vychozi_ne', '') === '1') return;
+        if ((int)nastaveni('vanocni_pokus', '0') > time() - 3600) return;
+        q('INSERT INTO nastaveni(klic,hodnota) VALUES(?,?) ON CONFLICT(klic) DO UPDATE SET hodnota=excluded.hodnota', ['vanocni_pokus', (string)time()]);
+        [$url, $hash] = POUKAZ_VANOCNI_VYCHOZI;
+        $data = false;
+        if (function_exists('curl_init')) {
+            $c = curl_init($url);
+            curl_setopt_array($c, [CURLOPT_RETURNTRANSFER => true, CURLOPT_FOLLOWLOCATION => true, CURLOPT_CONNECTTIMEOUT => 8, CURLOPT_TIMEOUT => 25, CURLOPT_USERAGENT => 'kartoteka-thaimost']);
+            $data = curl_exec($c);
+            if (curl_getinfo($c, CURLINFO_RESPONSE_CODE) !== 200) $data = false;
+            curl_close($c);
+        } elseif (ini_get('allow_url_fopen')) $data = @file_get_contents($url, false, stream_context_create(['http' => ['timeout' => 25]]));
+        if (!is_string($data) || !hash_equals($hash, hash('sha256', $data))) return;
+        $tmp = $cil . '.tmp' . getmypid();
+        if (@file_put_contents($tmp, $data) === strlen($data)) @rename($tmp, $cil); else @unlink($tmp);
+    } catch (Throwable $e) { error_log('vánoční poukaz: ' . $e->getMessage()); }
+}
+
+/** Dá se motiv použít? Dárkový vždy (výchozí návrh), vánoční jen s nahraným podkladem. */
+function poukaz_motiv_dostupny(string $m): bool { return $m === 'darkovy' || poukaz_motiv_jpg($m) !== null; }
+
+/** Vánoční období (Nastavení → Poukazy): v něm je vánoční motiv přednastavený. Výchozí 1. 11. – 24. 12. */
+function poukaz_vanoce(?string $den = null): bool
+{
+    $md = date('m-d', strtotime($den ?? 'today'));
+    $od = (string)nastaveni('vanoce_od', '11-01'); $do = (string)nastaveni('vanoce_do', '12-24');
+    return $od <= $do ? ($md >= $od && $md <= $do) : ($md >= $od || $md <= $do);
+}
+function poukaz_motiv_vychozi(): string { return poukaz_vanoce() && poukaz_motiv_dostupny('vanocni') ? 'vanocni' : 'darkovy'; }
+function poukaz_motiv(array $p): string { $m = (string)($p['motiv'] ?? 'darkovy'); return poukaz_motiv_dostupny($m) ? $m : 'darkovy'; }
+
+/** Adresa obrázku podkladu pro náhled (veřejná kopie v public/, v názvu čas změny kvůli mezipaměti prohlížeče). */
+function poukaz_motiv_url(string $m): string
+{
+    $jpg = poukaz_motiv_jpg($m);
+    if (!$jpg) return '/poukaz-pozadi.jpg';
+    $jmeno = "poukaz-motiv-$m-" . filemtime($jpg) . '.jpg';
+    $pub = dirname(__DIR__) . "/public/$jmeno";
+    if (!is_file($pub)) {
+        foreach (glob(dirname(__DIR__) . "/public/poukaz-motiv-$m-*.jpg") ?: [] as $stary) @unlink($stary);
+        if (!@copy($jpg, $pub)) return '/poukaz-pozadi.jpg';
+    }
+    return "/$jmeno";
+}
+
+/** PDF šablona (jedna stránka s obrázkem, klasická xref – stejná stavba jako app/poukaz/sablona.pdf) z JPEG. */
+function poukaz_sablona_z_jpg(string $jpg): string
+{
+    $info = getimagesize($jpg);
+    $data = (string)file_get_contents($jpg);
+    $w = poukaz_cislo(POUKAZ_SIRKA); $hh = poukaz_cislo(POUKAZ_VYSKA);
+    $obsah = "q $w 0 0 $hh 0 0 cm /Im1 Do Q";
+    $cs = ($info['channels'] ?? 3) === 1 ? '/DeviceGray' : '/DeviceRGB';
+    $obj = [
+        "<< /Type /Catalog /Pages 2 0 R >>",
+        "<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
+        "<< /Contents [4 0 R] /MediaBox [0 0 $w $hh] /Parent 2 0 R /Resources << /Font << >> /XObject << /Im1 5 0 R >> /ProcSet [/PDF /ImageC] >> /Type /Page >>",
+        "<< /Length " . strlen($obsah) . " >>\nstream\n$obsah\nendstream",
+        "<< /Type /XObject /Subtype /Image /Width $info[0] /Height $info[1] /ColorSpace $cs /BitsPerComponent 8 /Filter /DCTDecode /Length " . strlen($data) . " >>\nstream\n$data\nendstream",
+    ];
+    $pdf = "%PDF-1.4\n%\xE2\xE3\xCF\xD3\n"; $off = [];
+    foreach ($obj as $i => $o) { $off[] = strlen($pdf); $pdf .= ($i + 1) . " 0 obj\n$o\nendobj\n"; }
+    $xref = strlen($pdf);
+    $pdf .= "xref\n0 " . (count($obj) + 1) . "\n0000000000 65535 f \n";
+    foreach ($off as $o) $pdf .= sprintf("%010d 00000 n \n", $o);
+    return $pdf . "trailer\n<< /Size " . (count($obj) + 1) . " /Root 1 0 R >>\nstartxref\n$xref\n%%EOF\n";
+}
+
+/** Cesta k PDF šabloně motivu: nahraný podklad (šablona se vytvoří a uloží vedle), jinak výchozí návrh. */
+function poukaz_sablona(string $m): string
+{
+    $jpg = poukaz_motiv_jpg($m);
+    if (!$jpg) return poukaz_dir() . '/sablona.pdf';
+    $pdf = substr($jpg, 0, -4) . '.pdf';
+    if (!is_file($pdf) || filemtime($pdf) < filemtime($jpg)) {
+        $tmp = $pdf . '.tmp' . getmypid();
+        if (@file_put_contents($tmp, poukaz_sablona_z_jpg($jpg)) === false || !@rename($tmp, $pdf)) { @unlink($tmp); throw new RuntimeException('Šablonu poukazu se nepodařilo uložit.'); }
+    }
+    return $pdf;
+}
+
+/** Uloží nahraný podklad motivu (JPEG, poměr stran 210:100). Vrací chybu nebo null. */
+function poukaz_motiv_nahraj(string $m, array $soubor): ?string
+{
+    if (!isset(POUKAZ_MOTIVY[$m])) return 'Neznámý motiv.';
+    if (($soubor['error'] ?? 1) !== UPLOAD_ERR_OK || !is_uploaded_file($soubor['tmp_name'])) return 'Soubor se nenahrál (možná je moc velký).';
+    if ($soubor['size'] > 8 * 1024 * 1024) return 'Soubor je větší než 8 MB.';
+    $i = @getimagesize($soubor['tmp_name']);
+    if (!$i || $i[2] !== IMAGETYPE_JPEG) return 'Podklad musí být obrázek JPEG (.jpg).';
+    if (!empty($i['channels']) && $i['channels'] === 4) return 'JPEG v barvách CMYK neumím vložit do PDF – uložte ho jako RGB.';
+    $pomer = $i[0] / $i[1];
+    if ($pomer < 2.0 || $pomer > 2.2) return sprintf('Podklad má poměr stran %.2f : 1, potřeba je 2,1 : 1 (210 × 100 mm, např. 2381 × 1134 px).', $pomer);
+    if ($i[0] < 1200) return 'Podklad je moc malý – pro tisk aspoň 1200 px na šířku (ideálně 2381 × 1134 px).';
+    $cil = dirname(cfg()['db_path']) . "/poukaz-$m.jpg";
+    if (!move_uploaded_file($soubor['tmp_name'], $cil)) return 'Podklad se nepodařilo uložit.';
+    @touch($cil);
+    try { poukaz_sablona($m); poukaz_motiv_url($m); } catch (Throwable $e) { return $e->getMessage(); }
+    return null;
+}
+
+function poukaz_motiv_smaz(string $m): void
+{
+    if ($m === 'vanocni') q('INSERT INTO nastaveni(klic,hodnota) VALUES(?,?) ON CONFLICT(klic) DO UPDATE SET hodnota=excluded.hodnota', ['vanocni_vychozi_ne', '1']);   // připravený návrh už nestahovat
+    $f = dirname(cfg()['db_path']) . "/poukaz-$m";
+    @unlink("$f.jpg"); @unlink("$f.pdf");
+    foreach (glob(dirname(__DIR__) . "/public/poukaz-motiv-$m-*.jpg") ?: [] as $stary) @unlink($stary);
+}
+
 /**
  * Podklady poukazu (PDF šablona, písmo, obrázek) a knihovna pro QR kód (app/qrcode.php) se nasazují spolu s kódem, ale na NAS
  * je nelze nahrát přes textové rozhraní, proto je kartotéka při prvním použití poukazu sama stáhne z GitHubu. Stahuje se pevný
@@ -203,7 +334,7 @@ function poukaz_vrstva(array $p): string
 function poukaz_pdf(array $p): string
 {
     poukaz_podklady();
-    $sab = (string)file_get_contents(poukaz_dir() . '/sablona.pdf');
+    $sab = (string)file_get_contents(poukaz_sablona(poukaz_motiv($p)));
     if (!preg_match('~startxref\s+(\d+)\s+%%EOF\s*$~', $sab, $m)) throw new RuntimeException('Šablona poukazu je poškozená (startxref).');
     $prev = (int)$m[1];
     $tr = substr($sab, (int)strrpos($sab, 'trailer'));
@@ -303,7 +434,8 @@ function poukaz_html(array $p): string
     $A = $m['ascent'] / $m['upm']; $D = -$m['descent'] / $m['upm'];
     // při line-height:1 leží základní linka (1 - (A+D)) / 2 + A násobků velikosti pod horním okrajem řádku
     $horni = fn(float $zakladna, float $velikost) => $zakladna - ((1 - ($A + $D)) / 2 + $A) * $velikost;
-    $s = '<div class="pk"><img src="/poukaz-pozadi.jpg" alt="Dárkový poukaz Thajské masáže Most">';
+    $motiv = poukaz_motiv($p);
+    $s = '<div class="pk"><img src="' . h(poukaz_motiv_url($motiv)) . '" alt="' . h(POUKAZ_MOTIVY[$motiv]) . ' poukaz Thajské masáže Most">';
     foreach (poukaz_texty($p) as $t) {
         $s .= '<span class="pk-t" style="left:' . $pct($t['x'], POUKAZ_SIRKA) . ';top:' . $pct($horni($t['y'], $t['velikost']), POUKAZ_VYSKA)
             . ';font-size:' . poukaz_cislo($t['velikost'] / POUKAZ_SIRKA * 100) . 'cqw">' . htmlspecialchars($t['text'], ENT_QUOTES, 'UTF-8') . '</span>';

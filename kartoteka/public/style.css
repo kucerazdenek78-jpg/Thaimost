@@ -257,3 +257,10 @@ details.rozbal>summary h3{display:inline;margin:0}.posta-ucet details.rozbal{mar
 .pk-typ label:has(input:checked){border-color:#6b4a2b;background:#f3e8d6}
 .pk-typ input{width:auto;height:auto;margin:0;padding:0;accent-color:#6b4a2b}
 .pk-uplatnit{display:flex;flex-direction:column;gap:6px;margin-bottom:14px}
+/* Motivy poukazu (Nastavení) */
+.motivy-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px;margin:10px 0 14px}
+.motiv{display:flex;flex-direction:column;gap:6px;border:1px solid #eadfcf;border-radius:12px;padding:10px;background:#fffdf9}
+.motiv img{width:100%;aspect-ratio:2.1;object-fit:cover;border-radius:6px;border:1px solid #eadfcf}
+.motiv-prazdny{aspect-ratio:2.1;display:grid;place-items:center;border:1.5px dashed #d8c7ad;border-radius:6px;color:#9a8670;font-size:.85rem;text-align:center;padding:8px}
+.pk-motiv{margin-bottom:12px}
+@media print{body.tisk-seznam header.top,body.tisk-seznam .subnav,body.tisk-seznam .cal-nav form,body.tisk-seznam .cal-nav .btn,body.tisk-seznam .flash,body.tisk-seznam p.muted.small,body.tisk-seznam .aipom-btn,body.tisk-seznam .aipom-okno{display:none!important}body.tisk-seznam .tbl{font-size:10pt}body.tisk-seznam .tbl tr{break-inside:avoid}}

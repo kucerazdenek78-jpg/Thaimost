@@ -2,6 +2,7 @@
 // Nastavení: masérky, ceník, prahy štítků, uživatelé, fronta e-mailů.
 
 require_once __DIR__ . '/stranky_reklamy.php';
+// poukaz_pdf.php (motivy poukazu) načítá public/index.php – tady ho znovu nenačítat (index ho bere přes require)
 
 function stranka_nastaveni(array $u): void
 {
@@ -10,6 +11,21 @@ function stranka_nastaveni(array $u): void
     if (($_GET['sekce'] ?? '') === 'platby') { stranka_platby($u); return; }
     if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $akce = $_POST['akce'] ?? '';
+        if ($akce === 'poukaz_motivy') {
+            // podklady poukazu (dárkový / vánoční) a vánoční období
+            foreach (array_keys(POUKAZ_MOTIVY) as $m) {
+                if (!empty($_POST["smazat_$m"])) { poukaz_motiv_smaz($m); flash('Nahraný podklad „' . POUKAZ_MOTIVY[$m] . '“ smazán.'); }
+                if (!empty($_FILES["motiv_$m"]['name'])) {
+                    $chyba = poukaz_motiv_nahraj($m, $_FILES["motiv_$m"]);
+                    $chyba ? flash(POUKAZ_MOTIVY[$m] . ' poukaz: ' . $chyba, 'err') : flash(POUKAZ_MOTIVY[$m] . ' poukaz: podklad nahrán.');
+                }
+            }
+            if (!empty($_POST['obnovit_vanocni'])) { q("DELETE FROM nastaveni WHERE klic IN ('vanocni_vychozi_ne','vanocni_pokus')"); poukaz_motiv_jpg('vanocni') ? flash('Připravený vánoční návrh je zpět.') : flash('Připravený vánoční návrh se nepodařilo stáhnout z GitHubu, zkuste to později.', 'err'); }
+                        foreach (['vanoce_od', 'vanoce_do'] as $k) if (preg_match('~^\d{4}-(\d{2}-\d{2})$~', (string)($_POST[$k] ?? ''), $mm))
+                q('INSERT INTO nastaveni(klic,hodnota) VALUES(?,?) ON CONFLICT(klic) DO UPDATE SET hodnota=excluded.hodnota', [$k, $mm[1]]);
+            zapis_log('poukaz_motivy', '');
+            presmeruj('/?r=nastaveni#motivy');
+        }
         if ($akce === 'nastaveni') {
             foreach (['rezim_webu', 'tematicka_web', 'oteviraci_od', 'oteviraci_do', 'prestavka_min', 'tablet_predstih_min', 'prah_staly_navstev', 'prah_spici_dni', 'prah_nespolehlivy', 'bonus_po', 'bonus_pocita_poukaz'] as $k)
                 if (isset($_POST[$k])) q('INSERT INTO nastaveni(klic,hodnota) VALUES(?,?) ON CONFLICT(klic) DO UPDATE SET hodnota=excluded.hodnota', [$k, trim($_POST[$k])]);
@@ -102,6 +118,29 @@ function stranka_nastaveni(array $u): void
             <label>Zdarma po kolika zaplacených<input type="number" name="bonus_po" value="<?= h($n['bonus_po']) ?>"></label>
             <label>Masáž na poukaz se počítá<select name="bonus_pocita_poukaz"><?= moznosti(['0' => 'ne', '1' => 'ano'], $n['bonus_pocita_poukaz']) ?></select></label>
           </div>
+          <button class="btn primary">Uložit</button>
+        </form>
+
+        <form method="post" class="card" id="motivy" enctype="multipart/form-data">
+          <?= csrf_pole() ?><input type="hidden" name="akce" value="poukaz_motivy">
+          <h2>🎄 Motivy poukazu</h2>
+          <p class="muted small" style="margin-top:0">Podklad = celý poukaz bez vyplněných údajů jako obrázek JPEG 210 × 100 mm (ideálně 2381 × 1134 px). Políčka Jméno / Procedura / Platnost, kód a QR musí být na stejných místech jako ve výchozím dárkovém návrhu – kartotéka do nich jen dopisuje.</p>
+          <div class="motivy-grid">
+          <?php foreach (POUKAZ_MOTIVY as $m => $nazev): $vl = poukaz_motiv_jpg($m); ?>
+            <div class="motiv">
+              <b><?= h($nazev) ?> poukaz</b>
+              <?php if (poukaz_motiv_dostupny($m)): ?><img src="<?= h(poukaz_motiv_url($m)) ?>" alt="<?= h($nazev) ?> poukaz" loading="lazy"><?php else: ?><div class="motiv-prazdny">zatím nenahraný – motiv nejde vybrat</div><?php if ($m === 'vanocni'): ?><label class="check"><input type="checkbox" name="obnovit_vanocni" value="1"> použít připravený vánoční návrh</label><?php endif ?><?php endif ?>
+              <span class="muted small"><?= $vl ? 'podklad z ' . h(date('j. n. Y', filemtime($vl))) : ($m === 'darkovy' ? 'výchozí návrh' : '') ?></span>
+              <label>Nahrát nový podklad (.jpg)<input type="file" name="motiv_<?= $m ?>" accept="image/jpeg"></label>
+              <?php if ($vl): ?><label class="check"><input type="checkbox" name="smazat_<?= $m ?>" value="1"> smazat<?= $m === 'darkovy' ? ' (vrátí se výchozí návrh)' : ' (vánoční motiv nepůjde vybrat)' ?></label><?php endif ?>
+            </div>
+          <?php endforeach ?>
+          </div>
+          <div class="grid3">
+            <label>Vánoční motiv přednastavit od<input type="date" name="vanoce_od" value="<?= date('Y') . '-' . h((string)nastaveni('vanoce_od', '11-01')) ?>"></label>
+            <label>do<input type="date" name="vanoce_do" value="<?= date('Y') . '-' . h((string)nastaveni('vanoce_do', '12-24')) ?>"></label>
+          </div>
+          <p class="muted small">V tomto období se na webu i v kartotéce předvybere vánoční poukaz (pokud je nahraný); vždy jde přepnout na dárkový. Teď: <b><?= h(POUKAZ_MOTIVY[poukaz_motiv_vychozi()]) ?></b>.</p>
           <button class="btn primary">Uložit</button>
         </form>
 

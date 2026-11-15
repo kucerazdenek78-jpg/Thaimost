@@ -1,4 +1,5 @@
 <?php
+require_once __DIR__ . '/poukaz_pdf.php';   // motivy poukazu (dárkový / vánoční)
 // Veřejné API pro web (GitHub Pages). Jen to, co web potřebuje – nic z kartotéky nevrací.
 
 function api_odpoved(array $data, int $kod = 200): void
@@ -42,7 +43,11 @@ function api_route(string $cesta): void
         api_odpoved(['ok' => true, 'rezim' => nastaveni('rezim_webu', 'zajem'), 'tematicka' => (string)nastaveni('tematicka_web', '1') === '1' && tematicka_maserna_je(),
             'platby_min' => platby_nastaveno() ? platby_interval() : 0,    // web: za jak dlouho se platba spáruje (0 = ručně)
             'ucet' => salon_ucet() !== '' && ucet_iban(salon_ucet()) !== '' ? salon_ucet() : '', 'iban' => ucet_iban(salon_ucet()),   // platba poukazu převodem (Nastavení)
-            'platnost_mes' => poukaz_platnost_mes()]);
+            'platnost_mes' => poukaz_platnost_mes(),
+            // motivy poukazu pro web: obrázky podkladů (vánoční jen když je nahraný) a co je teď přednastavené
+            'motivy' => array_filter(['darkovy' => poukaz_motiv_jpg('darkovy') ? rtrim(cfg()['url'], '/') . poukaz_motiv_url('darkovy') : '',
+                                      'vanocni' => poukaz_motiv_jpg('vanocni') ? rtrim(cfg()['url'], '/') . poukaz_motiv_url('vanocni') : ''], fn($x) => true),
+            'motiv' => poukaz_motiv_vychozi()]);
     }
 
     if ($cesta === '/api/sluzby' && $m === 'GET') {
@@ -126,11 +131,13 @@ function api_poukaz(): void
          $d['venovani'] ?? '', $d['prevzeti'] ?? '', $d['platba'] ?? '', 'Objednávka z webu. ' . ($d['poznamka'] ?? '')]);
     $pid = (int)db()->lastInsertId();
     $cislo = poukaz_vs_recepce($pid);   // číslo poukazu = variabilní symbol platby
+    $motiv = poukaz_motiv_dostupny((string)($d['motiv'] ?? '')) ? (string)$d['motiv'] : poukaz_motiv_vychozi();
+    q('UPDATE poukazy SET motiv=? WHERE id=?', [$motiv, $pid]);
     q('UPDATE poukazy SET vs=?, poznamka=? WHERE id=?', [$cislo, trim("Objednávka z webu č. $cislo. " . ($d['poznamka'] ?? '')), $pid]);
 
     $popis = ($d['sluzba'] ?? '') !== '' ? $d['sluzba'] : kc($hodnota);
     $txtPoukaz = ["Objednávka poukazu – $jmeno ($popis)",
-        "Nová objednávka dárkového poukazu z webu č. $cislo (VS $cislo):\n\n"
+        "Nová objednávka poukazu z webu č. $cislo (VS $cislo), motiv: " . POUKAZ_MOTIVY[$motiv] . ":\n\n"
         . "Poukaz: $popis, hodnota " . kc($hodnota) . "\nObjednal: $jmeno, " . telefon_cz($tel) . ($email ? ", $email" : '') . "\n"
         . "Převzetí: " . ($d['prevzeti'] ?? '') . "\nPlatba: " . ($d['platba'] ?? '') . "\n"
         . (($d['poznamka'] ?? '') !== '' ? "Poznámka: $d[poznamka]\n" : '')

@@ -63,7 +63,7 @@
 
   /* ================= POUKAZY ================= */
   /* Platba převodem a platnost poukazu: z kartotéky (Nastavení → Poukazy a platba převodem), data.js je jen záloha */
-  const PL = { ucet: D.platba.cislo_uctu || "", iban: D.platba.iban || V.ibanZUctu(D.platba.cislo_uctu), mes: 6 };
+  const PL = { ucet: D.platba.cislo_uctu || "", iban: D.platba.iban || V.ibanZUctu(D.platba.cislo_uctu), mes: 6, motivy: {} };
   /* Platba podle převzetí: osobně v salonu = jen hotově při vyzvednutí; e-mailem = převodem s QR (když má kartotéka účet) */
   function nabidniPrevod() {
     const sel = $("#platba"), osobne = $("#prevzeti").value === "salon", prevod = !!PL.iban && !osobne;
@@ -86,10 +86,20 @@
     if (!r || !r.ok) return;
     if (r.iban) { PL.ucet = r.ucet; PL.iban = r.iban; nabidniPrevod(); }
     if (r.platnost_mes) PL.mes = +r.platnost_mes;
+    /* motiv poukazu: vánoční jen když ho salon nahrál; ve vánočním období přednastavený, jde přepnout */
+    if (r.motivy) {
+      PL.motivy = r.motivy;
+      if (r.motivy.vanocni) {
+        $("#motivSeg").style.display = "";
+        st.motiv = r.motiv === "vanocni" ? "vanocni" : "darkovy";
+        const radio = document.querySelector('input[name="motiv"][value="' + st.motiv + '"]'); if (radio) radio.checked = true;
+      }
+    }
     platnostInfo(); update();
   }).catch(() => {});
 
-  const st = { typ: "hodnota", hodnota: 1000, sluzbaId: D.sluzby[0].id, varIdx: 0 };
+  const st = { typ: "hodnota", hodnota: 1000, sluzbaId: D.sluzby[0].id, varIdx: 0, motiv: "darkovy" };
+  document.querySelectorAll('input[name="motiv"]').forEach(r => r.addEventListener("change", () => { st.motiv = r.value; update(); }));
   const HODNOTY = [500, 790, 1000, 1500, 2000];
   /* texty voleb, které se odesílají salonu (vždy česky; zákazník vidí svůj jazyk) */
   const PREVZETI_CS = { salon: TK("Vyzvednu osobně v salonu"), email: TK("Pošlete mi ho e-mailem k vytištění") };
@@ -118,7 +128,8 @@
       typ: st.typ, hodnota: st.hodnota,
       sluzba: s.nazev, varianta: s.ceny[st.varIdx][0],
       komu: $("#komu").value.trim(), od: $("#od").value.trim(), venovani: $("#venovani").value.trim(),
-      platnost: platnostDo()
+      platnost: platnostDo(),
+      motiv: st.motiv, pozadi: PL.motivy[st.motiv] || ""
     };
   }
   function update() {
@@ -229,7 +240,7 @@
     const payload = {
       jmeno: $("#jmeno").value.trim(), telefon: $("#tel").value.trim(), email: $("#mail").value.trim(),
       hodnota: cena(), sluzba: d.typ === "sluzba" ? d.sluzba + " (" + d.varianta + ")" : "",
-      komu: d.komu, od: d.od, venovani: d.venovani, prevzeti: PREVZETI_CS[prevzeti] || "",
+      komu: d.komu, od: d.od, venovani: d.venovani, motiv: d.motiv, prevzeti: PREVZETI_CS[prevzeti] || "",
       platba: PLATBA_CS[platba] || "", poznamka, cislo: vs, gdpr: 1,
       web: $("#web") ? $("#web").value : ""
     };

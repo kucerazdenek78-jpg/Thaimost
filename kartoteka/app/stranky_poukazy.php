@@ -19,6 +19,7 @@ function stranka_poukazy(array $u): void
     <div class="cal-nav">
       <h1>Dárkové poukazy</h1>
       <form class="grow"><input type="hidden" name="r" value="poukazy"><input type="hidden" name="f" value="<?= h($f) ?>"><input name="q" value="<?= h($hl) ?>" placeholder="kód poukazu, jméno, telefon" autocapitalize="characters"></form>
+      <button type="button" class="btn" onclick="document.body.classList.add('tisk-seznam');print();document.body.classList.remove('tisk-seznam')">🖨 Vytisknout seznam</button>
       <a class="btn primary" href="/?r=poukaz_novy">+ Vystavit poukaz</a>
     </div>
     <?php if ($nPlateb = platby_ke_sparovani()): ?><p class="flash warn">💳 <?= $nPlateb ?> platb<?= $nPlateb === 1 ? 'a čeká' : ($nPlateb < 5 ? 'y čekají' : ' čeká') ?> na spárování s poukazem – <a href="/?r=nastaveni&amp;sekce=platby">otevřít Platby</a></p><?php endif ?>
@@ -28,7 +29,7 @@ function stranka_poukazy(array $u): void
       <tr><th>Kód</th><th>Stav</th><th>Hodnota</th><th>Zůstatek</th><th>Pro</th><th>Objednal</th><th>Platnost</th><th>Vytvořeno</th></tr>
       <?php foreach ($rows as $pk): ?>
         <tr onclick="location='/?r=poukaz&id=<?= $pk['id'] ?>'">
-          <td><a href="/?r=poukaz&id=<?= $pk['id'] ?>"><?= h($pk['kod']) ?></a></td>
+          <td><a href="/?r=poukaz&id=<?= $pk['id'] ?>"><?= h($pk['kod']) ?></a><?= ($pk['motiv'] ?? '') === 'vanocni' ? ' 🎄' : '' ?></td>
           <td><span class="stav p-<?= h($pk['stav']) ?>"><?= h(STAVY_POUKAZU[$pk['stav']]) ?></span></td>
           <td><?= h($pk['sluzba_text'] ?: kc($pk['hodnota'])) ?></td>
           <td><?= kc($pk['zustatek']) ?></td>
@@ -68,7 +69,8 @@ function stranka_poukaz_novy(array $u): void
              trim($p['objednal_email'] ?? ''), trim($p['pro_koho'] ?? ''), trim($p['od_koho'] ?? ''), trim($p['venovani'] ?? ''),
              $p['platba'] ?? '', trim($p['poznamka'] ?? '')]);
         $id = (int)db()->lastInsertId();
-        q('UPDATE poukazy SET vs=? WHERE id=?', [poukaz_vs_recepce($id), $id]);
+        $motiv = poukaz_motiv_dostupny((string)($p['motiv'] ?? '')) ? (string)$p['motiv'] : poukaz_motiv_vychozi();
+        q('UPDATE poukazy SET vs=?, motiv=? WHERE id=?', [poukaz_vs_recepce($id), $motiv, $id]);
         // poukaz se vede pod kupujícím (podle telefonu); může ho darovat – držitele pak lze změnit na kartě poukazu
         $tel = telefon_norm($p['objednal_tel'] ?? '');
         if ($tel !== '') {
@@ -86,6 +88,11 @@ function stranka_poukaz_novy(array $u): void
       <?php $vars = q("SELECT v.id, v.popis, v.cena, s.nazev FROM varianty v JOIN sluzby s ON s.id=v.sluzba_id WHERE v.aktivni=1 AND s.aktivni=1 AND v.cena>0 ORDER BY s.poradi, v.poradi")->fetchAll(); ?>
       <label>Kód z vytištěného poukazu <span class="muted small">(opište kód z poukazu; prázdné = kartotéka vytvoří nový a poukaz vytisknete z kartotéky)</span>
         <input name="kod" maxlength="40" autocapitalize="characters" autocomplete="off" placeholder="např. TM-0123" style="text-transform:uppercase"></label>
+      <?php if (poukaz_motiv_dostupny('vanocni')): $mv = poukaz_motiv_vychozi(); ?>
+      <div class="seg pk-typ pk-motiv" role="radiogroup" aria-label="Motiv poukazu">
+        <?php foreach (POUKAZ_MOTIVY as $m => $nazev): ?><label><input type="radio" name="motiv" value="<?= $m ?>"<?= $m === $mv ? ' checked' : '' ?>> <?= $m === 'vanocni' ? '🎄 ' : '🎁 ' ?><?= h($nazev) ?> poukaz</label><?php endforeach ?>
+      </div>
+      <?php endif ?>
       <div class="seg pk-typ" role="radiogroup">
         <label><input type="radio" name="typ" value="castka" checked> Na částku</label>
         <label><input type="radio" name="typ" value="masaz"> Na konkrétní masáž</label>
@@ -154,6 +161,7 @@ function stranka_poukaz(array $u): void
             $zid = telefon_norm($_POST['zakaznik_tel'] ?? '') ? zakaznik_najdi_nebo_zaloz(telefon_norm($_POST['zakaznik_tel']), '', '') : null;
             q('UPDATE poukazy SET platnost_do=?, poznamka=?, zakaznik_id=COALESCE(?, zakaznik_id), pro_koho=?, od_koho=?, venovani=? WHERE id=?',
                 [$platnost, trim($_POST['poznamka'] ?? ''), $zid, trim($_POST['pro_koho'] ?? ''), trim($_POST['od_koho'] ?? ''), mb_substr(trim($_POST['venovani'] ?? ''), 0, 200), $id]);
+            if (isset($_POST['motiv']) && poukaz_motiv_dostupny((string)$_POST['motiv'])) q('UPDATE poukazy SET motiv=? WHERE id=?', [$_POST['motiv'], $id]);
             flash('Uloženo.');
         } elseif ($akce === 'email') {
             $komu = trim($_POST['email'] ?? '');
@@ -215,6 +223,7 @@ function stranka_poukaz(array $u): void
           <div class="grid3">
             <label>Platnost do<input type="date" name="platnost_do" value="<?= h($p['platnost_do'] ?? '') ?>"></label>
             <label>Držitel – komu poukaz patří (telefon)<input name="zakaznik_tel" value="<?= h($zak ? telefon_cz($zak['telefon']) : '') ?>"></label>
+            <?php if (poukaz_motiv_dostupny('vanocni')): ?><label>Motiv poukazu<select name="motiv"><?= moznosti(array_map(fn($n) => "$n poukaz", POUKAZ_MOTIVY), poukaz_motiv($p)) ?></select></label><?php endif ?>
           </div>
           <div class="grid3">
             <label>Věnováno (pro koho)<input name="pro_koho" value="<?= h($p['pro_koho']) ?>"></label>

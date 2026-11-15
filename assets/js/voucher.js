@@ -36,7 +36,9 @@
 
   function render(d) {
     const t = texty(d);
-    let h = `<div class="pk"><img src="${window.T ? window.T.root : ""}assets/img/poukaz-pozadi.jpg" alt="${esc(window.T ? window.T("Dárkový poukaz Thajské masáže Most") : "Dárkový poukaz Thajské masáže Most")}">`;
+    /* podklad: motiv z kartotéky (d.pozadi – dárkový / vánoční nahraný v Nastavení), jinak výchozí návrh z webu */
+    const src = d.pozadi || `${window.T ? window.T.root : ""}assets/img/poukaz-pozadi.jpg`;
+    let h = `<div class="pk"><img src="${esc(src)}" alt="${esc(window.T ? window.T("Dárkový poukaz Thajské masáže Most") : "Dárkový poukaz Thajské masáže Most")}">`;
     for (const k of Object.keys(POLE)) {
       if (!t[k]) continue;
       const [x0, x1] = POLE[k], max = x1 - x0 - 2 * ODSAZENI;
