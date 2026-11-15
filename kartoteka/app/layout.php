@@ -16,12 +16,12 @@ function hlavicka(string $titul, string $aktivni = ''): void
     // Poukazy a Karty jsou podmenu Zákazníků; Volné termíny se otevírají z Kalendáře; Tým, Směny, Uživatelé, Volna a Nastavení jsou ve Správě.
     $konfl = ($u && smi_upravit_tym($u)) ? count(konflikty_dostupnosti()) : 0;
     $menu = [
-        'dnes' => ['/?r=dnes', 'Masérny' . ($zadosti ? " <b class=\"cnt\">$zadosti</b>" : '')],
-        'kalendar' => ['/?r=kalendar&pohled=masterny', '📅 Kalendář'],
-        'zakaznici' => ['/?r=zakaznici', 'Zákazníci' . ($poukazyCekaji ? " <b class=\"cnt\">$poukazyCekaji</b>" : '')],
+        'dnes' => ['/?r=dnes', '<i class="mi">🛏️</i>Masérny' . ($zadosti ? " <b class=\"cnt\">$zadosti</b>" : '')],
+        'kalendar' => ['/?r=kalendar&pohled=masterny', '<i class="mi">📅</i>Kalendář'],
+        'zakaznici' => ['/?r=zakaznici', '<i class="mi">👥</i>Zákazníci' . ($poukazyCekaji ? " <b class=\"cnt\">$poukazyCekaji</b>" : '')],
     ];
     $nPlateb = ($u && smi_upravit_tym($u)) ? platby_ke_sparovani() : 0;
-    if ($u && smi_upravit_tym($u)) $menu['nastaveni'] = ['/?r=nastaveni', 'Správa' . (($konfl + $nPlateb) ? ' <b class="cnt">' . ($konfl + $nPlateb) . '</b>' : '')];
+    if ($u && smi_upravit_tym($u)) $menu['nastaveni'] = ['/?r=nastaveni', '<i class="mi">⚙️</i>Správa' . (($konfl + $nPlateb) ? ' <b class="cnt">' . ($konfl + $nPlateb) . '</b>' : '')];
     // stránky, které patří pod jinou položku menu
     $patri = ['dnes_stary' => 'dnes', 'volno' => 'kalendar', 'poukazy' => 'zakaznici', 'karty' => 'zakaznici',
               'tym' => 'nastaveni', 'smeny' => 'nastaveni', 'uzivatele' => 'nastaveni', 'dostupnost' => 'nastaveni', 'posta' => 'nastaveni', 'platby' => 'nastaveni'];
@@ -42,22 +42,24 @@ function hlavicka(string $titul, string $aktivni = ''): void
     $aktivni = $patri[$aktivni] ?? $aktivni;
     ?><!doctype html>
 <html lang="cs"><head><meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="robots" content="noindex, nofollow">
 <title><?= h($titul) ?> · Kartotéka Thai Most</title>
-<link rel="stylesheet" href="/style.css?v=23">
+<link rel="stylesheet" href="/style.css?v=24">
 <?php if (je_okno() && !je_app()): ?><base target="_top"><?php endif ?>
-<link rel="manifest" href="/?r=manifest">
+<link rel="manifest" href="<?= je_app() ? '/?r=manifest' : '/kartoteka-manifest.json' ?>">
+<meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Kartotéka"><meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="theme-color" content="#6b4a2b">
-<link rel="apple-touch-icon" href="/asistent-192.png">
+<link rel="apple-touch-icon" href="<?= je_app() ? '/asistent-192.png' : '/kartoteka-192.png' ?>">
 </head><body<?= je_okno() ? ' class="okno' . (je_app() ? ' app' : '') . '"' : '' ?>>
 <?php if ($u && !je_okno()): ?>
 <header class="top">
   <a class="logo" href="/?r=dnes">Thai Most <span>kartotéka</span></a>
-  <nav><?php foreach ($menu as $k => [$href, $t]): ?><a href="<?= $href ?>"<?= $aktivni === $k ? ' class="on"' : '' ?>><?= $t ?></a><?php endforeach ?></nav>
+  <nav class="hlavni"><?php foreach ($menu as $k => [$href, $t]): ?><a href="<?= $href ?>"<?= $aktivni === $k ? ' class="on"' : '' ?>><?= $t ?></a><?php endforeach ?></nav>
   <div class="gs"><input id="gs" type="search" placeholder="🔍 příjmení, telefon, kód karty / poukazu" autocomplete="off"><button type="button" id="gscan" class="gscan" title="Skenovat QR kód karty fotoaparátem">📷</button><div id="gsr" class="gsr" hidden></div></div>
-  <a class="btn primary" href="/?r=rez_nova">+ Rezervace</a>
-  <span class="who"><?= h($u['jmeno']) ?> · <a href="/?r=logout">odhlásit</a></span>
+  <a class="btn primary rez-btn" href="/?r=rez_nova" title="Nová rezervace">+ <span>Rezervace</span></a>
+  <span class="who"><span class="who-j"><?= h($u['jmeno']) ?> · </span><a href="/?r=logout" title="Odhlásit">odhlásit</a></span>
 </header>
 <?php endif ?>
 <main>
@@ -71,6 +73,7 @@ function hlavicka(string $titul, string $aktivni = ''): void
 function paticka(): void
 {
     ?></main>
+<script>if('serviceWorker' in navigator)navigator.serviceWorker.register('/sw-asistent.js').catch(function(){});</script>
 <?php if (uzivatel() && !je_okno() && ($GLOBALS['__stranka_aktivni'] ?? '') !== 'ai') asistent_ikona(); ?>
 <?php if (uzivatel() && !je_okno()): ?>
 <div id="poplach" hidden></div>

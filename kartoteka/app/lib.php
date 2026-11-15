@@ -71,7 +71,9 @@ function vyzaduj_prihlaseni(): array
 
 // ---------- Trvalé přihlášení („Zůstat přihlášen“, hlavně pro aplikaci v telefonu) ----------
 const TRVALE_COOKIE = 'tmk_trvale';
-const TRVALE_DNI = 60;
+// prohlížeče drží cookie nejvýš ~400 dní; platnost se při každém použití prodlužuje,
+// takže kdo kartotéku používá, zůstane přihlášený natrvalo (do odhlášení)
+const TRVALE_DNI = 400;
 
 function trvale_cookie(string $hodnota, int $expirace): void
 {

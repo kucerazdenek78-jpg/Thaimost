@@ -41,7 +41,7 @@ function stranka_login(): void
       <?php if ($zadnyUzivatel): ?><div class="flash warn">Zatím není založený žádný uživatel. Založte ho v terminálu kontejneru: <code>php bin/uzivatel.php</code> (návod v README).</div><?php endif ?>
       <label>Uživatel<input name="login" autocomplete="username" required autofocus></label>
       <label>Heslo<input name="heslo" type="password" autocomplete="current-password" required></label>
-      <label class="check"><input type="checkbox" name="trvale" value="1"<?= str_contains((string)($_SESSION['po_prihlaseni'] ?? ''), 'app=1') ? ' checked' : '' ?>> Zůstat přihlášen na tomto zařízení (<?= TRVALE_DNI ?> dní) – jen na vlastním telefonu, ne na sdíleném počítači</label>
+      <label class="check"><input type="checkbox" name="trvale" value="1"<?= preg_match('~[?&](app|pwa)=1~', (string)($_SESSION['po_prihlaseni'] ?? '')) ? ' checked' : '' ?>> Zůstat přihlášen na tomto zařízení natrvalo (do odhlášení) – jen na vlastním telefonu či tabletu, ne na sdíleném počítači</label>
       <button class="btn primary">Přihlásit</button>
     </form>
     <?php paticka();

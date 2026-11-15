@@ -1,0 +1,23 @@
+{
+  "name": "Kartotéka Thai Most",
+  "short_name": "Kartotéka",
+  "id": "/?r=dnes&pwa=1",
+  "description": "Kartotéka salonu Thai Most – masérny, kalendář, zákazníci, poukazy a správa",
+  "start_url": "/?r=dnes&pwa=1",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#f6f1ea",
+  "theme_color": "#6b4a2b",
+  "lang": "cs",
+  "icons": [
+    {"src": "/kartoteka-192.png", "sizes": "192x192", "type": "image/png"},
+    {"src": "/kartoteka-512.png", "sizes": "512x512", "type": "image/png"},
+    {"src": "/kartoteka-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable"}
+  ],
+  "shortcuts": [
+    {"name": "Nová rezervace", "url": "/?r=rez_nova", "icons": [{"src": "/kartoteka-192.png", "sizes": "192x192"}]},
+    {"name": "Kalendář", "url": "/?r=kalendar&pohled=masterny", "icons": [{"src": "/kartoteka-192.png", "sizes": "192x192"}]},
+    {"name": "Zákazníci", "url": "/?r=zakaznici", "icons": [{"src": "/kartoteka-192.png", "sizes": "192x192"}]}
+  ]
+}

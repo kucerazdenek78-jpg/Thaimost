@@ -287,3 +287,57 @@ details.rozbal>summary h3{display:inline;margin:0}.posta-ucet details.rozbal{mar
 .cs-preklad{margin-top:4px;background:#f7f1e8;border-radius:8px;padding:6px 10px}.cs-preklad summary{cursor:pointer}
 .cs-var{margin:0 12px 12px;width:calc(100% - 24px)}.cs-var input{margin:0}
 @media (max-width:700px){.cs-hlava{grid-template-columns:1fr}.cs-var{display:block;overflow-x:auto}}
+/* ---------- Mobil a tablet (i jako nainstalovaná aplikace) ---------- */
+.top nav .mi{font-style:normal;margin-right:5px}
+.cal-nav form.grow{min-width:240px}
+@media (max-width:760px){
+  body{padding-bottom:calc(64px + env(safe-area-inset-bottom,0px))}
+  main{padding:10px 10px 16px}
+  .card{padding:12px;border-radius:12px}
+  h1{font-size:1.3rem}
+  /* horní lišta: logo + jméno, pod tím hledání, skener a nová rezervace */
+  header.top{position:sticky;top:0;z-index:60;gap:8px;padding:6px 10px calc(8px);padding-top:max(6px,env(safe-area-inset-top,0px))}
+  .top .logo{font-size:1rem;order:1}
+  .top .who{order:2;font-size:.8rem}.top .who .who-j{display:none}
+  .top .gs{order:3;flex:1 1 auto;min-width:0;max-width:none}
+  .top .gs input{min-height:42px}.top .gscan{min-height:42px;min-width:42px}
+  .top .rez-btn{order:4;padding:9px 13px;min-height:42px;white-space:nowrap}
+  .top .gsr{position:fixed;left:8px;right:8px;top:auto;min-width:0;max-height:65vh}
+  /* hlavní menu jako lišta dole (jako v aplikaci) */
+  .top nav.hlavni{position:fixed;left:0;right:0;bottom:0;z-index:70;display:flex;flex-wrap:nowrap;gap:0;background:var(--hn);
+    padding:4px 4px calc(4px + env(safe-area-inset-bottom,0px));box-shadow:0 -4px 16px rgba(60,40,20,.25)}
+  .top nav.hlavni a{flex:1 1 0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;
+    padding:6px 2px;min-height:54px;font-size:.74rem;border-radius:10px;text-align:center;position:relative;line-height:1.15}
+  .top nav.hlavni .mi{font-size:1.35rem;margin:0}
+  .top nav.hlavni .cnt{position:absolute;top:3px;left:calc(50% + 6px);font-size:.68rem}
+  .aipom-btn{bottom:calc(74px + env(safe-area-inset-bottom,0px));width:52px;height:52px;font-size:26px}
+  /* podmenu: jeden řádek, posouvá se do strany */
+  .subnav{display:flex;gap:6px;overflow-x:auto;white-space:nowrap;margin:0 -10px 10px;padding:0 10px 2px;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+  .subnav a{margin:0;flex:none;padding:10px 14px}
+  /* tabulky se posouvají uvnitř, stránka zůstane v šířce telefonu */
+  table.tbl,main table{display:block;max-width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch}
+  .tbl th,.tbl td{padding:9px 8px}
+  /* řádky s tlačítky se zalamují, pole nepřetékají */
+  main img,main video,main iframe{max-width:100%;height:auto}
+  main pre,main code{white-space:pre-wrap;word-break:break-word}
+  .flash{font-size:.92rem}
+  .row-item{flex-wrap:wrap;gap:8px 12px}.row-item .grow{flex:1 1 55%;min-width:0}
+  .subnav{max-width:calc(100% + 20px)}
+  .cols>*,.grid3>*,.posta-grid>*{min-width:0}
+  select{max-width:100%}
+  .cal-nav form.grow{flex:1 1 100%}
+  .cal-nav h1{margin-left:0}
+  .cal-nav{gap:8px}
+  .pm-toast{bottom:calc(76px + env(safe-area-inset-bottom,0px))!important}
+}
+@media (max-width:480px){.top .rez-btn span{display:none}.top .rez-btn{font-size:1.3rem;padding:4px 14px;line-height:1}}
+.pm-toast:not(.show),.pm-hint:not(.show){visibility:hidden}
+/* tablet na výšku: menu nahoře v jednom řádku, větší plochy */
+@media (min-width:761px) and (max-width:1100px){
+  .top nav.hlavni{flex-wrap:nowrap}
+  .top .gs{min-width:160px}
+}
+/* nainstalovaná aplikace (standalone): místo pro výřez a stavový řádek */
+@media (display-mode:standalone){
+  header.top{padding-top:max(8px,env(safe-area-inset-top,0px))}
+}
