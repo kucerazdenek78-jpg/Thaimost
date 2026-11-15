@@ -380,5 +380,8 @@
  "Poukaz platí {mes} měs. od nákupu (při objednání dnes do {datum}). Do té doby je potřeba se objednat na masáž – stačí zavolat.": "The voucher is valid for {mes} months from the date of purchase (for orders placed today, until {datum}). You’ll need to book a massage before then – just give us a call.",
  "číslo poukazu": "voucher number",
  "Poukaz platí do {datum}. Do té doby je potřeba se objednat na masáž – stačí zavolat na 778 429 329.": "The voucher is valid until {datum}. You’ll need to book a massage before then – simply call 778 429 329.",
- "Objednávka se odešle do salonu. Zaplatit můžete v salonu, nebo hned převodem s QR kódem – platba se s objednávkou spáruje sama.": "Your order will be sent to the salon. You can pay at the salon or straight away by bank transfer using the QR code – the payment will be automatically linked to your order."
+ "Objednávka se odešle do salonu. Zaplatit můžete v salonu, nebo hned převodem s QR kódem – platba se s objednávkou spáruje sama.": "Your order will be sent to the salon. You can pay at the salon or straight away by bank transfer using the QR code – the payment will be automatically linked to your order.",
+ "Hotově v salonu při vyzvednutí": "In cash at the salon upon collection",
+ "Objednávka se odešle do salonu. Poukaz zaplatíte převodem s QR kódem, který se ukáže po odeslání – platba se s objednávkou spáruje sama.": "Your order will be sent to the salon. You can pay for the voucher by bank transfer using the QR code that appears once the order has been sent – the payment will be automatically linked to your order.",
+ "Objednávka se odešle do salonu. Poukaz zaplatíte hotově při vyzvednutí v salonu.": "Your order will be sent to the salon. You will pay for the voucher in cash when you collect it from the salon."
 }

@@ -64,13 +64,18 @@
   /* ================= POUKAZY ================= */
   /* Platba převodem a platnost poukazu: z kartotéky (Nastavení → Poukazy a platba převodem), data.js je jen záloha */
   const PL = { ucet: D.platba.cislo_uctu || "", iban: D.platba.iban || V.ibanZUctu(D.platba.cislo_uctu), mes: 6 };
+  /* Platba podle převzetí: osobně v salonu = jen hotově při vyzvednutí; e-mailem = převodem s QR (když má kartotéka účet) */
   function nabidniPrevod() {
-    if (PL.iban && !$('#platba option[value="prevod"]')) {
-      $("#platba").insertAdjacentHTML("beforeend", '<option value="prevod">' + V.esc(T("Převodem / QR platbou předem")) + "</option>");
-      if ($("#platbaPozn")) $("#platbaPozn").textContent = T("Objednávka se odešle do salonu. Zaplatit můžete v salonu, nebo hned převodem s QR kódem – platba se s objednávkou spáruje sama.");
-    }
+    const sel = $("#platba"), osobne = $("#prevzeti").value === "salon", prevod = !!PL.iban && !osobne;
+    const opt = prevod ? [["prevod", T("Převodem / QR platbou předem")]] : [["salon", T("Hotově v salonu při vyzvednutí")]];
+    sel.innerHTML = opt.map(o => `<option value="${o[0]}">${V.esc(o[1])}</option>`).join("");
+    if ($("#platbaPozn")) $("#platbaPozn").textContent = prevod
+      ? T("Objednávka se odešle do salonu. Poukaz zaplatíte převodem s QR kódem, který se ukáže po odeslání – platba se s objednávkou spáruje sama.")
+      : osobne ? T("Objednávka se odešle do salonu. Poukaz zaplatíte hotově při vyzvednutí v salonu.")
+      : T("Objednávka se odešle e-mailem do salonu – nic se neplatí online.");
   }
   nabidniPrevod();
+  $("#prevzeti").addEventListener("change", nabidniPrevod);
   const platnostDo = () => { const d = new Date(); d.setMonth(d.getMonth() + PL.mes); return d.getDate() + ". " + (d.getMonth() + 1) + ". " + d.getFullYear(); };
   function platnostInfo() {
     const el = $("#platnostInfo"); if (!el) return;
@@ -88,7 +93,7 @@
   const HODNOTY = [500, 790, 1000, 1500, 2000];
   /* texty voleb, které se odesílají salonu (vždy česky; zákazník vidí svůj jazyk) */
   const PREVZETI_CS = { salon: TK("Vyzvednu osobně v salonu"), email: TK("Pošlete mi ho e-mailem k vytištění") };
-  const PLATBA_CS = { salon: TK("V salonu při vyzvednutí"), prevod: TK("Převodem / QR platbou předem") };
+  const PLATBA_CS = { salon: TK("Hotově v salonu při vyzvednutí"), prevod: TK("Převodem / QR platbou předem") };
 
   $("#chips").innerHTML = HODNOTY.map(h => `<button type="button" data-h="${h}">${V.kc(h)}</button>`).join("") + `<button type="button" data-h="x">${V.esc(T("Jiná částka"))}</button>`;
   $("#selSluzba").innerHTML = ["masaze", "wellness"].map(k =>
