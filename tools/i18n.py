@@ -41,7 +41,7 @@ NO_TRANSLATE = {"stepanova.hanka@centrum.cz", "salon@thaimost.cz", "SNP 2654/26,
 ALT_SUFFIX = " – thajské masáže Most, Thai Most"
 PRICE = re.compile(r"^(\d[\d\s ]*)\s*Kč$")
 JS_FILES = ["main.js", "moje.js", "skener.js", "i18n.js", "voucher.js"]
-ROOT_FILES = ("assets/", "favicon.ico", "site.webmanifest", "salon.html", "firma.html", "index.html", "kartoteka")
+ROOT_FILES = ("assets/", "favicon.ico", "site.webmanifest", "salon.html", "firma.html", "index.html", "kartoteka", "ochrana-osobnich-udaju/")
 
 
 def norm(s):

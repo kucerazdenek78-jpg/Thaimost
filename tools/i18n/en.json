@@ -392,5 +392,9 @@
  "Potvrzení objednávky jsme poslali na e-mail <b>{mail}</b>.": "We have sent the order confirmation to the email address <b>{mail}</b>.",
  "pouze wellness, masáže dle domluvy": "Wellness only; massages by arrangement",
  "Prohlédnout online": "View online",
- "Stáhnout nabídku masáží (PDF)": "Download the massage menu (PDF)"
+ "Stáhnout nabídku masáží (PDF)": "Download the massage menu (PDF)",
+ "Souhlasím se zpracováním uvedených údajů za účelem vyřízení objednávky poukazu (": "I consent to the processing of the data provided for the purpose of processing my voucher order (",
+ "zásady": "privacy policy",
+ "Souhlasím se zpracováním uvedených údajů za účelem domluvení termínu (": "I consent to the processing of the data provided for the purpose of arranging an appointment (",
+ "Ochrana osobních údajů": "Privacy policy"
 }
