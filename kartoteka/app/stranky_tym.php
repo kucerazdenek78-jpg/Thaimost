@@ -287,6 +287,11 @@ function stranka_recepcni(array $u): void
                     if (strlen($_POST['heslo']) >= 8) q('UPDATE uzivatele SET heslo_hash=? WHERE id=?', [password_hash($_POST['heslo'], PASSWORD_DEFAULT), $id]);
                     else flash('Heslo musí mít aspoň 8 znaků – heslo nezměněno.', 'err');
                 }
+                $novyLogin = trim($_POST['login'] ?? '');
+                if ($novyLogin !== '' && $novyLogin !== $x['login']) {
+                    if (q1('SELECT 1 FROM uzivatele WHERE login=? AND id<>?', [$novyLogin, $id])) flash("Login $novyLogin už má jiný uživatel – login nezměněn.", 'err');
+                    else { q('UPDATE uzivatele SET login=? WHERE id=?', [$novyLogin, $id]); zapis_log('uzivatel_login', $x['login'] . ' → ' . $novyLogin); flash("Login změněn na $novyLogin."); }
+                }
                 zapis_log('uzivatel_uprava', $x['login']);
                 flash('Uloženo.');
             }
@@ -330,6 +335,7 @@ function stranka_recepcni(array $u): void
           <form method="post" class="inline"><?= csrf_pole() ?><input type="hidden" name="akce" value="ulozit"><input type="hidden" name="id" value="<?= $x['id'] ?>">
             <div class="grid3">
               <label>Jméno<input name="jmeno" value="<?= h($x['jmeno']) ?>"></label>
+              <label>Login (přihlašovací jméno)<input name="login" value="<?= h($x['login']) ?>" required autocomplete="off"></label>
               <label>Role<select name="role"><?= moznosti(ROLE, $x['role']) ?></select></label>
               <label>Barva ve směnách<input type="color" name="barva" value="<?= h($x['barva']) ?>"></label>
               <label>Telefon<input name="telefon" value="<?= h($x['telefon']) ?>"></label>
