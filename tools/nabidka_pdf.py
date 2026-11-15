@@ -1,49 +1,37 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Vygeneruje nabidka-masazi.pdf z nabidka-masazi.html (A4, vícestránkový e-book).
-Bere ceny a texty z assets/js/data.js, takže po změně ceníku stačí spustit znovu:
-    python3 tools/nabidka_pdf.py
-Potřebuje Google Chrome / Chromium v systému.
+Vygeneruje PDF e-booky nabídky z HTML (CZ/EN/DE), vše z assets/js/data.js.
+Po změně cen/textů v data.js spusť znovu:  python3 tools/nabidka_pdf.py
+Potřebuje Google Chrome / Chromium.
 """
 import http.server, socketserver, threading, subprocess, sys, os, shutil, time
-
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 PORT = 8099
-OUT  = os.path.join(ROOT, "nabidka-masazi.pdf")
-PAGE = "nabidka-masazi.html"
-
+PAGES = [
+    ("nabidka-masazi.html",    "nabidka-masazi.pdf"),
+    ("nabidka-masazi-en.html", "nabidka-masazi-en.pdf"),
+    ("nabidka-masazi-de.html", "nabidka-masazi-de.pdf"),
+]
 def find_chrome():
     for c in ("google-chrome","google-chrome-stable","chromium","chromium-browser","chrome"):
         p = shutil.which(c)
         if p: return p
     return None
-
-class Handler(http.server.SimpleHTTPRequestHandler):
-    def log_message(self, *a): pass
-
 def main():
     chrome = find_chrome()
-    if not chrome:
-        sys.exit("Nenalezen Chrome/Chromium – nainstalujte jej a spusťte znovu.")
+    if not chrome: sys.exit("Nenalezen Chrome/Chromium.")
     os.chdir(ROOT)
-    httpd = socketserver.TCPServer(("127.0.0.1", PORT), Handler)
-    t = threading.Thread(target=httpd.serve_forever, daemon=True); t.start()
+    httpd = socketserver.TCPServer(("127.0.0.1", PORT), type("H",(http.server.SimpleHTTPRequestHandler,),{"log_message":lambda *a:None}))
+    threading.Thread(target=httpd.serve_forever, daemon=True).start()
     try:
-        cmd = [chrome, "--headless=new", "--no-sandbox", "--disable-gpu",
-               "--no-pdf-header-footer", "--print-to-pdf-no-header",
-               "--virtual-time-budget=15000",
-               "--print-to-pdf=%s" % OUT,
-               "http://127.0.0.1:%d/%s" % (PORT, PAGE)]
-        r = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-        time.sleep(0.3)
+        for page, out in PAGES:
+            outp = os.path.join(ROOT, out)
+            subprocess.run([chrome,"--headless=new","--no-sandbox","--disable-gpu","--no-pdf-header-footer",
+                "--virtual-time-budget=15000","--print-to-pdf=%s"%outp,"http://127.0.0.1:%d/%s"%(PORT,page)],
+                stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            time.sleep(0.2)
+            print(("OK  " if os.path.exists(outp) else "FAIL ")+out+(" (%dkB)"%(os.path.getsize(outp)//1024) if os.path.exists(outp) else ""))
     finally:
         httpd.shutdown()
-    if os.path.exists(OUT):
-        print("Hotovo:", OUT, "(%d kB)" % (os.path.getsize(OUT)//1024))
-    else:
-        sys.stdout.write(r.stdout.decode("utf-8","replace"))
-        sys.exit("PDF se nevytvořilo.")
-
-if __name__ == "__main__":
-    main()
+if __name__=="__main__": main()

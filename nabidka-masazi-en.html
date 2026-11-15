@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Thai Most – nabídka masáží (na šířku)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;1,500&family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{--teak:#2b1e16;--teak2:#47321f;--bark:#6b4d33;--gold:#c69c5d;--gold-l:#e6d0a6;
+  --cream:#f8f2e9;--sand:#efe4d3;--paper:#fffdf9;--jade:#3d6858;--ink:#2a211b;--muted:#7a6a5c;--line:rgba(43,30,22,.14);}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{font-family:"Manrope",system-ui,sans-serif;color:var(--ink);-webkit-font-smoothing:antialiased;background:#d9cdbb;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+h1,h2,h3,h4,.serif{font-family:"Cormorant Garamond",Georgia,serif;font-weight:600;line-height:1.08;letter-spacing:-.01em}
+.paper{width:297mm;margin:24px auto 60px;background:var(--paper);box-shadow:0 22px 55px -26px rgba(43,30,22,.55);padding:12mm 14mm}
+.cover{background:radial-gradient(120% 120% at 50% 0%, #3a281c 0%, #2b1e16 55%, #221711 100%);color:var(--cream);border-radius:4mm;min-height:185mm;padding:14mm;display:flex;break-after:page;page-break-after:always}
+.cover-fr{border:1px solid rgba(230,208,166,.25);border-radius:3mm;padding:12mm 16mm;width:100%;display:flex;flex-direction:column;align-items:center;text-align:center}
+.brand{display:flex;align-items:center;gap:12px;color:var(--gold-l)}
+.brand .lotus{width:48px;height:auto;color:var(--gold)}
+.brand .bt{text-align:left;line-height:1}
+.brand .bt b{font-family:"Cormorant Garamond",serif;font-size:28px;font-weight:600;display:block;color:var(--gold-l)}
+.brand .bt span{font-size:11px;letter-spacing:.3em;text-transform:uppercase;color:rgba(230,208,166,.75)}
+.cover-mid{margin:auto 0;display:flex;flex-direction:column;align-items:center;gap:12px}
+.eyebrow{letter-spacing:.42em;text-transform:uppercase;font-size:13px;color:var(--gold)}
+.cover h1{font-size:56px;color:#fff}
+.cover .lead{max-width:150mm;color:rgba(248,242,233,.82);font-size:15px;line-height:1.7}
+.cover-foot{margin-top:auto;font-size:13px;color:rgba(230,208,166,.85);display:flex;gap:18px}
+.svc{padding-top:0}
+.svc.brk{break-before:page;page-break-before:always}
+.section{display:flex;align-items:center;gap:16px;margin:0 0 6mm;break-after:avoid}
+.section .line{flex:1;height:1px;background:var(--line)}
+.section>div{text-align:center}
+.section h2{font-size:28px;color:var(--teak)}
+.section p{font-size:11px;letter-spacing:.24em;text-transform:uppercase;color:var(--gold);margin-top:4px}
+.card{display:flex;gap:9mm;min-height:80mm;margin-bottom:7mm;break-inside:avoid;page-break-inside:avoid}
+.photo{flex:0 0 150mm;align-self:stretch;min-height:80mm;border-radius:3mm;background-color:var(--sand);background-position:center;background-size:cover;background-repeat:no-repeat}
+.body{flex:1;display:flex;flex-direction:column;justify-content:center;padding:1mm 0}
+.card h3{font-size:26px;color:var(--teak);margin-bottom:3mm}
+.desc{font-size:12.7px;line-height:1.62;color:#3a2f26}
+.pozn{font-size:11.5px;font-style:italic;color:var(--muted);margin-top:2.5mm}
+.prices{margin-top:4mm;display:flex;flex-direction:column;gap:2mm}
+.price{display:flex;align-items:baseline;gap:8px;font-size:13px}
+.price .pn{color:var(--bark);font-weight:600}
+.price .dots{flex:1;border-bottom:1.5px dotted rgba(43,30,22,.28);transform:translateY(-3px)}
+.price .pc{font-family:"Cormorant Garamond",serif;font-size:18.5px;font-weight:600;color:var(--teak);white-space:nowrap}
+.back{break-before:page;page-break-before:always;display:flex;flex-direction:column;min-height:185mm}
+.brand.dark{color:var(--bark);margin-bottom:9mm}
+.brand.dark .lotus{color:var(--gold)}
+.brand.dark .bt b{color:var(--teak)}
+.brand.dark .bt span{color:var(--muted)}
+.back-grid{display:grid;grid-template-columns:1fr 1fr;gap:12mm;margin-bottom:9mm}
+.bk h4{font-size:21px;color:var(--teak);margin-bottom:5mm}
+.ot{display:flex;justify-content:space-between;gap:12px;padding:2.6mm 0;border-bottom:1px solid var(--line);font-size:13px}
+.ot b{color:var(--bark);font-weight:600}
+.ot span{color:#3a2f26;text-align:right;max-width:100mm}
+.bk p{font-size:13.5px;line-height:1.7;color:#3a2f26;margin-bottom:3mm}
+.gift{display:grid;grid-template-columns:1.5fr 1fr;gap:9mm;background:var(--cream);border:1px solid var(--line);border-radius:3mm;padding:8mm;align-items:center}
+.gift h4{font-size:21px;color:var(--teak);margin-bottom:4mm}
+.gift p{font-size:12.5px;line-height:1.6;color:#3a2f26}
+.loy{text-align:center;border-left:1px solid var(--line);padding-left:8mm}
+.loy b{font-family:"Cormorant Garamond",serif;font-size:22px;color:var(--bark);display:block;line-height:1.15;margin-bottom:3mm}
+.loy span{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+.note{margin-top:auto;padding-top:9mm;font-size:11px;color:var(--muted);text-align:center}
+.bar{position:fixed;top:14px;right:14px;z-index:50;display:flex;gap:8px}
+.bar button{font-family:inherit;font-weight:700;font-size:13px;border:0;border-radius:999px;padding:11px 20px;cursor:pointer;background:var(--teak);color:var(--cream)}
+.hint{max-width:297mm;margin:0 auto 6px;text-align:center;font-size:12.5px;color:#6b5a49}
+.load{margin:40px auto;text-align:center;color:#6b5a49}
+@media print{html,body{background:#fff}.bar,.hint{display:none!important}.paper{width:auto;margin:0;padding:0;box-shadow:none}.cover,.back{min-height:170mm}@page{size:A4 landscape;margin:12mm 14mm}}
+</style>
+</head>
+<body>
+<div class="bar"><a href="index.html" style="font-family:inherit;font-weight:700;font-size:13px;text-decoration:none;border-radius:999px;padding:11px 20px;background:#fff;color:#2b1e16;border:1.5px solid rgba(43,30,22,.14)">← Back to website</a><button onclick="window.print()">Save as PDF</button></div>
+<div class="hint">Thai Most massage menu. To save as PDF click „Save as PDF“ (A4 landscape).</div>
+<div id="app"><div class="load">Načítám ceník…</div></div>
+<script>
+var REMOTE="https://kucerazdenek78-jpg.github.io/Thaimost/";
+var LOTUS='<svg class="lotus" viewBox="0 0 64 44" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M32 6 C36 16 36 28 32 38 C28 28 28 16 32 6 Z"/><path d="M32 38 C24 30 20 20 20 12 C27 16 31 26 32 38 Z"/><path d="M32 38 C40 30 44 20 44 12 C37 16 33 26 32 38 Z"/><path d="M32 38 C20 36 10 30 6 22 C16 22 27 29 32 38 Z"/><path d="M32 38 C44 36 54 30 58 22 C48 22 37 29 32 38 Z"/></g></svg>';
+var NAZVY2={"tradicni": "Traditional Thai Massage", "hlava": "Head & Neck Massage", "zada": "Back & Neck Massage", "olej": "Thai Oil Massage", "aroma": "Aromatherapy Massage", "detska": "Children's Massage", "lymfa-oblicej": "Lymphatic Face & Décolletage Massage", "poporodni": "Postpartum Massage", "oblicej": "Facial Massage", "nohy": "Foot Massage", "bylinna": "Herbal Massage", "siam": "Siam Massage", "ventosa": "Cupping Massage (Ventosa)", "lava": "Hot Stone Facial Massage", "lymfa-telo": "Full-Body Manual Lymphatic Massage", "tehotenska": "Prenatal Massage", "whirlpool": "Whirlpool & Sauna", "fiji": "Fiji Ritual", "cukr": "A Sweet Breeze from Paradise"};
+var POPISY2={"tradicni": "The most well-known form of Thai massage, with a tradition dating back hundreds of years. The therapist applies pressure with palms, thumbs, elbows and feet along energy pathways, interspersing the massage with passive stretching in gentle yoga poses. Performed without oil on a comfortable mat on the floor; the client stays fully clothed. It relaxes stiff muscles, improves mobility and leaves you feeling light and full of fresh energy.", "hlava": "A gentle, dry massage of the cervical spine, head, neck and shoulders. Targeted pressure on acupressure points releases tension and blockages that build up here from prolonged sitting and stress. It brings a pleasant sense of calm, relieves a stiff neck and helps with headaches caused by overexertion.", "zada": "A massage focused on the areas under the most strain – the neck, shoulders and lower back. It combines kneading, pressure and stretching to relieve muscle tension caused by a sedentary job. Regular sessions help loosen a stiff back and restore its range of motion.", "olej": "A very pleasant, soothing form of Thai massage. Gentle to moderate fluid strokes combine with the effects of aromatic oils made from Thai herbs, which nourish the skin and leave the whole body fragrant. The ideal choice when you want to treat yourself to deep relaxation and calm.", "aroma": "A full-body oil massage with aromatic oils of your choice, complemented by the inhalation of essences to soothe the senses. Choose refreshing lime with bamboo or invigorating lemongrass with orange. Gentle strokes relax body and mind and induce a sense of overall harmony.", "detska": "A gentle full-body oil massage for children aged 2 to 10, performed slowly and sensitively according to the child's age and condition. Gentle stroking promotes relaxation, better sleep and a pleasant experience. The therapist adjusts the pressure and duration so the child feels safe.", "lymfa-oblicej": "Very gentle, slow strokes on dry skin – without oils or creams – performed in the direction of the lymphatic pathways. They help drain excess fluid, brighten the complexion and support the skin's natural regeneration. Afterwards the face and décolletage look fresh and rested.", "poporodni": "A delicate blend of traditional Thai massage and herbal care, with warm herbal pouches applied to the strained areas of a woman's body after childbirth. The warmth and gentle pressure help relieve tension and support recovery. Always performed with consideration for the mother's needs.", "oblicej": "A combination of a cosmetic skin treatment and an acupressure facial massage. It includes exfoliation, a facial mask and regenerative creams; while the mask is on, a cervical spine massage is also performed. After the treatment the skin looks well-circulated, smooth and refreshed.", "nohy": "Part of the traditional Thai massage devoted to tired and swollen legs, supplemented with foot reflexology. The therapist uses Thai balm or heated herbal pouches to gently warm the muscles. It relieves heavy legs and restores a sense of lightness.", "bylinna": "An invigorating herbal massage based on traditional Thai medicine. The classic Thai massage is complemented by hot herbal pouches, whose warmth and aroma deepen muscle relaxation. A warming, aromatic treatment, ideal for cold days and a tired body.", "siam": "A hot herbal massage from traditional Thai medicine. Warm herbal pouches filled with aromatic herbs are applied and gently massaged into the body – the heat releases muscle tension, softens the skin and warms deeply. A profoundly relaxing ritual for body and senses.", "ventosa": "A traditional Filipino massage combining a full-body oil massage, cupping with glass cups and ear candling. The negative pressure of the cups stimulates blood flow to the tissues and helps release deep muscle tension. A vigorous, relieving treatment for those who enjoy a more intense massage.", "lava": "A facial massage using the warmth and gentle vibrations of smooth lava stones. The soothing warmth promotes circulation, skin regeneration and deep relaxation. Suitable for all skin types; after the treatment the skin looks fresh and radiant.", "lymfa-telo": "A gentle, manual full-body lymphatic massage performed with slow strokes in the direction of the lymphatic pathways. It promotes the drainage of excess fluid, improves circulation and creates a feeling of lightness in the legs and throughout the body. A pleasantly soothing treatment without oils.", "tehotenska": "A gentle pressure massage in comfortable clothing, tailored for expectant mothers. It gently relieves back and head pain, tension, swelling and restlessness, and helps you sleep better. Always performed with the mother's comfort and safety in mind.", "whirlpool": "Private relaxation just for you in the whirlpool and sauna. The warm whirlpool relaxes the muscles while the sauna warms you up and helps the body unwind. A carafe of water is included free with all treatments, and a glass of champagne is also available. The perfect end to a massage or a standalone wellness experience.", "fiji": "A sensual body ritual inspired by the islands of Fiji. It begins with a coconut cream scrub, continues with a warming body-butter wrap and the application of lava stones, and ends with a light oil massage. Your skin is left soft, nourished and scented with the tropics.", "cukr": "A luxurious body ritual with a Fijian sugarcane scrub, tropical oils and coconut milk. It gently exfoliates dead skin cells and deeply nourishes and hydrates the body. After the treatment the skin feels silky smooth and refreshed."};
+var POZN2={"tradicni": "Recommended clothing: underwear or light leggings and a T-shirt."};
+var LABELY2={"60 min s bylinnými sáčky": "60 min with herbal pouches", "Sauna + sprcha": "Sauna + shower", "90 min whirlpool": "90 min whirlpool", "90 min whirlpool + sauna": "90 min whirlpool + sauna", "120 min párová (2 asistentky + šampaňské + whirlpool + sauna)": "120 min couples' (2 therapists + champagne + whirlpool + sauna)"};
+var UIX={"eyebrow": "Menu", "h1": "Massages & wellness", "lead": "Thai massages, rituals and private wellness in the heart of Most. Choose a treatment and we'll take care of the rest.", "masaze": "Massages", "masaze_sub": "Thai & relaxation massages", "wellness": "Wellness & rituals", "wellness_sub": "Private relaxation & body rituals", "oteviraci": "Opening hours", "kde": "Where to find us", "poukazy": "Gift vouchers", "poukazy_text": "A voucher for any amount or a specific treatment. Valid for 6 months from purchase. Available at reception, by post or by e-mail.", "loyal": "Five massages,<br>the sixth on us", "loyal_sub": "Loyalty card for regular clients", "note": "Photos are illustrative. Prices subject to change.", "back": "← Back to website", "save": "Save as PDF", "hint": "Thai Most massage menu. To save as PDF click „Save as PDF“ (A4 landscape).", "title": " – massage menu"};
+var OTX=[["Mon–Fri", "9:00–20:00"], ["Sat–Sun", "wellness only / by arrangement with the therapists (surcharge CZK 150/person)"]];
+function esc(s){return String(s==null?"":s).replace(/[&<>"]/g,function(c){return{"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;"}[c];});}
+function kc(n){if(typeof n!=="number")return esc(n);return n.toLocaleString("cs-CZ").replace(/ /g," ")+" Kč";}
+function loadData(cb){function inj(src,next){var s=document.createElement("script");s.src=src;s.onload=function(){cb();};s.onerror=next;document.head.appendChild(s);}inj("assets/js/data.js",function(){inj(REMOTE+"assets/js/data.js",function(){document.getElementById("app").innerHTML='<div class="load">Ceník se nepodařilo načíst.</div>';});});}
+function priceRows(c){return (c||[]).map(function(x){return '<div class="price"><span class="pn">'+esc(x[0])+'</span><span class="dots"></span><span class="pc">'+kc(x[1])+'</span></div>';}).join("");}
+function card(s,imgBase){var popis=POPISY2[s.id]||s.popis;var nz=NAZVY2[s.id]||s.nazev;var pzt=POZN2[s.id]||s.pozn;var pozn=pzt?'<p class="pozn">'+esc(pzt)+'</p>':'';
+ return '<article class="card"><div class="photo" role="img" aria-label="'+esc(s.nazev)+'" style="background-image:url(&quot;'+imgBase+esc(s.foto)+'&quot;)"></div><div class="body"><h3>'+esc(nz)+'</h3><p class="desc">'+esc(popis)+'</p>'+pozn+'<div class="prices">'+priceRows(s.ceny)+'</div></div></article>';}
+function svc(items,imgBase,title,sub,brk){return '<section class="svc'+(brk?' brk':'')+'"><div class="section"><span class="line"></span><div><h2>'+esc(title)+'</h2><p>'+esc(sub)+'</p></div><span class="line"></span></div>'+items.map(function(s){return card(s,imgBase);}).join("")+'</section>';}
+function render(){var T=window.THAI;if(!T)return;var S=T.salon||{};var web=S.web||"thaimost.cz";
+ var onSite=/github\.io$/i.test(location.hostname)||/thaimost\.cz$/i.test(location.hostname);
+ var imgBase=(onSite?"":REMOTE)+(T.img||"assets/img/ai/");
+ var sl=T.sluzby||[];var m=sl.filter(function(s){return s.kat==="masaze";});var w=sl.filter(function(s){return s.kat==="wellness";});
+ var adresa=(S.adresa||[]).join(", ");
+ var ot=OTX.map(function(r){return '<div class="ot"><b>'+esc(r[0])+'</b><span>'+esc(r[1])+'</span></div>';}).join("");
+ var cover='<section class="cover"><div class="cover-fr"><div class="brand">'+LOTUS+'<div class="bt"><b>'+esc(S.nazev||"Thai Most")+'</b><span>'+esc(S.podtitul||"Thajské masáže Most")+'</span></div></div><div class="cover-mid"><p class="eyebrow">Menu</p><h1>Massages &amp; wellness</h1><p class="lead">Thai massages, rituals and private wellness in the heart of Most. Choose a treatment and we\'ll take care of the rest.</p></div><div class="cover-foot"><span>'+esc(adresa)+'</span><span>'+esc(S.telefon||"")+' · '+esc(web)+'</span></div></div></section>';
+ var back='<section class="back"><div class="brand dark">'+LOTUS+'<div class="bt"><b>'+esc(S.nazev||"Thai Most")+'</b><span>'+esc(S.podtitul||"")+'</span></div></div><div class="back-grid"><div class="bk"><h4>Opening hours</h4>'+ot+'</div><div class="bk"><h4>Where to find us</h4><p>'+esc(adresa)+'</p><p>'+esc(S.telefon||"")+'<br>'+esc(web)+'</p></div></div><div class="gift"><div><h4>Gift vouchers</h4><p>A voucher for any amount or a specific treatment. Valid for 6 months from purchase. Available at reception, by post or by e-mail.</p></div><div class="loy"><b>Five massages,<br>the sixth on us</b><span>Loyalty card for regular clients</span></div></div><div class="note">Photos are illustrative. Prices subject to change.</div></section>';
+ document.getElementById("app").innerHTML='<div class="paper">'+cover+svc(m,imgBase,"Massages","Thai & relaxation massages",false)+svc(w,imgBase,"Wellness & rituals","Private relaxation & body rituals",true)+back+'</div>';
+ document.title=(S.nazev||"Thai Most")+" – massage menu";}
+loadData(render);
+</script>
+</body>
+</html>

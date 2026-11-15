@@ -3,145 +3,118 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Thai Most – nabídka masáží</title>
+<title>Thai Most – nabídka masáží (na šířku)</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;1,500&family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
-:root{
-  --teak:#2b1e16;--teak2:#47321f;--bark:#6b4d33;--gold:#c69c5d;--gold-l:#e6d0a6;
-  --cream:#f8f2e9;--sand:#efe4d3;--paper:#fffdf9;--jade:#3d6858;--ink:#2a211b;--muted:#7a6a5c;
-  --line:rgba(43,30,22,.14);
-}
+:root{--teak:#2b1e16;--teak2:#47321f;--bark:#6b4d33;--gold:#c69c5d;--gold-l:#e6d0a6;
+  --cream:#f8f2e9;--sand:#efe4d3;--paper:#fffdf9;--jade:#3d6858;--ink:#2a211b;--muted:#7a6a5c;--line:rgba(43,30,22,.14);}
 *{box-sizing:border-box;margin:0;padding:0}
 html,body{font-family:"Manrope",system-ui,sans-serif;color:var(--ink);-webkit-font-smoothing:antialiased;background:#d9cdbb;-webkit-print-color-adjust:exact;print-color-adjust:exact}
 h1,h2,h3,h4,.serif{font-family:"Cormorant Garamond",Georgia,serif;font-weight:600;line-height:1.08;letter-spacing:-.01em}
-
-.paper{width:210mm;min-height:297mm;margin:24px auto 60px;background:var(--paper);
-  box-shadow:0 22px 55px -26px rgba(43,30,22,.55);padding:13mm 14mm}
-
-/* titulní panel */
-.cover{background:radial-gradient(120% 90% at 50% 0%, #3a281c 0%, #2b1e16 55%, #221711 100%);
-  color:var(--cream);border-radius:4mm;min-height:270mm;padding:20mm 16mm;display:flex;flex-direction:column;
-  align-items:center;text-align:center;break-after:page;page-break-after:always}
-.cover-fr{border:1px solid rgba(230,208,166,.25);border-radius:3mm;padding:16mm 10mm;width:100%;min-height:100%;
-  display:flex;flex-direction:column;align-items:center}
+.paper{width:297mm;margin:24px auto 60px;background:var(--paper);box-shadow:0 22px 55px -26px rgba(43,30,22,.55);padding:12mm 14mm}
+.cover{background:radial-gradient(120% 120% at 50% 0%, #3a281c 0%, #2b1e16 55%, #221711 100%);color:var(--cream);border-radius:4mm;min-height:185mm;padding:14mm;display:flex;break-after:page;page-break-after:always}
+.cover-fr{border:1px solid rgba(230,208,166,.25);border-radius:3mm;padding:12mm 16mm;width:100%;display:flex;flex-direction:column;align-items:center;text-align:center}
 .brand{display:flex;align-items:center;gap:12px;color:var(--gold-l)}
-.brand .lotus{width:50px;height:auto;color:var(--gold)}
+.brand .lotus{width:48px;height:auto;color:var(--gold)}
 .brand .bt{text-align:left;line-height:1}
-.brand .bt b{font-family:"Cormorant Garamond",serif;font-size:29px;font-weight:600;display:block;color:var(--gold-l)}
-.brand .bt span{font-size:11.5px;letter-spacing:.3em;text-transform:uppercase;color:rgba(230,208,166,.75)}
-.cover-mid{margin:auto 0;display:flex;flex-direction:column;align-items:center;gap:13px}
+.brand .bt b{font-family:"Cormorant Garamond",serif;font-size:28px;font-weight:600;display:block;color:var(--gold-l)}
+.brand .bt span{font-size:11px;letter-spacing:.3em;text-transform:uppercase;color:rgba(230,208,166,.75)}
+.cover-mid{margin:auto 0;display:flex;flex-direction:column;align-items:center;gap:12px}
 .eyebrow{letter-spacing:.42em;text-transform:uppercase;font-size:13px;color:var(--gold)}
-.cover h1{font-size:58px;color:#fff;font-weight:600}
-.cover .lead{max-width:118mm;color:rgba(248,242,233,.82);font-size:15.5px;line-height:1.7}
-.cover-foot{margin-top:auto;font-size:13px;color:rgba(230,208,166,.85);display:flex;flex-direction:column;gap:4px}
-
-/* sekce služeb – plynou */
+.cover h1{font-size:56px;color:#fff}
+.cover .lead{max-width:150mm;color:rgba(248,242,233,.82);font-size:15px;line-height:1.7}
+.cover-foot{margin-top:auto;font-size:13px;color:rgba(230,208,166,.85);display:flex;gap:18px}
 .svc{padding-top:0}
-.svc.brk{break-before:page;page-break-before:always;padding-top:0}
+.svc.brk{break-before:page;page-break-before:always}
 .section{display:flex;align-items:center;gap:16px;margin:0 0 6mm;break-after:avoid}
 .section .line{flex:1;height:1px;background:var(--line)}
 .section>div{text-align:center}
-.section h2{font-size:29px;color:var(--teak)}
-.section p{font-size:11.5px;letter-spacing:.24em;text-transform:uppercase;color:var(--gold);margin-top:4px}
-
-.card{display:block;min-height:118mm;margin-bottom:5mm;break-inside:avoid;page-break-inside:avoid}
-.photo{width:100%;height:66mm;overflow:hidden;border-radius:3mm;background-color:var(--sand);background-position:center;background-size:cover;background-repeat:no-repeat;display:block}
-.body{padding:5mm 1mm 0}
-.card h3{font-size:25px;color:var(--teak);margin-bottom:2.5mm}
-.desc{font-size:13px;line-height:1.55;color:#3a2f26}
-.pozn{font-size:11.5px;font-style:italic;color:var(--muted);margin-top:2mm}
-.prices{margin-top:3.5mm;display:flex;flex-direction:column;gap:1.8mm}
+.section h2{font-size:28px;color:var(--teak)}
+.section p{font-size:11px;letter-spacing:.24em;text-transform:uppercase;color:var(--gold);margin-top:4px}
+.card{display:flex;gap:9mm;min-height:80mm;margin-bottom:7mm;break-inside:avoid;page-break-inside:avoid}
+.photo{flex:0 0 150mm;align-self:stretch;min-height:80mm;border-radius:3mm;background-color:var(--sand);background-position:center;background-size:cover;background-repeat:no-repeat}
+.body{flex:1;display:flex;flex-direction:column;justify-content:center;padding:1mm 0}
+.card h3{font-size:26px;color:var(--teak);margin-bottom:3mm}
+.desc{font-size:12.7px;line-height:1.62;color:#3a2f26}
+.pozn{font-size:11.5px;font-style:italic;color:var(--muted);margin-top:2.5mm}
+.prices{margin-top:4mm;display:flex;flex-direction:column;gap:2mm}
 .price{display:flex;align-items:baseline;gap:8px;font-size:13px}
 .price .pn{color:var(--bark);font-weight:600}
 .price .dots{flex:1;border-bottom:1.5px dotted rgba(43,30,22,.28);transform:translateY(-3px)}
 .price .pc{font-family:"Cormorant Garamond",serif;font-size:18.5px;font-weight:600;color:var(--teak);white-space:nowrap}
-
-/* zadní strana */
-.back{break-before:page;page-break-before:always;display:flex;flex-direction:column;min-height:270mm}
-.brand.dark{color:var(--bark);margin-bottom:11mm}
+.back{break-before:page;page-break-before:always;display:flex;flex-direction:column;min-height:185mm}
+.brand.dark{color:var(--bark);margin-bottom:9mm}
 .brand.dark .lotus{color:var(--gold)}
 .brand.dark .bt b{color:var(--teak)}
 .brand.dark .bt span{color:var(--muted)}
-.back-grid{display:grid;grid-template-columns:1fr 1fr;gap:10mm;margin-bottom:11mm}
+.back-grid{display:grid;grid-template-columns:1fr 1fr;gap:12mm;margin-bottom:9mm}
 .bk h4{font-size:21px;color:var(--teak);margin-bottom:5mm}
 .ot{display:flex;justify-content:space-between;gap:12px;padding:2.6mm 0;border-bottom:1px solid var(--line);font-size:13px}
 .ot b{color:var(--bark);font-weight:600}
-.ot span{color:#3a2f26;text-align:right;max-width:72mm}
+.ot span{color:#3a2f26;text-align:right;max-width:100mm}
 .bk p{font-size:13.5px;line-height:1.7;color:#3a2f26;margin-bottom:3mm}
-.gift{display:grid;grid-template-columns:1.4fr 1fr;gap:8mm;background:var(--cream);border:1px solid var(--line);
-  border-radius:3mm;padding:8mm;align-items:center}
+.gift{display:grid;grid-template-columns:1.5fr 1fr;gap:9mm;background:var(--cream);border:1px solid var(--line);border-radius:3mm;padding:8mm;align-items:center}
 .gift h4{font-size:21px;color:var(--teak);margin-bottom:4mm}
 .gift p{font-size:12.5px;line-height:1.6;color:#3a2f26}
-.loy{text-align:center;border-left:1px solid var(--line);padding-left:7mm}
+.loy{text-align:center;border-left:1px solid var(--line);padding-left:8mm}
 .loy b{font-family:"Cormorant Garamond",serif;font-size:22px;color:var(--bark);display:block;line-height:1.15;margin-bottom:3mm}
 .loy span{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
-.note{margin-top:auto;padding-top:11mm;font-size:11px;color:var(--muted);text-align:center}
-
+.note{margin-top:auto;padding-top:9mm;font-size:11px;color:var(--muted);text-align:center}
 .bar{position:fixed;top:14px;right:14px;z-index:50;display:flex;gap:8px}
-.bar button,.bar a{font-family:inherit;font-weight:700;font-size:13px;border:0;border-radius:999px;padding:11px 20px;cursor:pointer;text-decoration:none}
-.bar button{background:var(--teak);color:var(--cream);box-shadow:0 10px 24px -10px rgba(43,30,22,.6)}
-.bar a{background:#fff;color:var(--teak);border:1.5px solid var(--line)}
-.hint{max-width:210mm;margin:0 auto 6px;text-align:center;font-size:12.5px;color:#6b5a49}
-.load{max-width:210mm;margin:40px auto;text-align:center;color:#6b5a49;font-size:15px}
-
-@media print{
-  html,body{background:#fff}
-  .bar,.hint{display:none!important}
-  .paper{width:auto;min-height:0;margin:0;padding:0;box-shadow:none}
-  .cover{height:252mm}
-  .back{min-height:252mm}
-  @page{size:A4;margin:13mm 14mm}
-}
-@media (max-width:760px){
-  .paper{width:100%;min-height:0;padding:16px}
-  .cover{min-height:0;padding:28px 14px}
-  .cover-fr{padding:22px 10px}
-  .cover h1{font-size:40px}
-  .photo{height:50vw}
-  .back{min-height:0}
-}
+.bar button{font-family:inherit;font-weight:700;font-size:13px;border:0;border-radius:999px;padding:11px 20px;cursor:pointer;background:var(--teak);color:var(--cream)}
+.hint{max-width:297mm;margin:0 auto 6px;text-align:center;font-size:12.5px;color:#6b5a49}
+.load{margin:40px auto;text-align:center;color:#6b5a49}
+@media print{html,body{background:#fff}.bar,.hint{display:none!important}.paper{width:auto;margin:0;padding:0;box-shadow:none}.cover,.back{min-height:170mm}@page{size:A4 landscape;margin:12mm 14mm}}
 </style>
 </head>
 <body>
-<div class="bar"><a href="index.html">← Zpět na web</a><button onclick="window.print()">Uložit jako PDF</button></div>
-<div class="hint">Nabídka masáží Thai Most – generuje se z ceníku webu (<code>data.js</code>). Uložení do PDF: tlačítko „Uložit jako PDF“, formát A4.</div>
+<div class="bar"><a href="index.html" style="font-family:inherit;font-weight:700;font-size:13px;text-decoration:none;border-radius:999px;padding:11px 20px;background:#fff;color:#2b1e16;border:1.5px solid rgba(43,30,22,.14)">← Zpět na web</a><button onclick="window.print()">Uložit jako PDF</button></div>
+<div class="hint">Nabídka masáží – na šířku A4, delší popisy. Uložení do PDF: „Uložit jako PDF“ (A4 na šířku).</div>
 <div id="app"><div class="load">Načítám ceník…</div></div>
-
 <script>
-var REMOTE = "https://kucerazdenek78-jpg.github.io/Thaimost/";
-var LOTUS = '<svg class="lotus" viewBox="0 0 64 44" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M32 6 C36 16 36 28 32 38 C28 28 28 16 32 6 Z"/><path d="M32 38 C24 30 20 20 20 12 C27 16 31 26 32 38 Z"/><path d="M32 38 C40 30 44 20 44 12 C37 16 33 26 32 38 Z"/><path d="M32 38 C20 36 10 30 6 22 C16 22 27 29 32 38 Z"/><path d="M32 38 C44 36 54 30 58 22 C48 22 37 29 32 38 Z"/></g></svg>';
+var REMOTE="https://kucerazdenek78-jpg.github.io/Thaimost/";
+var LOTUS='<svg class="lotus" viewBox="0 0 64 44" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M32 6 C36 16 36 28 32 38 C28 28 28 16 32 6 Z"/><path d="M32 38 C24 30 20 20 20 12 C27 16 31 26 32 38 Z"/><path d="M32 38 C40 30 44 20 44 12 C37 16 33 26 32 38 Z"/><path d="M32 38 C20 36 10 30 6 22 C16 22 27 29 32 38 Z"/><path d="M32 38 C44 36 54 30 58 22 C48 22 37 29 32 38 Z"/></g></svg>';
+/* delší popisy – překryv podle id (ceny zůstávají z data.js) */
+var POPISY2={
+ "tradicni":"Nejznámější forma thajské masáže s mnohasetletou tradicí. Masérka pracuje tlakem dlaní, palců, loktů i chodidel podél energetických drah a prokládá masáž pasivním protahováním v jemných jógových pozicích. Probíhá bez oleje na pohodlné matraci na zemi, klient zůstává oblečený. Skvěle uvolní ztuhlé svaly, zlepší pohyblivost a zanechá pocit lehkosti a svěží energie.",
+ "hlava":"Jemná masáž krční páteře, hlavy, šíje a ramen prováděná nasucho. Cílenými tlaky na akupresurní body uvolňuje napětí a bloky, které se v této oblasti usazují z dlouhého sezení a stresu. Příjemně zklidní, uleví ztuhlé šíji a pomáhá od bolestí hlavy z přetížení.",
+ "zada":"Masáž zaměřená na nejvíce namáhané partie – šíji, ramena, bedra a křížovou oblast. Kombinuje hněte­ní, tlak a protažení, které rozpouští svalové napětí ze sedavého zaměstnání. Pravidelné opakování pomáhá uvolnit ztuhlá záda a vrátit zádům volný pohyb.",
+ "olej":"Velmi příjemná, hřejivá forma thajské masáže. Jemná až střední technika plynulých tahů se spojuje s účinky aromatických olejů z thajských bylin, které vyživují pokožku a provoní celé tělo. Ideální volba, když si chcete dopřát hluboké uvolnění a klid.",
+ "aroma":"Olejová masáž celého těla s vonnými oleji podle vlastního výběru, doplněná inhalací esencí pro zklidnění smyslů. Na výběr máte svěží limetku s bambusem nebo povzbudivou citronovou trávu s pomerančem. Hladivé tahy uvolní tělo i mysl a navodí pocit celkové harmonie.",
+ "detska":"Šetrná olejová masáž celého těla pro děti od 2 do 10 let, vedená pomalu a citlivě podle věku a stavu dítěte. Jemné hlazení podporuje uvolnění, lepší spánek a příjemně stráve­ný čas. Masérka přizpůsobí tlak i délku tak, aby se dítě cítilo bezpečně.",
+ "lymfa-oblicej":"Velmi jemné a pomalé hmaty na suchou pokožku bez olejů a krémů, vedené ve směru mízních cest. Pomáhají odvádět přebytečnou tekutinu, rozjasnit pleť a podpořit její přirozenou regeneraci. Po masáži obličej a dekolt působí svěže a odpočatě.",
+ "poporodni":"Citlivé spojení tradiční thajské masáže a bylinné péče s přikládáním teplých bylinných váčků na namáhané partie ženského těla po porodu. Prohřátí a jemný tlak pomáhají uvolnit napětí a podpořit regeneraci. Vždy vedeno ohleduplně k potřebám maminky.",
+ "oblicej":"Spojení kosmetického ošetření pleti a akupresurní masáže obličeje. Zahrnuje peeling, pleťovou masku i regenerační krémy; během působení masky navíc proběhne masáž krční páteře. Pleť po ošetření působí prokrvená, hladká a odpočatá.",
+ "nohy":"Část tradiční thajské masáže věnovaná unaveným a oteklým nohám, doplněná prvky reflexní masáže chodidel. Masérka pracuje s thajským balzámem nebo s nahřívanými bylinnými sáčky, které příjemně prohřejí svaly. Uleví těžkým nohám a vrátí jim lehkost.",
+ "bylinna":"Povzbuzující bylinná masáž vycházející z tradiční thajské medicíny. Klasickou thajskou masáž doplňují horké bylinné houbičky, jejichž teplo a vůně prohloubí uvolnění svalů. Hřejivá, aromatická péče ideální pro chladné dny a znavené tělo.",
+ "siam":"Horká bylinná masáž z tradiční thajské medicíny. Nahřáté bylinné váčky plné aromatických bylin se přikládají a jemně vmasírovávají do těla – teplo uvolňuje svalové napětí, změkčuje pokožku a prohřívá do hloubky. Hluboce relaxační rituál pro tělo i smysly.",
+ "ventosa":"Tradiční filipínská masáž spojující olejovou masáž celého těla, baňkování skleněnými baňkami a ušní svíčky. Podtlak baněk prokrvuje tkáně a pomáhá uvolnit hluboké svalové napětí. Výrazná, úlevná procedura pro ty, kdo mají rádi intenzivnější masáž.",
+ "lava":"Masáž obličeje využívající teplo a jemné vibrace hlazených lávových kamenů. Příjemné prohřátí podporuje prokrvení, regeneraci pleti a hluboké uvolnění. Vhodné pro všechny typy pokožky; po ošetření pleť působí svěží a rozjasněná.",
+ "lymfa-telo":"Jemná ruční lymfatická masáž celého těla vedená pomalými hmaty ve směru mízních cest. Podporuje odvod přebytečné tekutiny, prokrvení a pocit lehkosti v nohách i celém těle. Příjemně zklidňující péče bez olejů.",
+ "tehotenska":"Jemná tlaková masáž v pohodlném oblečení, přizpůsobená budoucím maminkám. Šetrně uleví od bolestí zad a hlavy, napětí, otoků i neklidu a pomáhá lépe spát. Vždy vedeno s ohledem na pohodlí a bezpečí maminky.",
+ "whirlpool":"Privátní relaxace jen pro vás ve whirlpoolu a sauně. Teplá vířivá lázeň uvolní svaly, sauna prohřeje a pomůže tělu vypnout. Ke všem procedurám je karafa vody zdarma, k dispozici je i sklenka šampaňského. Dokonalé zakončení masáže i samostatný wellness zážitek.",
+ "fiji":"Smyslný tělový rituál inspirovaný ostrovy Fidži. Začíná kokosovým krémovým peelingem, pokračuje hřejivým zábalem s tělovým máslem a přikládáním lávových kamenů a končí lehkou olejovou masáží. Pokožka zůstane hebká, vyživená a provoněná tropy.",
+ "cukr":"Luxusní tělový rituál s peelingem z fidžijské cukrové třtiny, tropickými oleji a kokosovým mlékem. Jemně odstraní odumřelé buňky a tělo do hloubky vyživí a hydratuje. Po ošetření je pokožka hedvábně hladká a svěží."
+};
 function esc(s){return String(s==null?"":s).replace(/[&<>"]/g,function(c){return{"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;"}[c];});}
-function kc(n){ if(typeof n!=="number") return esc(n); return n.toLocaleString("cs-CZ").replace(/ /g," ")+" Kč"; }
-function loadData(cb){
-  function inject(src,next){var s=document.createElement("script");s.src=src;s.onload=function(){cb();};s.onerror=next;document.head.appendChild(s);}
-  inject("assets/js/data.js",function(){inject(REMOTE+"assets/js/data.js",function(){document.getElementById("app").innerHTML='<div class="load">Ceník se nepodařilo načíst.</div>';});});
-}
-function priceRows(ceny){return (ceny||[]).map(function(c){return '<div class="price"><span class="pn">'+esc(c[0])+'</span><span class="dots"></span><span class="pc">'+kc(c[1])+'</span></div>';}).join("");}
-function card(s,imgBase){
-  var pozn=s.pozn?'<p class="pozn">'+esc(s.pozn)+'</p>':'';
-  return '<article class="card"><div class="photo" role="img" aria-label="'+esc(s.nazev)+'" style="background-image:url(&quot;'+imgBase+esc(s.foto)+'&quot;)"></div><div class="body"><h3>'+esc(s.nazev)+'</h3><p class="desc">'+esc(s.popis)+'</p>'+pozn+'<div class="prices">'+priceRows(s.ceny)+'</div></div></article>';
-}
-function svcSection(items,imgBase,title,sub,brk){
-  var cards=items.map(function(s){return card(s,imgBase);}).join("");
-  return '<section class="svc'+(brk?' brk':'')+'"><div class="section"><span class="line"></span><div><h2>'+esc(title)+'</h2><p>'+esc(sub)+'</p></div><span class="line"></span></div>'+cards+'</section>';
-}
-function render(){
-  var T=window.THAI; if(!T)return;
-  var S=T.salon||{}; var web=S.web||"thaimost.cz";
-  var onSite=/github\.io$/i.test(location.hostname)||/thaimost\.cz$/i.test(location.hostname);
-  var imgBase=(onSite?"":REMOTE)+(T.img||"assets/img/ai/");
-  var sluzby=T.sluzby||[];
-  var masaze=sluzby.filter(function(s){return s.kat==="masaze";});
-  var wellness=sluzby.filter(function(s){return s.kat==="wellness";});
-  var adresa=(S.adresa||[]).join(", ");
-  var ot=(S.oteviraci||[]).map(function(r){return '<div class="ot"><b>'+esc(r[0])+'</b><span>'+esc(r[1])+'</span></div>';}).join("");
-  var cover='<section class="cover"><div class="cover-fr"><div class="brand">'+LOTUS+'<div class="bt"><b>'+esc(S.nazev||"Thai Most")+'</b><span>'+esc(S.podtitul||"Thajské masáže Most")+'</span></div></div><div class="cover-mid"><p class="eyebrow">Nabídka</p><h1>Masáže &amp; wellness</h1><p class="lead">Thajské masáže, rituály a privátní wellness v srdci Mostu. Vyberte si proceduru, o zbytek se postaráme my.</p></div><div class="cover-foot"><div>'+esc(adresa)+'</div><div>'+esc(S.telefon||"")+' · '+esc(web)+'</div></div></div></section>';
-  var back='<section class="back"><div class="brand dark">'+LOTUS+'<div class="bt"><b>'+esc(S.nazev||"Thai Most")+'</b><span>'+esc(S.podtitul||"")+'</span></div></div><div class="back-grid"><div class="bk"><h4>Otevírací doba</h4>'+ot+'</div><div class="bk"><h4>Kde nás najdete</h4><p>'+esc(adresa)+'</p><p>'+esc(S.telefon||"")+'<br>'+esc(web)+'</p></div></div><div class="gift"><div><h4>Dárkové poukazy</h4><p>Poukaz na libovolnou částku nebo konkrétní proceduru. Platnost 6 měsíců od zakoupení. K vyzvednutí na recepci, poštou i e-mailem.</p></div><div class="loy"><b>Pět masáží,<br>šestá od nás</b><span>Věrnostní kartička pro stálé zákazníky</span></div></div><div class="note">Fotografie jsou ilustrační. Změna cen vyhrazena.</div></section>';
-  document.getElementById("app").innerHTML='<div class="paper">'+cover+svcSection(masaze,imgBase,"Masáže","Thajské a relaxační masáže",false)+svcSection(wellness,imgBase,"Wellness & rituály","Privátní relaxace a tělové rituály",true)+back+'</div>';
-  document.title=(S.nazev||"Thai Most")+" – nabídka masáží";
-}
+function kc(n){if(typeof n!=="number")return esc(n);return n.toLocaleString("cs-CZ").replace(/ /g," ")+" Kč";}
+function loadData(cb){function inj(src,next){var s=document.createElement("script");s.src=src;s.onload=function(){cb();};s.onerror=next;document.head.appendChild(s);}inj("assets/js/data.js",function(){inj(REMOTE+"assets/js/data.js",function(){document.getElementById("app").innerHTML='<div class="load">Ceník se nepodařilo načíst.</div>';});});}
+function priceRows(c){return (c||[]).map(function(x){return '<div class="price"><span class="pn">'+esc(x[0])+'</span><span class="dots"></span><span class="pc">'+kc(x[1])+'</span></div>';}).join("");}
+function card(s,imgBase){var popis=POPISY2[s.id]||s.popis;var pozn=s.pozn?'<p class="pozn">'+esc(s.pozn)+'</p>':'';
+ return '<article class="card"><div class="photo" role="img" aria-label="'+esc(s.nazev)+'" style="background-image:url(&quot;'+imgBase+esc(s.foto)+'&quot;)"></div><div class="body"><h3>'+esc(s.nazev)+'</h3><p class="desc">'+esc(popis)+'</p>'+pozn+'<div class="prices">'+priceRows(s.ceny)+'</div></div></article>';}
+function svc(items,imgBase,title,sub,brk){return '<section class="svc'+(brk?' brk':'')+'"><div class="section"><span class="line"></span><div><h2>'+esc(title)+'</h2><p>'+esc(sub)+'</p></div><span class="line"></span></div>'+items.map(function(s){return card(s,imgBase);}).join("")+'</section>';}
+function render(){var T=window.THAI;if(!T)return;var S=T.salon||{};var web=S.web||"thaimost.cz";
+ var onSite=/github\.io$/i.test(location.hostname)||/thaimost\.cz$/i.test(location.hostname);
+ var imgBase=(onSite?"":REMOTE)+(T.img||"assets/img/ai/");
+ var sl=T.sluzby||[];var m=sl.filter(function(s){return s.kat==="masaze";});var w=sl.filter(function(s){return s.kat==="wellness";});
+ var adresa=(S.adresa||[]).join(", ");
+ var ot=(S.oteviraci||[]).map(function(r){return '<div class="ot"><b>'+esc(r[0])+'</b><span>'+esc(r[1])+'</span></div>';}).join("");
+ var cover='<section class="cover"><div class="cover-fr"><div class="brand">'+LOTUS+'<div class="bt"><b>'+esc(S.nazev||"Thai Most")+'</b><span>'+esc(S.podtitul||"Thajské masáže Most")+'</span></div></div><div class="cover-mid"><p class="eyebrow">Nabídka</p><h1>Masáže &amp; wellness</h1><p class="lead">Thajské masáže, rituály a privátní wellness v srdci Mostu. Vyberte si proceduru, o zbytek se postaráme my.</p></div><div class="cover-foot"><span>'+esc(adresa)+'</span><span>'+esc(S.telefon||"")+' · '+esc(web)+'</span></div></div></section>';
+ var back='<section class="back"><div class="brand dark">'+LOTUS+'<div class="bt"><b>'+esc(S.nazev||"Thai Most")+'</b><span>'+esc(S.podtitul||"")+'</span></div></div><div class="back-grid"><div class="bk"><h4>Otevírací doba</h4>'+ot+'</div><div class="bk"><h4>Kde nás najdete</h4><p>'+esc(adresa)+'</p><p>'+esc(S.telefon||"")+'<br>'+esc(web)+'</p></div></div><div class="gift"><div><h4>Dárkové poukazy</h4><p>Poukaz na libovolnou částku nebo konkrétní proceduru. Platnost 6 měsíců od zakoupení. K vyzvednutí na recepci, poštou i e-mailem.</p></div><div class="loy"><b>Pět masáží,<br>šestá od nás</b><span>Věrnostní kartička pro stálé zákazníky</span></div></div><div class="note">Fotografie jsou ilustrační. Změna cen vyhrazena.</div></section>';
+ document.getElementById("app").innerHTML='<div class="paper">'+cover+svc(m,imgBase,"Masáže","Thajské a relaxační masáže",false)+svc(w,imgBase,"Wellness & rituály","Privátní relaxace a tělové rituály",true)+back+'</div>';
+ document.title=(S.nazev||"Thai Most")+" – nabídka masáží";}
 loadData(render);
 </script>
 </body>
