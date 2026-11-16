@@ -4,6 +4,8 @@
   /* Odpovědi pro salon (e-mail, kartotéka) jsou vždy česky; to, co vidí zákazník, se překládá. */
   const CS = { t: s => s, m: T.moneyCs }, LO = { t: T, m: T.money };
   const JAZYK = { en: "English", de: "Deutsch" }[T.lang] || "";
+  /* služby s rozpohybovaným videem (assets/video/sluzby/<id>.mp4 + .jpg) */
+  const VID_SLUZBY = new Set(["tradicni","hlava","zada","olej","aroma","detska","lymfa-oblicej","poporodni","oblicej","nohy","bylinna","siam","ventosa","lava","lymfa-telo","tehotenska","whirlpool","fiji","cukr"]);
 
   $("#rok").textContent = new Date().getFullYear();
 
@@ -54,9 +56,18 @@
     grid.innerHTML = D.sluzby.filter(s => kat === "vse" || s.kat === kat).map(s => {
       const od = Math.min(...s.ceny.map(c => c[1]));
       const nazev = tx(s, "nazev");
-      const img = s.foto
-        ? `<img src="${/^https?:/.test(s.foto) ? s.foto : T.root + D.img + s.foto}" alt="${V.esc(T("{nazev} – thajské masáže Most, Thai Most", { nazev }))}" loading="lazy" width="1200" height="800" onerror="this.remove()">${!s.vlastni && !/^https?:/.test(s.foto) ? '<span class="sv-ilu">' + V.esc(T("Ilustrační foto")) + "</span>" : ""}`
-        : "";
+      const alt = V.esc(T("{nazev} – thajské masáže Most, Thai Most", { nazev }));
+      const maRemote = /^https?:/.test(s.foto || "");
+      const maVideo = VID_SLUZBY.has(s.id) && !maRemote;
+      let img;
+      if (maVideo) {
+        const vb = T.root + "assets/video/sluzby/" + s.id;
+        img = `<video class="rc-media" autoplay loop muted playsinline preload="metadata" poster="${vb}.jpg" width="1200" height="800" aria-label="${alt}"><source src="${vb}.mp4" type="video/mp4"><img src="${T.root + D.img + s.foto}" alt="${alt}" width="1200" height="800"></video>${!s.vlastni ? '<span class="sv-ilu">' + V.esc(T("Ilustrační video")) + "</span>" : ""}`;
+      } else {
+        img = s.foto
+          ? `<img src="${maRemote ? s.foto : T.root + D.img + s.foto}" alt="${alt}" loading="lazy" width="1200" height="800" onerror="this.remove()">${!s.vlastni && !maRemote ? '<span class="sv-ilu">' + V.esc(T("Ilustrační foto")) + "</span>" : ""}`
+          : "";
+      }
       return `<article class="sv reveal in">
         <div class="sv-img"><div class="ph">${LOTUS}</div>${img}${s.top ? '<span class="sv-tag">' + V.esc(T("Oblíbené")) + "</span>" : ""}</div>
         <div class="sv-body">
