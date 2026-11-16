@@ -137,6 +137,7 @@ header.nav{position:sticky;top:0;z-index:50;background:rgba(248,242,233,.88);bac
 .bonus li{padding:8px 0 8px 28px;position:relative;color:rgba(248,242,233,.85);font-size:.95rem}
 .bonus li::before{content:"";position:absolute;left:0;top:16px;width:14px;height:1.5px;background:var(--gold)}
 .stamps{background:linear-gradient(145deg,#f3e6cf,#e3cfa9);color:var(--teak);border-radius:22px;padding:30px;box-shadow:0 30px 60px -30px #000;transform:rotate(-2deg)}
+.stamp-vid{width:100%;aspect-ratio:3/2;object-fit:cover;border-radius:14px;display:block;margin-bottom:20px;box-shadow:0 12px 30px -16px rgba(43,30,22,.6)}
 .stamps h3{font-size:1.6rem;margin-bottom:4px}
 .stamps small{color:var(--bark)}
 .stamp-row{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:12px;margin-top:22px}
