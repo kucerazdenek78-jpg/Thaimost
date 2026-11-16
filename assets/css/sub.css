@@ -38,7 +38,7 @@
 .rel-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:18px;margin-top:24px}
 .rel-card{display:flex;flex-direction:column;background:var(--paper);border:1px solid var(--line);border-radius:var(--r);overflow:hidden;text-decoration:none;transition:.25s}
 .rel-card:hover{transform:translateY(-3px);box-shadow:var(--shadow)}
-.rel-card img{aspect-ratio:16/10;object-fit:cover;width:100%;height:auto}
+.rel-card img,.rel-card video.rc-media{aspect-ratio:16/10;object-fit:cover;width:100%;height:auto;display:block}
 .rel-card div{padding:14px 16px 16px}
 .rel-card b{font-family:"Cormorant Garamond",serif;font-size:1.25rem;display:block;line-height:1.15}
 .rel-card span{font-size:.85rem;color:var(--muted)}

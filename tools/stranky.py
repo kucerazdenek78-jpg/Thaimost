@@ -196,9 +196,19 @@ def faq_html(faq, h2):
     return f'<section class="sub-faq"><div class="wrap"><span class="eyebrow">Časté otázky</span><h2 class="h2">{e(h2)}</h2><div class="faq-grid">{items}</div></div></section>\n'
 
 
+def thumb_media(R, s):
+    """Náhled do mřížky – video (když existuje) nebo statická foto."""
+    if s["id"] in VIDS:
+        vb = R + "assets/video/sluzby/" + s["id"]
+        return (f'<video class="rc-media" autoplay loop muted playsinline preload="metadata" '
+                f'poster="{vb}.jpg" width="1200" height="800" aria-label="{e(s["nazev"])} – ukázka masáže">'
+                f'<source src="{vb}.mp4" type="video/mp4">'
+                f'<img src="{R}{D["img"]}{s["foto"]}" alt="{e(s["nazev"])} – thajské masáže Most" width="1200" height="800"></video>')
+    return f'<img src="{R}{D["img"]}{s["foto"]}" alt="{e(s["nazev"])} – thajské masáže Most" loading="lazy" width="1200" height="800">'
+
+
 def card(R, s):
-    ilu = "" if s.get("vlastni") else ""
-    return (f'<a class="rel-card" href="{R}{s["url"]}"><img src="{R}{D["img"]}{s["foto"]}" alt="{e(s["nazev"])} – thajské masáže Most" loading="lazy" width="1200" height="800">{ilu}'
+    return (f'<a class="rel-card" href="{R}{s["url"]}">{thumb_media(R, s)}'
             f'<div><b>{e(s["nazev"])}</b><span>od {kc(s["od"])}</span></div></a>')
 
 
@@ -290,7 +300,7 @@ def page_sluzby():
 
     def blok(kat):
         return "".join(
-            f'<a class="rel-card" href="{R}{s["url"]}"><img src="{R}{D["img"]}{s["foto"]}" alt="{e(s["nazev"])} – thajské masáže Most" loading="lazy" width="1200" height="800">'
+            f'<a class="rel-card" href="{R}{s["url"]}">{thumb_media(R, s)}'
             f'<div><b>{e(s["nazev"])}</b><span>{e(s["popis"])}</span><em>{" · ".join(e(c[0]) + " " + kc(c[1]) for c in s["ceny"])}</em></div></a>'
             for s in SLUZBY if s["kat"] == kat)
     body = f"""{crumbs_html(R, crumbs)}<main><section class="hub"><div class="wrap">
