@@ -165,6 +165,7 @@ function migrate_v1(PDO $pdo): void
         'prah_nespolehlivy' => '2',       // Nespolehlivý: tolik „nepřišel“ / pozdních storen za 12 měsíců
         'bonus_po' => '5',                // po kolika zaplacených masážích je jedna zdarma
         'bonus_pocita_poukaz' => '0',     // počítá se do bonusu masáž placená poukazem? (ověřit se salonem)
+        'bonus_platnost_mesicu' => '12',  // věrnostní karta platí tolik měsíců od poslední zapsané masáže; bez další návštěvy propadá (0 = bez expirace)
     ];
     $st = $pdo->prepare('INSERT INTO nastaveni(klic,hodnota) VALUES(?,?)');
     foreach ($def as $k => $v) $st->execute([$k, $v]);
@@ -324,7 +325,7 @@ function migrate_v9(PDO $pdo): void
         ['R-04', 'tvrde', 'Párový balíček (párová masáž + vířivka a sauna) = 2 masérky na 1 hodinu ve dvoulůžkové masérně; plánovat na konec směny, wellness pak běží po zavírací době jen s recepční.'],
         ['R-05', 'tvrde', 'Samotná párová masáž je jiná služba než wellness balíček.'],
         ['R-06', 'mekke', 'Cíl: každý den co nejplnější, bez prázdných hodin.'],
-        ['R-07', 'tvrde', 'Každá 5. zaplacená návštěva s věrnostní kartou je zdarma.'],
+        ['R-07', 'tvrde', 'Každá 5. zaplacená návštěva s věrnostní kartou je zdarma. Věrnostní karta platí 1 rok od poslední zapsané masáže; bez další návštěvy do roka nasbíraná razítka propadají.'],
         ['R-08', 'mekke', 'Při výpadku masérky nabídnout zákazníkovi jinou masérku nebo přeplánování.'],
     ] as $r) $st->execute($r);
 }

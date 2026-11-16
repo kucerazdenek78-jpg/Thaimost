@@ -474,18 +474,53 @@ function pap_stav(array $b): array
     return ['na' => $na, 'po' => $b['po'], 'plna' => $b['zdarma'] > 0];
 }
 
-/** Bonus: každá N-tá zaplacená masáž zdarma. */
+/**
+ * Bonus: každá N-tá zaplacená masáž zdarma.
+ * Věrnostní karta platí nastaveni('bonus_platnost_mesicu') měsíců od poslední zapsané masáže (nebo nákupu poukazu);
+ * když zákazník tak dlouho nepřijde, nasbíraná razítka propadnou a karta začíná od nuly (0 = bez expirace).
+ */
 function zakaznik_bonus(array $z): array
 {
     $po = max(1, (int)nastaveni('bonus_po', 5));
+    $platnostM = max(0, (int)nastaveni('bonus_platnost_mesicu', 12));
     $in = "'" . implode("','", bonus_platby()) . "'";
-    $zaplacene = (int)qv("SELECT COUNT(*) FROM rezervace WHERE zakaznik_id=? AND stav='probehlo' AND platba IN ($in)", [$z['id']]);
+
+    // chronologický seznam bonusových událostí (zaplacené proběhlé masáže + nákupy poukazů)
+    $ud = [];
+    foreach (q("SELECT zacatek AS kdy FROM rezervace WHERE zakaznik_id=? AND stav='probehlo' AND platba IN ($in)", [$z['id']])->fetchAll() as $r)
+        $ud[] = (string)$r['kdy'];
+    try {
+        foreach (q("SELECT vytvoreno AS kdy FROM poukazy WHERE razitko_zak_id=? AND stav IN ('zaplaceno','vydano','uplatneno')", [$z['id']])->fetchAll() as $p)
+            $ud[] = (string)$p['kdy'];
+    } catch (Throwable $e) {}
+    sort($ud);
+
     $vyuzite = (int)qv("SELECT COUNT(*) FROM rezervace WHERE zakaznik_id=? AND stav IN ('probehlo','potvrzeno') AND platba='bonus'", [$z['id']]);
-    // nákup dárkového poukazu = razítko kupujícímu (masáž na poukaz pak už razítko nedostane, viz bonus_pocita_poukaz)
-    try { $zaplacene += (int)qv("SELECT COUNT(*) FROM poukazy WHERE razitko_zak_id=? AND stav IN ('zaplaceno','vydano','uplatneno')", [$z['id']]); } catch (Throwable $e) {}
-    $razitka = (int)$z['pocatecni_razitka'] + $zaplacene;
-    $zdarma = max(0, intdiv($razitka, $po) - $vyuzite);
-    return ['razitka' => $razitka % $po, 'po' => $po, 'zdarma' => $zdarma, 'celkem' => $razitka];
+
+    $posledni = $ud ? end($ud) : null;
+    $zaplacene = count($ud);     // bez expirace: všechny události
+    $resetnuto = false;          // došlo k propadnutí kvůli delší pauze
+    $plati_do = null;
+    $prosle = false;
+
+    if ($platnostM > 0 && $posledni) {
+        // začátek aktuálního „streaku“ = poslední událost, před níž byla pauza delší než platnost
+        $start = 0;
+        for ($i = 1, $n = count($ud); $i < $n; $i++) {
+            if (strtotime($ud[$i]) > strtotime($ud[$i - 1] . " +$platnostM months")) { $start = $i; $resetnuto = true; }
+        }
+        $zaplacene = count($ud) - $start;                                   // jen události v aktuálním streaku
+        $plati_do = date('Y-m-d', strtotime($posledni . " +$platnostM months"));
+        if (nyni() > date('Y-m-d H:i:s', strtotime($posledni . " +$platnostM months"))) $prosle = true;
+    }
+
+    // papírová razítka počítáme jen pokud nedošlo k propadnutí
+    $pocat = $resetnuto ? 0 : (int)$z['pocatecni_razitka'];
+    $razitka = $prosle ? 0 : ($pocat + $zaplacene);
+    $zdarma = $prosle ? 0 : max(0, intdiv($razitka, $po) - $vyuzite);
+
+    return ['razitka' => $razitka % $po, 'po' => $po, 'zdarma' => $zdarma, 'celkem' => $razitka,
+            'prosle' => $prosle, 'posledni' => $posledni, 'plati_do' => $plati_do, 'platnost_m' => $platnostM];
 }
 
 function zakaznik_poukazy(int $id): array

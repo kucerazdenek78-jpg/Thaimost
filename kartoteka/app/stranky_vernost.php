@@ -157,6 +157,11 @@ dl{display:grid;grid-template-columns:auto 1fr;gap:6px 14px;margin:10px 0 0}dt{c
     <div class="raz"><?php for ($i = 0; $i < $b['po']; $i++): ?><i class="<?= $i < $b['razitka'] ? 'on' : '' ?><?= $i === $b['po'] - 1 ? ' dar' : '' ?>"><?= $i < $b['razitka'] ? '✓' : ($i === $b['po'] - 1 ? '🎁' : '') ?></i><?php endfor ?></div>
     <p class="m">Po <?= $b['po'] ?> zaplacených masážích máte jednu zdarma.</p>
     <?php if ($b['zdarma'] > 0): ?><div class="zdarma">🎉 Máte nárok na masáž zdarma<?= $b['zdarma'] > 1 ? ' (' . $b['zdarma'] . '×)' : '' ?> – řekněte na recepci.</div><?php endif ?>
+    <?php if (!empty($b['prosle'])): ?>
+      <div class="zdarma" style="background:#fbe9e7;color:#b3261e">Platnost karty vypršela – déle než <?= (int)$b['platnost_m'] ?> měsíců bez masáže. Razítka se počítají znovu od příští návštěvy.</div>
+    <?php elseif (!empty($b['plati_do'])): ?>
+      <p class="m">Platí do <?= h(datum_cz($b['plati_do'], false)) ?> · karta platí <?= (int)$b['platnost_m'] ?> měsíců od poslední masáže.</p>
+    <?php endif ?>
     <dl>
       <dt>Masáží celkem</dt><dd><?= (int)$st['pocet'] ?></dd>
       <?php if ($poz): ?>
@@ -333,7 +338,8 @@ body{margin:0;font:12px Georgia,"Times New Roman",serif;color:#2b2520}
     <h1>Thai Most <small>věrnostní kartička</small></h1>
     <div class="jm"><?= $z ? h(jmeno_z($z)) . ' · ' . h(telefon_cz($z['telefon'])) : '' ?></div>
     <div class="r"><?php for ($i = 0; $i < $po; $i++): ?><i class="<?= $i < $na ? 'on' : '' ?>"><?= $i < $na ? '✓' : '' ?></i><?php endfor ?><b class="dar">→ 🎁 zdarma</b></div>
-    <p>Za každou zaplacenou masáž razítko. Po <?= $po ?> razítkách máte jednu masáž zdarma. Masáž na dárkový poukaz se nezapočítává.</p>
+    <?php $pl = max(0, (int)nastaveni('bonus_platnost_mesicu', 12)); ?>
+    <p>Za každou zaplacenou masáž razítko. Po <?= $po ?> razítkách máte jednu masáž zdarma. Masáž na dárkový poukaz se nezapočítává.<?php if ($pl > 0): ?> Karta platí <?= $pl === 12 ? '1 rok' : $pl . ' měsíců' ?> od poslední masáže – bez další návštěvy razítka propadají.<?php endif ?></p>
     <div class="kon">Vydáno <?= date('j. n. Y') ?> · tel. 778 429 329</div>
   </div>
 <?php endfor ?></div>
