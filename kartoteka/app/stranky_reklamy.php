@@ -9,6 +9,42 @@ function reklamy_seznam(): array
     $w = REKLAMY_WEB;
     return [
         [
+            'nazev' => 'Reel – Nová éra (spuštění online objednávek)', 'typ' => 'video', 'format' => '9:16 · 1080×1920 · 35 s',
+            'kde' => 'Facebook a Instagram Reels a Stories', 'pridano' => '16. 11. 2026',
+            'soubor' => $w . 'assets/reklamy/nova-era/thaimost-reel-nova-era.mp4', 'nahled' => $w . 'assets/reklamy/nova-era/thaimost-reel-nova-era-poster.jpg',
+            'pozn' => 'AI video (Magnific Kling) + naše hudba Chrám. Oznamuje spuštění online objednávek masáží i poukazů, nový e-book, web v AJ/NJ, největší salon a chystané novinky.',
+            'texty' => ['Hlavní text' => reklamy_text_novaera(), 'Nadpis' => 'Thai Most spouští novou éru',
+                        'Popis' => 'Online objednávky · dárkové poukazy · novinky', 'Tlačítko' => 'Zobrazit web'],
+        ],
+        [
+            'nazev' => 'Příspěvek – Spouštíme online objednávky', 'typ' => 'obrazek', 'format' => '4:5 · 1080×1350',
+            'kde' => 'FB/IG feed, Meta reklama', 'pridano' => '16. 11. 2026',
+            'soubor' => $w . 'assets/reklamy/nova-era/start-4x5.png',
+            'odkaz' => $w . 'assets/reklamy/nova-era/start-9x16.png', 'odkaz_text' => 'Verze Story 9:16',
+            'texty' => ['Hlavní text' => reklamy_text_novaera(), 'Nadpis' => 'Objednejte masáž online', 'Tlačítko' => 'Zobrazit web'],
+        ],
+        [
+            'nazev' => 'Příspěvek – Dárkové poukazy online', 'typ' => 'obrazek', 'format' => '4:5 · 1080×1350',
+            'kde' => 'FB/IG feed, Meta reklama', 'pridano' => '16. 11. 2026',
+            'soubor' => $w . 'assets/reklamy/nova-era/poukazy-4x5.png',
+            'odkaz' => $w . 'assets/reklamy/nova-era/poukazy-9x16.png', 'odkaz_text' => 'Verze Story 9:16',
+            'texty' => ['Hlavní text' => reklamy_text_novaera(), 'Nadpis' => 'Dárkové a vánoční poukazy online', 'Tlačítko' => 'Zobrazit web'],
+        ],
+        [
+            'nazev' => 'Příspěvek – Největší salon + nový e-book', 'typ' => 'obrazek', 'format' => '4:5 · 1080×1350',
+            'kde' => 'FB/IG feed', 'pridano' => '16. 11. 2026',
+            'soubor' => $w . 'assets/reklamy/nova-era/salon-4x5.png',
+            'odkaz' => $w . 'assets/reklamy/nova-era/salon-9x16.png', 'odkaz_text' => 'Verze Story 9:16',
+            'texty' => ['Hlavní text' => reklamy_text_novaera()],
+        ],
+        [
+            'nazev' => 'Příspěvek – Chystáme novinky (teaser)', 'typ' => 'obrazek', 'format' => '4:5 · 1080×1350',
+            'kde' => 'FB/IG feed a Stories', 'pridano' => '16. 11. 2026',
+            'soubor' => $w . 'assets/reklamy/nova-era/novinky-4x5.png',
+            'odkaz' => $w . 'assets/reklamy/nova-era/novinky-9x16.png', 'odkaz_text' => 'Verze Story 9:16',
+            'texty' => ['Hlavní text' => reklamy_text_novaera()],
+        ],
+        [
             'nazev' => 'Nabídka masáží – příspěvek 4:5', 'typ' => 'obrazek', 'format' => '4:5 · 1080×1350',
             'kde' => 'Facebook a Instagram feed, Meta reklama', 'pridano' => '15. 11. 2026',
             'soubor' => $w . 'assets/reklamy/nabidka/nabidka-feed-4x5.png',
@@ -73,6 +109,14 @@ function reklamy_seznam(): array
             'pozn' => 'Delší reel pro recepci (84 s) a verze 9:16 jsou zatím jen na notebooku ve složce Videos\\ThaiMost-maserny.',
         ],
     ];
+}
+
+function reklamy_text_novaera(): string
+{
+    return 'Thai Most spouští novou éru! U nás nově objednáte masáže i dárkové a vánoční poukazy online, přímo z webu. '
+         . 'Máme nový e-book s celou nabídkou, web je teď i v angličtině a němčině a jsme největší thajský salon široko daleko '
+         . '– 5 zkušených masérek. A chystáme novinky, jaké v ČR zatím nikdo nenabízí. '
+         . 'Sledujte náš web thaimost.cz a Facebook. Objednávky na tel. 778 429 329.';
 }
 
 function reklamy_text_nabidka(): string
