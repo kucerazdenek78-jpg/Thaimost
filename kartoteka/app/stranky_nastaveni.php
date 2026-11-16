@@ -29,7 +29,7 @@ function stranka_nastaveni(array $u): void
             presmeruj('/?r=nastaveni#motivy');
         }
         if ($akce === 'nastaveni') {
-            foreach (['rezim_webu', 'tematicka_web', 'oteviraci_od', 'oteviraci_do', 'prestavka_min', 'tablet_predstih_min', 'prah_staly_navstev', 'prah_spici_dni', 'prah_nespolehlivy', 'bonus_po', 'bonus_pocita_poukaz', 'bonus_platnost_mesicu'] as $k)
+            foreach (['rezim_webu', 'tematicka_web', 'oteviraci_od', 'oteviraci_do', 'prestavka_min', 'tablet_predstih_min', 'prah_staly_navstev', 'prah_spici_dni', 'prah_nespolehlivy', 'bonus_po', 'bonus_pocita_poukaz', 'bonus_platnost_mesicu', 'hodnoceni_zapnuto'] as $k)
                 if (isset($_POST[$k])) q('INSERT INTO nastaveni(klic,hodnota) VALUES(?,?) ON CONFLICT(klic) DO UPDATE SET hodnota=excluded.hodnota', [$k, trim($_POST[$k])]);
             // poukazy a platba převodem: číslo účtu (kontrola modulo 11), platnost poukazů v měsících
             if (isset($_POST['platba_ucet'])) {
@@ -177,6 +177,7 @@ function stranka_nastaveni(array $u): void
             <label>Zdarma po kolika zaplacených<input type="number" name="bonus_po" value="<?= h($n['bonus_po']) ?>"></label>
             <label>Masáž na poukaz se počítá<select name="bonus_pocita_poukaz"><?= moznosti(['0' => 'ne', '1' => 'ano'], $n['bonus_pocita_poukaz']) ?></select><span class="muted small">Razítko dostane kupující poukazu – jedno za každý zaplacený poukaz.</span></label>
             <label>Platnost karty (měsíců)<input type="number" name="bonus_platnost_mesicu" min="0" max="60" value="<?= h($n['bonus_platnost_mesicu'] ?? '12') ?>"><span class="muted small">Karta platí tolik měsíců od poslední zapsané masáže; bez další návštěvy razítka propadají. 0 = bez expirace.</span></label>
+            <label>Hodnocení po masáži e-mailem<select name="hodnoceni_zapnuto"><?= moznosti(['1' => 'posílat', '0' => 'neposílat'], $n['hodnoceni_zapnuto'] ?? '1') ?></select><span class="muted small">Po proběhlé masáži pošleme zákazníkovi (s e-mailem) odkaz na ohodnocení spokojenosti; výsledek se uloží k zákazníkovi do karty.</span></label>
           </div>
           <button class="btn primary">Uložit</button>
         </form>

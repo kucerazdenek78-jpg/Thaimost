@@ -26,7 +26,7 @@ function q(string $sql, array $p = []): PDOStatement
 function q1(string $sql, array $p = []): ?array { $r = q($sql, $p)->fetch(); return $r ?: null; }
 function qv(string $sql, array $p = []) { $r = q($sql, $p)->fetchColumn(); return $r === false ? null : $r; }
 
-const DB_VERZE = 21;
+const DB_VERZE = 22;
 
 /** Migrace běží v jedné transakci a po získání zámku se verze ověří znovu (souběžné první požadavky). */
 function migrate(PDO $pdo): void
@@ -67,6 +67,21 @@ function migrate(PDO $pdo): void
             $st = $pdo->prepare("UPDATE sluzby SET popis_web=?, pozn_web=?, preklady=? WHERE kod=? AND popis_web=''");
             foreach (sluzby_web_vychozi() as $kod => $t)
                 $st->execute([$t['popis'], $t['pozn'], json_encode(['en' => $t['en'], 'de' => $t['de']], JSON_UNESCAPED_UNICODE), $kod]);
+        }
+        if ($ver < 22) {   // v22: zákaznická zpětná vazba – e-mail po masáži s hodnocením spokojenosti (1–5★ + komentář)
+            $pdo->exec("CREATE TABLE hodnoceni_zakaznik (
+                id INTEGER PRIMARY KEY,
+                zakaznik_id INTEGER NOT NULL REFERENCES zakaznici(id),
+                rezervace_id INTEGER REFERENCES rezervace(id),
+                token TEXT NOT NULL UNIQUE,
+                hvezdy INTEGER CHECK (hvezdy BETWEEN 1 AND 5),
+                komentar TEXT NOT NULL DEFAULT '',
+                email_odeslan TEXT,
+                hodnoceno TEXT,
+                vytvoreno TEXT NOT NULL DEFAULT (datetime('now','localtime'))
+            )");
+            $pdo->exec("CREATE INDEX hodnz_zak ON hodnoceni_zakaznik(zakaznik_id)");
+            $pdo->exec("CREATE INDEX hodnz_rez ON hodnoceni_zakaznik(rezervace_id)");
         }
         $pdo->exec('PRAGMA user_version = ' . DB_VERZE);
         $pdo->exec('COMMIT');
@@ -166,6 +181,7 @@ function migrate_v1(PDO $pdo): void
         'bonus_po' => '5',                // po kolika zaplacených masážích je jedna zdarma
         'bonus_pocita_poukaz' => '0',     // počítá se do bonusu masáž placená poukazem? (ověřit se salonem)
         'bonus_platnost_mesicu' => '12',  // věrnostní karta platí tolik měsíců od poslední zapsané masáže; bez další návštěvy propadá (0 = bez expirace)
+        'hodnoceni_zapnuto' => '1',       // posílat zákazníkům po masáži e-mail s dotazem na spokojenost (1 = ano, 0 = ne)
     ];
     $st = $pdo->prepare('INSERT INTO nastaveni(klic,hodnota) VALUES(?,?)');
     foreach ($def as $k => $v) $st->execute([$k, $v]);

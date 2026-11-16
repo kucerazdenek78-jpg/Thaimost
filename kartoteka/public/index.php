@@ -54,6 +54,10 @@ if ($r === 'ical') { stranka_ical(); }   // kalendářový odkaz chráněný tok
 if ($r === 'tablet') { stranka_tablet(); }
 // věrnostní karta zákazníka (QR): bez přihlášení, pozná se tajným kódem karty
 if ($r === 'karta') { stranka_karta(); }
+// zpětná vazba zákazníka (odkaz z e-mailu po masáži): bez přihlášení, pozná se tajným tokenem
+if ($r === 'hodnoceni') { stranka_hodnoceni(); }
+// opportunní rozeslání dotazů na hodnocení po proběhlých masážích (max 1× za 30 min, řeší si gate uvnitř)
+try { hodnoceni_davka(); } catch (Throwable $e) { /* nikdy nesmí shodit stránku */ }
 if ($r === 'tablet_api') {
     if ($_SERVER['REQUEST_METHOD'] !== 'POST') { http_response_code(405); exit('Metoda není povolena'); }
     require $root . '/app/api.php';

@@ -156,6 +156,20 @@ function stranka_zakaznik(array $u): void
             <dt>Souhlas GDPR</dt><dd><?= $z['gdpr_souhlas'] ? h(datum_cz($z['gdpr_souhlas'])) : 'není zaznamenán' ?></dd>
           </dl>
         </section>
+        <?php $hod = function_exists('hodnoceni_zakaznika') ? hodnoceni_zakaznika($id) : []; if ($hod): ?>
+        <section class="card">
+          <h3>Hodnocení zákazníka <span class="muted small">(zpětná vazba z e-mailu po masáži)</span></h3>
+          <?php $prum = round(array_sum(array_map(fn($x) => (int)$x['hvezdy'], $hod)) / count($hod), 1); ?>
+          <p class="muted small">Průměr <?= $prum ?> ★ z <?= count($hod) ?> hodnocení</p>
+          <?php foreach ($hod as $x): ?>
+            <div style="border-top:1px solid #efe7da;padding:8px 0">
+              <b style="color:#c69c5d"><?php for ($i = 1; $i <= 5; $i++) echo $i <= (int)$x['hvezdy'] ? '★' : '☆'; ?></b>
+              <span class="muted small"><?= h(datum_cz($x['hodnoceno'], false)) ?><?= $x['sluzba'] ? ' · ' . h($x['sluzba']) : '' ?></span>
+              <?php if (trim((string)$x['komentar']) !== ''): ?><div class="small" style="margin-top:2px">„<?= h($x['komentar']) ?>“</div><?php endif ?>
+            </div>
+          <?php endforeach ?>
+        </section>
+        <?php endif ?>
       </div>
     </div>
     <?php paticka();
