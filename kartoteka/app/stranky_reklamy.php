@@ -48,7 +48,7 @@ function reklamy_seznam(): array
             'nazev' => 'Nabídka masáží – příspěvek 4:5', 'typ' => 'obrazek', 'format' => '4:5 · 1080×1350',
             'kde' => 'Facebook a Instagram feed, Meta reklama', 'pridano' => '15. 11. 2026',
             'soubor' => $w . 'assets/reklamy/nabidka/nabidka-feed-4x5.png',
-            'pozn' => 'Propaguje e-book s celou nabídkou masáží ke stažení na webu (nabidka-masazi.pdf). Grafika nemá ceny, při změně ceníku se nemusí upravovat.',
+            'pozn' => 'Propaguje e-book s celou nabídkou masáží ke stažení na webu (nabidka-masazi.pdf, CZ/EN/DE). E-book je teď „živý“: online verze má u každé masáže rozpohybované video, tištěná/PDF verze má u každé masáže QR kód, který vede na stránku masáže s ukázkovým videem a online objednáním. Grafika nemá ceny, při změně ceníku se nemusí upravovat.',
             'texty' => ['Hlavní text' => reklamy_text_nabidka(), 'Nadpis' => 'Celá nabídka masáží ke stažení',
                         'Popis' => 'Thajské masáže Most · od roku 2004', 'Tlačítko' => 'Zobrazit web'],
         ],
