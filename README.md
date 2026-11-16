@@ -5,7 +5,7 @@ Nový web pro **Thajské masáže Most** (thaimost.cz). Statický web pro GitHub
 ## Co obsahuje
 - `index.html` – celý web: úvod, O nás, služby a ceník (19 položek), bonus program, **dárkové poukazy**, kontakt s mapou
 - `salon.html` – interní stránka pro salon: vystavení poukazu s unikátním kódem a QR, tisk / PDF, evidence (uplatnit, propadlé, export/import CSV). Není v menu, odkaz je v patičce („Pro salon“), vyřazená z vyhledávačů.
-- `firma.html` – skrytá firemní stránka (zámeček v patičce, heslo se ověřuje jako SHA-256 v prohlížeči; změna hesla = nový hash v `firma.html`): brand (barvy, písma, logo), reklamy a profily, texty inzerátů, poukaz, odkaz na kartotéku masage.dvere.app. Není v menu, `noindex` + robots.
+- `firma.html` – vstup pro salon (zámeček v patičce, PIN; po odemčení odkaz na kartotéku masage.dvere.app, ostatní nástroje jsou sbalené pod ním; `salon.html` je za stejným PINem a z patičky na ni odkaz nevede). Původně: skrytá firemní stránka ( heslo se ověřuje jako SHA-256 v prohlížeči; změna hesla = nový hash v `firma.html`): brand (barvy, písma, logo), reklamy a profily, texty inzerátů, poukaz, odkaz na kartotéku masage.dvere.app. Není v menu, `noindex` + robots.
 - `assets/js/data.js` – **všechny ceny, texty služeb a kontakty na jednom místě**
 
 Texty a ceny jsou převzaté z původního thaimost.cz (stav 6. 10. 2026).

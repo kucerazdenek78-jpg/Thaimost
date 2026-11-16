@@ -29,6 +29,24 @@
 </style>
 </head>
 <body>
+<div id="gate" style="position:fixed;inset:0;z-index:999;background:#f8f2e9;display:grid;place-items:center;padding:20px">
+  <form id="gateF" autocomplete="off" style="background:#fffdf9;border:1px solid #e3d5bf;border-radius:22px;padding:32px;max-width:360px;width:100%;text-align:center">
+    <h1 class="h2" style="font-size:1.8rem;margin-bottom:8px">Jen pro salon</h1>
+    <p style="color:#7a6a5c;font-size:.92rem;margin-bottom:16px">Zadejte PIN.</p>
+    <input id="gateP" type="password" inputmode="numeric" maxlength="12" aria-label="PIN" style="width:100%;padding:14px;border:1.5px solid #e3d5bf;border-radius:12px;font:inherit;font-size:1.3rem;text-align:center;letter-spacing:.4em">
+    <button class="btn btn-dark" type="submit" style="width:100%;margin-top:12px">Odemknout</button>
+    <div id="gateE" style="color:#a63f13;font-size:.85rem;margin-top:10px;min-height:1.2em;font-weight:600"></div>
+  </form>
+</div>
+<script>
+(function(){var H='79f06f8fde333461739f220090a23cb2a79f6d714bee100d0e4b4af249294619',g=document.getElementById('gate');
+function ok(){g.remove();}
+try{if(sessionStorage.getItem('fiOk')==='1'){ok();return;}}catch(e){}
+async function sha(s){var b=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(s));return Array.from(new Uint8Array(b)).map(function(x){return x.toString(16).padStart(2,'0')}).join('');}
+document.getElementById('gateF').addEventListener('submit',async function(e){e.preventDefault();var i=document.getElementById('gateP');
+ if(await sha(i.value.trim())===H){try{sessionStorage.setItem('fiOk','1');}catch(e){}ok();}else{document.getElementById('gateE').textContent='Špatný PIN.';i.value='';i.focus();}});
+})();
+</script>
 <header class="nav">
   <div class="wrap nav-in">
     <a href="index.html" class="logo"><span><b>Thai Most</b><small>vystavení poukazů</small></span></a>
