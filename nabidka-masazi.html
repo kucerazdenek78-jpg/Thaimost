@@ -36,13 +36,15 @@ h1,h2,h3,h4,.serif{font-family:"Cormorant Garamond",Georgia,serif;font-weight:60
 .card{display:flex;gap:9mm;min-height:80mm;margin-bottom:7mm;break-inside:avoid;page-break-inside:avoid}
 .photo{flex:0 0 150mm;align-self:stretch;min-height:80mm;border-radius:3mm;background-color:var(--sand);background-position:center;background-size:cover;background-repeat:no-repeat}
 video.photo{display:block;object-fit:cover;width:150mm;height:auto}
+.photo.prt{display:none}
 .qrp{display:none}
 @media print{
+ .photo.scr{display:none}
+ .photo.prt{display:block}
  .qrp{display:flex;align-items:center;gap:5mm;margin-top:5mm;padding-top:4mm;border-top:1px solid var(--line);break-inside:avoid}
  .qrp img{width:22mm;height:22mm;flex:0 0 22mm}
  .qrt b{display:block;font-size:12.5px;color:var(--teak);margin-bottom:1mm}
  .qrt span{font-size:10.5px;line-height:1.5;color:var(--muted)}
- video.photo{height:80mm}
 }
 .body{flex:1;display:flex;flex-direction:column;justify-content:center;padding:1mm 0}
 .card h3{font-size:26px;color:var(--teak);margin-bottom:3mm}
@@ -114,11 +116,13 @@ function priceRows(c){return (c||[]).map(function(x){return '<div class="price">
 var SLUGY={"tradicni":"tradicni-thajska-masaz","hlava":"masaz-hlavicky","zada":"masaz-zad-a-krku","olej":"thajska-olejova-masaz","aroma":"aroma-masaz","detska":"detska-masaz","lymfa-oblicej":"lymfaticka-masaz-obliceje","poporodni":"poporodni-masaz","oblicej":"masaz-obliceje","nohy":"masaz-nohou","bylinna":"bylinna-masaz","siam":"siam-massage","ventosa":"ventosa-masaz-bankovni","lava":"masaze-obliceje-teplymi-lavovymi-kameny","lymfa-telo":"rucni-lymfaticka-masaz-celeho-tela","tehotenska":"tehotenska-masaz","whirlpool":"whirlpool-a-sauna","fiji":"fiji-ritual","cukr":"cukrovy-vanek-z-raje"};
 function card(s,imgBase,vidBase,qrBase){var popis=POPISY2[s.id]||s.popis;var pozn=s.pozn?'<p class="pozn">'+esc(s.pozn)+'</p>':'';
  var slug=SLUGY[s.id];
+ var photo=imgBase+esc(s.foto);
  var media;
  if(slug){
-  media='<video class="photo" autoplay loop muted playsinline poster="'+vidBase+esc(s.id)+'.jpg" aria-label="'+esc(s.nazev)+'"><source src="'+vidBase+esc(s.id)+'.mp4" type="video/mp4"></video>';
+  media='<video class="photo scr" autoplay loop muted playsinline poster="'+photo+'" aria-label="'+esc(s.nazev)+'"><source src="'+vidBase+esc(s.id)+'.mp4" type="video/mp4"></video>'
+      +'<div class="photo prt" role="img" aria-label="'+esc(s.nazev)+'" style="background-image:url(&quot;'+photo+'&quot;)"></div>';
  }else{
-  media='<div class="photo" role="img" aria-label="'+esc(s.nazev)+'" style="background-image:url(&quot;'+imgBase+esc(s.foto)+'&quot;)"></div>';
+  media='<div class="photo" role="img" aria-label="'+esc(s.nazev)+'" style="background-image:url(&quot;'+photo+'&quot;)"></div>';
  }
  var qr=slug?'<div class="qrp"><img src="'+qrBase+esc(slug)+'.png" alt="QR kód – '+esc(s.nazev)+'"><div class="qrt"><b>Video &amp; objednání</b><span>Naskenujte telefonem: ukázka masáže v pohybu a rovnou objednání termínu.</span></div></div>':'';
  return '<article class="card">'+media+'<div class="body"><h3>'+esc(s.nazev)+'</h3><p class="desc">'+esc(popis)+'</p>'+pozn+'<div class="prices">'+priceRows(s.ceny)+'</div>'+qr+'</div></article>';}

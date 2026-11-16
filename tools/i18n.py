@@ -377,7 +377,10 @@ def build_page(lang, d, missing):
     for a in soup.find_all(True):
         for attr in ("href", "src", "poster"):
             v = a.get(attr)
-            if isinstance(v, str) and v.startswith(ROOT_FILES):
+            if isinstance(v, str) and v in ("nabidka-masazi.pdf", "nabidka-masazi.html"):
+                ext = v.rsplit(".", 1)[1]
+                a[attr] = f"../nabidka-masazi-{lang}.{ext}"
+            elif isinstance(v, str) and v.startswith(ROOT_FILES):
                 a[attr] = "../" + v
             elif isinstance(v, str) and "hl=cs" in v:
                 a[attr] = v.replace("hl=cs", f"hl={lang}")
