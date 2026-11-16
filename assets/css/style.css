@@ -136,15 +136,21 @@ header.nav{position:sticky;top:0;z-index:50;background:rgba(248,242,233,.88);bac
 .bonus ul{list-style:none;margin-top:22px}
 .bonus li{padding:8px 0 8px 28px;position:relative;color:rgba(248,242,233,.85);font-size:.95rem}
 .bonus li::before{content:"";position:absolute;left:0;top:16px;width:14px;height:1.5px;background:var(--gold)}
-.stamps{background:linear-gradient(145deg,#f3e6cf,#e3cfa9);color:var(--teak);border-radius:22px;padding:30px;box-shadow:0 30px 60px -30px #000;transform:rotate(-2deg)}
-.stamp-vid{width:100%;aspect-ratio:3/2;object-fit:cover;border-radius:14px;display:block;margin-bottom:20px;box-shadow:0 12px 30px -16px rgba(43,30,22,.6)}
+.stamps{background:linear-gradient(145deg,#f3e6cf,#e3cfa9);color:var(--teak);border-radius:22px;padding:30px;box-shadow:0 30px 60px -30px #000;transform:rotate(-2deg);position:relative;overflow:hidden}
+/* jemný lesk, který občas přejede kartičkou */
+.stamps::after{content:"";position:absolute;top:-20%;left:-60%;width:38%;height:140%;background:linear-gradient(100deg,transparent,rgba(255,255,255,.55),transparent);transform:skewX(-18deg);animation:stampShine 6s ease-in-out 2s infinite;pointer-events:none}
+@keyframes stampShine{0%{left:-60%}28%{left:150%}100%{left:150%}}
 .stamps h3{font-size:1.6rem;margin-bottom:4px}
 .stamps small{color:var(--bark)}
 .stamp-row{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:12px;margin-top:22px}
-.stamp{aspect-ratio:1;border-radius:50%;border:1.5px dashed var(--bark);display:grid;place-items:center;font-weight:800;color:var(--bark);font-size:.85rem}
+.stamp{aspect-ratio:1;border-radius:50%;border:1.5px dashed var(--bark);display:grid;place-items:center;font-weight:800;color:var(--bark);font-size:.85rem;animation:stampIn .5s cubic-bezier(.34,1.56,.64,1) both}
+.stamp:nth-child(1){animation-delay:.15s}.stamp:nth-child(2){animation-delay:.3s}.stamp:nth-child(3){animation-delay:.45s}.stamp:nth-child(4){animation-delay:.6s}.stamp:nth-child(5){animation-delay:.75s}.stamp:nth-child(6){animation-delay:.9s}
+@keyframes stampIn{from{opacity:0;transform:scale(.55)}to{opacity:1;transform:scale(1)}}
 .stamp.on{background:var(--teak);border:0;color:var(--gold-l)}
 .stamp.on svg{width:60%;color:var(--gold)}
-.stamp.free{background:var(--jade);border:0;color:#fff;font-size:clamp(.42rem,1.9vw,.62rem);text-align:center;line-height:1.1}
+.stamp.free{background:var(--jade);border:0;color:#fff;font-size:clamp(.42rem,1.9vw,.62rem);text-align:center;line-height:1.1;animation:stampIn .5s cubic-bezier(.34,1.56,.64,1) both,freePulse 2.6s ease-in-out 1.6s infinite}
+@keyframes freePulse{0%,100%{box-shadow:0 0 0 0 rgba(91,138,114,.5)}50%{box-shadow:0 0 0 12px rgba(91,138,114,0)}}
+@media (prefers-reduced-motion:reduce){.stamps::after,.stamp,.stamp.free{animation:none}}
 
 /* poukazy */
 .vouchers{background:linear-gradient(180deg,var(--cream),var(--sand))}

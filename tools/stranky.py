@@ -111,8 +111,8 @@ def head(R, title, desc, path, image="assets/og-image.jpg", graph=None, robots="
 <meta name="twitter:card" content="summary_large_image">
 <link rel="preload" href="{R}assets/fonts/manrope-latin-ext-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="stylesheet" href="{R}assets/css/fonts.css">
-<link rel="stylesheet" href="{R}assets/css/style.css?v=20261116w">
-<link rel="stylesheet" href="{R}assets/css/sub.css?v=20261116w">
+<link rel="stylesheet" href="{R}assets/css/style.css?v=20261116x">
+<link rel="stylesheet" href="{R}assets/css/sub.css?v=20261116x">
 {ld}</head>
 <body class="sub">
 """
