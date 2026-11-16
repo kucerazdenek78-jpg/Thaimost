@@ -113,10 +113,13 @@ function reklamy_seznam(): array
 
 function reklamy_text_novaera(): string
 {
-    return 'Thai Most spouští novou éru! U nás nově objednáte masáže i dárkové a vánoční poukazy online, přímo z webu. '
-         . 'Máme nový e-book s celou nabídkou, web je teď i v angličtině a němčině a jsme největší thajský salon široko daleko '
-         . '– 5 zkušených masérek. A chystáme novinky, jaké v ČR zatím nikdo nenabízí. '
-         . 'Sledujte náš web thaimost.cz a Facebook. Objednávky na tel. 778 429 329.';
+    return "Jistě jste postřehli, že náš web teď prochází rozsáhlou rekonstrukcí a momentálně není dostupný. "
+         . "Vydržte – do 24 hodin bude všechno jinak. Lepší, a ještě lepší.\n\n"
+         . "Thai Most prochází největší změnou ve své historii. Spouštíme úplně nový web, kde si nově objednáte "
+         . "masáže i dárkové a vánoční poukazy online, najdete e-book s celou nabídkou a web je teď i v angličtině "
+         . "a němčině. Jsme největší thajský salon široko daleko – 5 zkušených masérek.\n\n"
+         . "A změnou webu to teprve začíná. Chystáme novinky, jaké v ČR zatím nikdo nenabízí.\n\n"
+         . "Sledujte nás – už za 24 hodin. thaimost.cz · Facebook Thai Most · 778 429 329";
 }
 
 function reklamy_text_nabidka(): string
