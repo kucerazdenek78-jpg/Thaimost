@@ -51,6 +51,8 @@ def load_data():
 
 D = load_data()
 OBSAH = json.loads((ROOT / "tools/stranky_obsah.json").read_text(encoding="utf-8"))
+# id služeb, pro které existuje rozpohybované video (assets/video/sluzby/<id>.mp4 + .jpg poster)
+VIDS = {p.stem for p in (ROOT / "assets/video/sluzby").glob("*.mp4")} if (ROOT / "assets/video/sluzby").is_dir() else set()
 S = D["salon"]
 PROVOZOVATEL = S["provozovatel"].split(",")[0]
 TEL, TEL_HREF = S["telefon"], S["telefonHref"]
@@ -232,7 +234,17 @@ def page_sluzba(s):
     for h2, ps in o.get("sekce", []):
         text += f"<h2>{e(h2)}</h2>" + "".join(f"<p>{e(p)}</p>" for p in ps)
     prices = "".join(f"<li><span>{e(c[0])}</span><b>{kc(c[1])}</b></li>" for c in s["ceny"])
-    ilu = "" if s.get("vlastni") else '<span class="sv-ilu">Ilustrační foto</span>'
+    ilu = "" if s.get("vlastni") else '<span class="sv-ilu">Ilustrační video</span>'
+    if s["id"] in VIDS:
+        vb = R + "assets/video/sluzby/" + s["id"]
+        hero_media = (f'<video class="sub-media" autoplay loop muted playsinline '
+                      f'poster="{vb}.jpg" width="1200" height="800" '
+                      f'aria-label="{e(s["nazev"])} – ukázka masáže, Thai Most Most">'
+                      f'<source src="{vb}.mp4" type="video/mp4">'
+                      f'<img src="{R}{img}" alt="{e(s["nazev"])} – thajské masáže Most, Thai Most" width="1200" height="800"></video>')
+    else:
+        ilu = "" if s.get("vlastni") else '<span class="sv-ilu">Ilustrační foto</span>'
+        hero_media = f'<img src="{R}{img}" alt="{e(s["nazev"])} – thajské masáže Most, Thai Most" width="1200" height="800" fetchpriority="high">'
     pozn = f'<p class="note">{e(s["pozn"])}</p>' if s.get("pozn") else ""
     rel = "".join(card(R, x) for x in related(s))
     body = f"""{crumbs_html(R, crumbs)}<main>
@@ -248,7 +260,7 @@ def page_sluzba(s):
     </div>
     <div class="sub-facts"><span><b id="cenaOd">od {kc(s["od"])}</b></span><span>rodilé Thajky a Filipínky, certifikace Wat Pho</span><span><a href="{GMAPS}" target="_blank" rel="noopener">{RATING} ★ z {REVIEWS} recenzí</a></span></div>
   </div>
-  <div class="sub-img"><img src="{R}{img}" alt="{e(s["nazev"])} – thajské masáže Most, Thai Most" width="1200" height="800" fetchpriority="high">{ilu}</div>
+  <div class="sub-img">{hero_media}{ilu}</div>
 </div></section>
 <section class="sub-body"><div class="wrap">
   <div class="sub-text">{text}

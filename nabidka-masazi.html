@@ -35,6 +35,15 @@ h1,h2,h3,h4,.serif{font-family:"Cormorant Garamond",Georgia,serif;font-weight:60
 .section p{font-size:11px;letter-spacing:.24em;text-transform:uppercase;color:var(--gold);margin-top:4px}
 .card{display:flex;gap:9mm;min-height:80mm;margin-bottom:7mm;break-inside:avoid;page-break-inside:avoid}
 .photo{flex:0 0 150mm;align-self:stretch;min-height:80mm;border-radius:3mm;background-color:var(--sand);background-position:center;background-size:cover;background-repeat:no-repeat}
+video.photo{display:block;object-fit:cover;width:150mm;height:auto}
+.qrp{display:none}
+@media print{
+ .qrp{display:flex;align-items:center;gap:5mm;margin-top:5mm;padding-top:4mm;border-top:1px solid var(--line);break-inside:avoid}
+ .qrp img{width:22mm;height:22mm;flex:0 0 22mm}
+ .qrt b{display:block;font-size:12.5px;color:var(--teak);margin-bottom:1mm}
+ .qrt span{font-size:10.5px;line-height:1.5;color:var(--muted)}
+ video.photo{height:80mm}
+}
 .body{flex:1;display:flex;flex-direction:column;justify-content:center;padding:1mm 0}
 .card h3{font-size:26px;color:var(--teak);margin-bottom:3mm}
 .desc{font-size:12.7px;line-height:1.62;color:#3a2f26}
@@ -102,18 +111,29 @@ function esc(s){return String(s==null?"":s).replace(/[&<>"]/g,function(c){return
 function kc(n){if(typeof n!=="number")return esc(n);return n.toLocaleString("cs-CZ").replace(/ /g," ")+" Kč";}
 function loadData(cb){function inj(src,next){var s=document.createElement("script");s.src=src;s.onload=function(){cb();};s.onerror=next;document.head.appendChild(s);}inj("assets/js/data.js",function(){inj(REMOTE+"assets/js/data.js",function(){document.getElementById("app").innerHTML='<div class="load">Ceník se nepodařilo načíst.</div>';});});}
 function priceRows(c){return (c||[]).map(function(x){return '<div class="price"><span class="pn">'+esc(x[0])+'</span><span class="dots"></span><span class="pc">'+kc(x[1])+'</span></div>';}).join("");}
-function card(s,imgBase){var popis=POPISY2[s.id]||s.popis;var pozn=s.pozn?'<p class="pozn">'+esc(s.pozn)+'</p>':'';
- return '<article class="card"><div class="photo" role="img" aria-label="'+esc(s.nazev)+'" style="background-image:url(&quot;'+imgBase+esc(s.foto)+'&quot;)"></div><div class="body"><h3>'+esc(s.nazev)+'</h3><p class="desc">'+esc(popis)+'</p>'+pozn+'<div class="prices">'+priceRows(s.ceny)+'</div></div></article>';}
-function svc(items,imgBase,title,sub,brk){return '<section class="svc'+(brk?' brk':'')+'"><div class="section"><span class="line"></span><div><h2>'+esc(title)+'</h2><p>'+esc(sub)+'</p></div><span class="line"></span></div>'+items.map(function(s){return card(s,imgBase);}).join("")+'</section>';}
+var SLUGY={"tradicni":"tradicni-thajska-masaz","hlava":"masaz-hlavicky","zada":"masaz-zad-a-krku","olej":"thajska-olejova-masaz","aroma":"aroma-masaz","detska":"detska-masaz","lymfa-oblicej":"lymfaticka-masaz-obliceje","poporodni":"poporodni-masaz","oblicej":"masaz-obliceje","nohy":"masaz-nohou","bylinna":"bylinna-masaz","siam":"siam-massage","ventosa":"ventosa-masaz-bankovni","lava":"masaze-obliceje-teplymi-lavovymi-kameny","lymfa-telo":"rucni-lymfaticka-masaz-celeho-tela","tehotenska":"tehotenska-masaz","whirlpool":"whirlpool-a-sauna","fiji":"fiji-ritual","cukr":"cukrovy-vanek-z-raje"};
+function card(s,imgBase,vidBase,qrBase){var popis=POPISY2[s.id]||s.popis;var pozn=s.pozn?'<p class="pozn">'+esc(s.pozn)+'</p>':'';
+ var slug=SLUGY[s.id];
+ var media;
+ if(slug){
+  media='<video class="photo" autoplay loop muted playsinline poster="'+vidBase+esc(s.id)+'.jpg" aria-label="'+esc(s.nazev)+'"><source src="'+vidBase+esc(s.id)+'.mp4" type="video/mp4"></video>';
+ }else{
+  media='<div class="photo" role="img" aria-label="'+esc(s.nazev)+'" style="background-image:url(&quot;'+imgBase+esc(s.foto)+'&quot;)"></div>';
+ }
+ var qr=slug?'<div class="qrp"><img src="'+qrBase+esc(slug)+'.png" alt="QR kód – '+esc(s.nazev)+'"><div class="qrt"><b>Video &amp; objednání</b><span>Naskenujte telefonem: ukázka masáže v pohybu a rovnou objednání termínu.</span></div></div>':'';
+ return '<article class="card">'+media+'<div class="body"><h3>'+esc(s.nazev)+'</h3><p class="desc">'+esc(popis)+'</p>'+pozn+'<div class="prices">'+priceRows(s.ceny)+'</div>'+qr+'</div></article>';}
+function svc(items,imgBase,vidBase,qrBase,title,sub,brk){return '<section class="svc'+(brk?' brk':'')+'"><div class="section"><span class="line"></span><div><h2>'+esc(title)+'</h2><p>'+esc(sub)+'</p></div><span class="line"></span></div>'+items.map(function(s){return card(s,imgBase,vidBase,qrBase);}).join("")+'</section>';}
 function render(){var T=window.THAI;if(!T)return;var S=T.salon||{};var web=S.web||"thaimost.cz";
- var onSite=/github\.io$/i.test(location.hostname)||/thaimost\.cz$/i.test(location.hostname);
+ var onSite=/github\.io$/i.test(location.hostname)||/thaimost\.cz$/i.test(location.hostname)||/^(127\.0\.0\.1|localhost)$/i.test(location.hostname);
  var imgBase=(onSite?"":REMOTE)+(T.img||"assets/img/ai/");
+ var vidBase=(onSite?"":REMOTE)+"assets/video/sluzby/";
+ var qrBase=(onSite?"":REMOTE)+"assets/qr/";
  var sl=T.sluzby||[];var m=sl.filter(function(s){return s.kat==="masaze";});var w=sl.filter(function(s){return s.kat==="wellness";});
  var adresa=(S.adresa||[]).join(", ");
  var ot=(S.oteviraci||[]).map(function(r){return '<div class="ot"><b>'+esc(r[0])+'</b><span>'+esc(r[1])+'</span></div>';}).join("");
  var cover='<section class="cover"><div class="cover-fr"><div class="brand">'+LOTUS+'<div class="bt"><b>'+esc(S.nazev||"Thai Most")+'</b><span>'+esc(S.podtitul||"Thajské masáže Most")+'</span></div></div><div class="cover-mid"><p class="eyebrow">Nabídka</p><h1>Masáže &amp; wellness</h1><p class="lead">Thajské masáže, rituály a privátní wellness v srdci Mostu. Vyberte si proceduru, o zbytek se postaráme my.</p></div><div class="cover-foot"><span>'+esc(adresa)+'</span><span>'+esc(S.telefon||"")+' · '+esc(web)+'</span></div></div></section>';
  var back='<section class="back"><div class="brand dark">'+LOTUS+'<div class="bt"><b>'+esc(S.nazev||"Thai Most")+'</b><span>'+esc(S.podtitul||"")+'</span></div></div><div class="back-grid"><div class="bk"><h4>Otevírací doba</h4>'+ot+'</div><div class="bk"><h4>Kde nás najdete</h4><p>'+esc(adresa)+'</p><p>'+esc(S.telefon||"")+'<br>'+esc(S.email||"")+'<br>'+esc(web)+'</p></div></div><div class="gift"><div><h4>Dárkové poukazy</h4><p>Poukaz na libovolnou částku nebo konkrétní proceduru. Platnost 6 měsíců od zakoupení. K vyzvednutí na recepci, poštou i e-mailem.</p></div><div class="loy"><b>Pět masáží,<br>šestá od nás</b><span>Věrnostní kartička pro stálé zákazníky</span></div></div><div class="note">Fotografie jsou ilustrační. Změna cen vyhrazena.</div></section>';
- document.getElementById("app").innerHTML='<div class="paper">'+cover+svc(m,imgBase,"Masáže","Thajské a relaxační masáže",false)+svc(w,imgBase,"Wellness & rituály","Privátní relaxace a tělové rituály",true)+back+'</div>';
+ document.getElementById("app").innerHTML='<div class="paper">'+cover+svc(m,imgBase,vidBase,qrBase,"Masáže","Thajské a relaxační masáže",false)+svc(w,imgBase,vidBase,qrBase,"Wellness & rituály","Privátní relaxace a tělové rituály",true)+back+'</div>';
  document.title=(S.nazev||"Thai Most")+" – nabídka masáží";}
 loadData(render);
 </script>
