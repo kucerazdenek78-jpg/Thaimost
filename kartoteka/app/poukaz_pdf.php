@@ -29,7 +29,7 @@ const POUKAZ_QR = [214.0, 147.0, 33.0];
 const POUKAZ_INFO = [282.0, 279.4, 5.3, true, [0.973, 0.925, 0.863]];
 function poukaz_info_text(string $datum): string { return "Poukaz platí do $datum – do tohoto data je potřeba se objednat, zavolejte na 778 429 329. Masáž na poukaz se nezapočítává do věrnostní kartičky."; }
 /** Kód poukazu bílým písmem na tmavém pruhu: konec textu zprava (x), základní linka od shora, velikost. */
-const POUKAZ_KOD = [518.0, 188.7, 6.8];
+const POUKAZ_KOD = [251.0, 166.0, 7.5];
 
 function poukaz_dir(): string { return __DIR__ . '/poukaz'; }
 
@@ -340,9 +340,14 @@ function poukaz_vrstva(array $p): string
     $kod = trim((string)($p['kod'] ?? ''));
     if ($kod !== '') {
         $kod = poukaz_ocisti($kod);
-        [$kx, $ky, $kv] = POUKAZ_KOD;
+        [$kx, $ky, $kv] = POUKAZ_KOD;   // kx = levá hrana, ky = základní linka shora, kv = velikost písma
         $text = 'KÓD  ' . $kod;
-        $s .= sprintf("BT /FT0 %s Tf 1 1 1 rg 1 0 0 1 %s %s Tm <%s> Tj ET\n", poukaz_cislo($kv), poukaz_cislo($kx - poukaz_sirka($text, $kv)),
+        $tw = poukaz_sirka($text, $kv);
+        $padx = 5.0; $padT = 3.0; $padB = 2.6;
+        // tmavá podložka pod kódem, aby byl vždy čitelný (bílý text na tmavém podkladu)
+        $s .= sprintf("0.17 0.09 0.04 rg %s %s %s %s re f\n",
+            poukaz_cislo($kx), poukaz_cislo($h - $ky - $padB), poukaz_cislo($tw + 2 * $padx), poukaz_cislo($kv + $padT + $padB));
+        $s .= sprintf("BT /FT0 %s Tf 1 1 1 rg 1 0 0 1 %s %s Tm <%s> Tj ET\n", poukaz_cislo($kv), poukaz_cislo($kx + $padx),
             poukaz_cislo($h - $ky), poukaz_hex($text));
         // QR: bílá podložka s tichou zónou + tmavé moduly (vodorovné pásy jedním obdélníkem, ať mezi nimi nejsou škvíry)
         [$qx, $qy, $qs] = POUKAZ_QR;

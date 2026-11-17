@@ -263,7 +263,7 @@ details.rozbal>summary h3{display:inline;margin:0}.posta-ucet details.rozbal{mar
 .motiv img{width:100%;aspect-ratio:2.1;object-fit:cover;border-radius:6px;border:1px solid #eadfcf}
 .motiv-prazdny{aspect-ratio:2.1;display:grid;place-items:center;border:1.5px dashed #d8c7ad;border-radius:6px;color:#9a8670;font-size:.85rem;text-align:center;padding:8px}
 .pk-motiv{margin-bottom:12px}
-@media print{body.tisk-seznam header.top,body.tisk-seznam .subnav,body.tisk-seznam .cal-nav form,body.tisk-seznam .cal-nav .btn,body.tisk-seznam .flash,body.tisk-seznam p.muted.small,body.tisk-seznam .aipom-btn,body.tisk-seznam .aipom-okno{display:none!important}body.tisk-seznam .tbl{font-size:10pt}body.tisk-seznam .tbl tr{break-inside:avoid}}
+@media print{body.tisk-seznam header.top,body.tisk-seznam .subnav,body.tisk-seznam .cal-nav form,body.tisk-seznam .cal-nav .btn,body.tisk-seznam .flash,body.tisk-seznam p.muted.small,body.tisk-seznam .aipom-btn,body.tisk-seznam .aipom-okno{display:none!important}body.tisk-seznam .tbl{font-size:10pt}body.tisk-seznam .tbl tr{break-inside:avoid}body.tisk-seznam .tbl a{color:#000!important;text-decoration:none}body.tisk-seznam .tbl th,body.tisk-seznam .tbl td{-webkit-print-color-adjust:exact;print-color-adjust:exact}}
 
 /* papírová věrnostní kartička */
 .pap-box{margin:10px 0;padding:9px 11px;border:1px solid #e3d6c4;border-radius:10px;background:#fbf7f1;font-size:.92rem}

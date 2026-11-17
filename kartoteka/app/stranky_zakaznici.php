@@ -23,6 +23,8 @@ function stranka_zakaznici(array $u): void
       <a class="btn" href="/?r=rez_nova">+ Rezervace</a>
       <a class="btn" href="/?r=import">⬆ Import z Google kontaktů</a>
     </div>
+    <p class="muted small">Filtr: <?php foreach (['' => 'vše', 'staly' => '⭐ stálí', 'spici' => '💤 spící', 'nesp' => '⚠️ nespolehliví', 'volny' => '⏱ vezmou volný termín', 'nove' => '🆕 noví', 'pap' => '📇 papírová kartička'] as $k => $t): ?>
+      <a href="/?r=zakaznici&f=<?= $k ?>&q=<?= urlencode($hl) ?>"<?= $filtr === $k ? ' class="on"' : '' ?>><?= $t ?></a> · <?php endforeach ?></p>
     <table class="tbl">
       <tr><th>Jméno</th><th>Telefon</th><th>Štítky</th><th>Návštěv</th><th>Naposledy</th><th>Bonus</th></tr>
       <?php foreach ($rows as $z):
@@ -38,8 +40,6 @@ function stranka_zakaznici(array $u): void
         </tr>
       <?php endforeach ?>
     </table>
-    <p class="muted small">Filtr: <?php foreach (['' => 'vše', 'staly' => '⭐ stálí', 'spici' => '💤 spící', 'nesp' => '⚠️ nespolehliví', 'volny' => '⏱ vezmou volný termín', 'nove' => '🆕 noví', 'pap' => '📇 papírová kartička'] as $k => $t): ?>
-      <a href="/?r=zakaznici&f=<?= $k ?>&q=<?= urlencode($hl) ?>"<?= $filtr === $k ? ' class="on"' : '' ?>><?= $t ?></a> · <?php endforeach ?></p>
     <?php paticka();
 }
 
