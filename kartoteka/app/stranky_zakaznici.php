@@ -22,6 +22,7 @@ function stranka_zakaznici(array $u): void
       <a class="btn primary" href="/?r=zakaznik&novy=1">+ Nový zákazník</a>
       <a class="btn" href="/?r=rez_nova">+ Rezervace</a>
       <a class="btn" href="/?r=import">⬆ Import z Google kontaktů</a>
+      <?php if (smi_upravit_tym($u)): ?><a class="btn" href="/?r=uklid_zakaznici">🧹 Úklid – bez masáží</a><?php endif ?>
     </div>
     <p class="muted small">Filtr: <?php foreach (['' => 'vše', 'staly' => '⭐ stálí', 'spici' => '💤 spící', 'nesp' => '⚠️ nespolehliví', 'volny' => '⏱ vezmou volný termín', 'nove' => '🆕 noví', 'pap' => '📇 papírová kartička'] as $k => $t): ?>
       <a href="/?r=zakaznici&f=<?= $k ?>&q=<?= urlencode($hl) ?>"<?= $filtr === $k ? ' class="on"' : '' ?>><?= $t ?></a> · <?php endforeach ?></p>
@@ -40,6 +41,67 @@ function stranka_zakaznici(array $u): void
         </tr>
       <?php endforeach ?>
     </table>
+    <?php paticka();
+}
+
+/** Úklid: hromadné mazání zákazníků, kteří nikdy nebyli na masáži a jsou v kartotéce déle než X měsíců. Jen admin / hlavní pracovník. */
+function stranka_uklid_zakaznici(array $u): void
+{
+    vyzaduj_tym();
+    $mes = max(0, (int)($_GET['mes'] ?? $_POST['mes'] ?? 12));
+    $kandidati = fn() => q("SELECT z.*,
+            (SELECT COUNT(*) FROM rezervace r WHERE r.zakaznik_id=z.id) AS rez_vse
+        FROM zakaznici z
+        WHERE z.zdroj<>'vzor'
+          AND NOT EXISTS (SELECT 1 FROM rezervace r WHERE r.zakaznik_id=z.id AND r.stav='probehlo')
+          AND NOT EXISTS (SELECT 1 FROM rezervace r WHERE r.zakaznik_id=z.id AND r.zacatek IS NOT NULL AND r.zacatek >= datetime('now','localtime'))
+          AND NOT EXISTS (SELECT 1 FROM poukazy p WHERE (p.zakaznik_id=z.id OR p.razitko_zak_id=z.id) AND p.stav IN ('objednano','zaplaceno','vydano'))
+          AND z.vytvoreno <= datetime('now','localtime','-' || ? || ' months')
+        ORDER BY z.vytvoreno", [$mes])->fetchAll();
+
+    if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['akce'] ?? '') === 'smaz') {
+        if (($_POST['potvrzeni'] ?? '') !== 'SMAZAT') { flash('Pro smazání napište SMAZAT.', 'err'); presmeruj("/?r=uklid_zakaznici&mes=$mes"); }
+        $vyber = array_map('intval', (array)($_POST['z'] ?? []));
+        $moznosti = array_map(fn($r) => (int)$r['id'], $kandidati());   // smazat jde jen to, co je teď mezi kandidáty
+        $smazat = array_values(array_intersect($vyber, $moznosti));
+        if (!$smazat) { flash('Nikdo nebyl vybrán.', 'err'); presmeruj("/?r=uklid_zakaznici&mes=$mes"); }
+        try { $n = zakaznici_smaz($smazat); flash("Smazáno $n zákazníků bez masáží."); }
+        catch (Throwable $e) { flash('Smazání selhalo: ' . $e->getMessage(), 'err'); }
+        presmeruj("/?r=uklid_zakaznici&mes=$mes");
+    }
+
+    $rows = $kandidati();
+    hlavicka('Úklid zákazníků', 'zakaznici'); ?>
+    <div class="cal-nav"><h1>🧹 Zákazníci bez masáží</h1><a class="btn" href="/?r=zakaznici">‹ Zpět na zákazníky</a></div>
+    <p class="muted small">Zákazníci, kteří u vás nikdy nebyli na masáži, nemají objednanou budoucí rezervaci ani aktivní poukaz a jsou v kartotéce déle než zvolenou dobu (typicky importované kontakty, které se nikdy neobjednaly). Vzoroví zákazníci se sem nepočítají.</p>
+    <p class="muted small">V kartotéce déle než:
+      <?php foreach ([6 => '6 měsíců', 12 => '1 rok', 24 => '2 roky', 0 => 'bez omezení'] as $k => $t): ?>
+        <a href="/?r=uklid_zakaznici&mes=<?= $k ?>"<?= $mes === $k ? ' class="on"' : '' ?>><?= $t ?></a> · <?php endforeach ?></p>
+
+    <?php if (!$rows): ?>
+      <p class="flash ok">Nikdo takový tu není. ✓</p>
+    <?php else: ?>
+      <form method="post" action="/?r=uklid_zakaznici&mes=<?= $mes ?>"><?= csrf_pole() ?><input type="hidden" name="akce" value="smaz"><input type="hidden" name="mes" value="<?= $mes ?>">
+      <p><label><input type="checkbox" onclick="document.querySelectorAll('.uz').forEach(c=>c.checked=this.checked)"> <b>Vybrat všechny (<?= count($rows) ?>)</b></label></p>
+      <table class="tbl">
+        <tr><th></th><th>Jméno</th><th>Telefon</th><th>E-mail</th><th>Zdroj</th><th>V kartotéce od</th><th>Žádostí</th></tr>
+        <?php foreach ($rows as $z): ?>
+          <tr>
+            <td><input type="checkbox" class="uz" name="z[]" value="<?= (int)$z['id'] ?>"></td>
+            <td><a href="/?r=zakaznik&id=<?= (int)$z['id'] ?>" target="_blank"><?= h(jmeno_z($z)) ?></a></td>
+            <td><?= h(telefon_cz($z['telefon'])) ?></td>
+            <td class="small"><?= h($z['email']) ?></td>
+            <td class="small"><?= h($z['zdroj']) ?></td>
+            <td><?= h(datum_cz($z['vytvoreno'], false)) ?></td>
+            <td><?= (int)$z['rez_vse'] ?></td>
+          </tr>
+        <?php endforeach ?>
+      </table>
+      <p class="muted small" style="margin-top:12px">Smazání je natrvalo a nelze ho vrátit. Poukazy (pokud nějaké byly) zůstanou, jen se u nich odpojí kupující.</p>
+      <label class="small">Pro potvrzení napište <b>SMAZAT</b> <input name="potvrzeni" autocomplete="off" required pattern="SMAZAT" style="max-width:140px"></label>
+      <button class="btn danger">Smazat vybrané</button>
+      </form>
+    <?php endif ?>
     <?php paticka();
 }
 
@@ -76,6 +138,12 @@ function stranka_zakaznik(array $u): void
     }
     if (!$z) { flash('Zákazník nenalezen.', 'err'); presmeruj('/?r=zakaznici'); }
 
+    if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['akce'] ?? '') === 'smaz_zakaznika' && !$novy) {
+        vyzaduj_tym();   // smí jen admin nebo hlavní pracovník
+        $jm = jmeno_z($z);
+        try { zakaznici_smaz([$id]); flash("Zákazník $jm byl smazán."); presmeruj('/?r=zakaznici'); }
+        catch (Throwable $e) { flash('Smazání selhalo: ' . $e->getMessage(), 'err'); presmeruj("/?r=zakaznik&id=$id"); }
+    }
     if ($_SERVER['REQUEST_METHOD'] === 'POST' && !$novy) pap_post("/?r=zakaznik&id=$id");   // papírová kartička (akce pap_*)
     if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $p = $_POST;
@@ -156,6 +224,17 @@ function stranka_zakaznik(array $u): void
             <dt>Souhlas GDPR</dt><dd><?= $z['gdpr_souhlas'] ? h(datum_cz($z['gdpr_souhlas'])) : 'není zaznamenán' ?></dd>
           </dl>
         </section>
+        <?php if (smi_upravit_tym($u)): $pocetPoukazu = count($poukazy);
+            $co = []; if ($vse) $co[] = count($vse) . ' rezervací/žádostí'; if ($pocetPoukazu) $co[] = $pocetPoukazu . ' poukaz' . ($pocetPoukazu === 1 ? '' : ($pocetPoukazu < 5 ? 'y' : 'ů'));
+            $potvrd = 'Opravdu natrvalo smazat zákazníka ' . jmeno_z($z) . '?' . ($vse ? ' Smaže se i jeho historie (' . count($vse) . ' rezervací/žádostí).' : '') . ($pocetPoukazu ? ' Poukazy zůstanou, jen se u nich odpojí kupující.' : '') . ' Nelze vrátit zpět.'; ?>
+        <section class="card side">
+          <h3>🗑 Smazat zákazníka</h3>
+          <p class="muted small">Natrvalo odebere zákazníka z kartotéky<?= $vse ? ' i s jeho historií (' . count($vse) . ' rezervací/žádostí)' : '' ?>. Poukazy zůstanou. Nelze vrátit zpět.</p>
+          <form method="post" action="/?r=zakaznik&id=<?= (int)$z['id'] ?>"><?= csrf_pole() ?><input type="hidden" name="akce" value="smaz_zakaznika">
+            <button class="btn danger" data-confirm="<?= h($potvrd) ?>">Smazat zákazníka</button>
+          </form>
+        </section>
+        <?php endif ?>
         <?php $hod = function_exists('hodnoceni_zakaznika') ? hodnoceni_zakaznika($id) : []; if ($hod): ?>
         <section class="card">
           <h3>Hodnocení zákazníka <span class="muted small">(zpětná vazba z e-mailu po masáži)</span></h3>

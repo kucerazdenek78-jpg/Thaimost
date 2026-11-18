@@ -312,6 +312,28 @@ function smaz_zaznamy(string $zak, string $rez, string $pou, string $kar): void
     q("DELETE FROM zakaznici WHERE id IN ($zak)");
 }
 
+/**
+ * Natrvalo smaže zadané zákazníky i s jejich rezervacemi, žádostmi, kartami a sezeními.
+ * Poukazy zůstanou (jen se u nich odpojí kupující) – patří někomu obdarovanému. Vrací počet smazaných.
+ * Oprávnění (admin / hlavní pracovník) si hlídá volající.
+ */
+function zakaznici_smaz(array $ids): int
+{
+    $ids = array_values(array_unique(array_filter(array_map('intval', $ids))));
+    if (!$ids) return 0;
+    $sez = implode(',', $ids);
+    db()->beginTransaction();
+    try {
+        smaz_zaznamy($sez, '0', '0', '0');
+        zapis_log('zakaznik_smazan', $sez);
+        db()->commit();
+    } catch (Throwable $e) {
+        if (db()->inTransaction()) db()->rollBack();
+        throw $e;
+    }
+    return count($ids);
+}
+
 /** Smaže všechna vzorová data – i to, co recepce během testování u vzorových zákazníků vytvořila. */
 function demo_smazat(): string
 {
