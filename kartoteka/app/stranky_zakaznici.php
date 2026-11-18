@@ -3,6 +3,7 @@
 
 function stranka_zakaznici(array $u): void
 {
+    if (!empty($_GET['uklid'])) { stranka_uklid_zakaznici($u); return; }   // hromadný úklid zákazníků bez masáží (admin/hlavní)
     $hl = trim($_GET['q'] ?? '');
     $filtr = $_GET['f'] ?? '';
     $sql = "SELECT z.*, (SELECT COUNT(*) FROM rezervace r WHERE r.zakaznik_id=z.id AND r.stav='probehlo') AS navstev,
@@ -22,7 +23,7 @@ function stranka_zakaznici(array $u): void
       <a class="btn primary" href="/?r=zakaznik&novy=1">+ Nový zákazník</a>
       <a class="btn" href="/?r=rez_nova">+ Rezervace</a>
       <a class="btn" href="/?r=import">⬆ Import z Google kontaktů</a>
-      <?php if (smi_upravit_tym($u)): ?><a class="btn" href="/?r=uklid_zakaznici">🧹 Úklid – bez masáží</a><?php endif ?>
+      <?php if (smi_upravit_tym($u)): ?><a class="btn" href="/?r=zakaznici&uklid=1">🧹 Úklid – bez masáží</a><?php endif ?>
     </div>
     <p class="muted small">Filtr: <?php foreach (['' => 'vše', 'staly' => '⭐ stálí', 'spici' => '💤 spící', 'nesp' => '⚠️ nespolehliví', 'volny' => '⏱ vezmou volný termín', 'nove' => '🆕 noví', 'pap' => '📇 papírová kartička'] as $k => $t): ?>
       <a href="/?r=zakaznici&f=<?= $k ?>&q=<?= urlencode($hl) ?>"<?= $filtr === $k ? ' class="on"' : '' ?>><?= $t ?></a> · <?php endforeach ?></p>
@@ -60,14 +61,14 @@ function stranka_uklid_zakaznici(array $u): void
         ORDER BY z.vytvoreno", [$mes])->fetchAll();
 
     if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['akce'] ?? '') === 'smaz') {
-        if (($_POST['potvrzeni'] ?? '') !== 'SMAZAT') { flash('Pro smazání napište SMAZAT.', 'err'); presmeruj("/?r=uklid_zakaznici&mes=$mes"); }
+        if (($_POST['potvrzeni'] ?? '') !== 'SMAZAT') { flash('Pro smazání napište SMAZAT.', 'err'); presmeruj("/?r=zakaznici&uklid=1&mes=$mes"); }
         $vyber = array_map('intval', (array)($_POST['z'] ?? []));
         $moznosti = array_map(fn($r) => (int)$r['id'], $kandidati());   // smazat jde jen to, co je teď mezi kandidáty
         $smazat = array_values(array_intersect($vyber, $moznosti));
-        if (!$smazat) { flash('Nikdo nebyl vybrán.', 'err'); presmeruj("/?r=uklid_zakaznici&mes=$mes"); }
+        if (!$smazat) { flash('Nikdo nebyl vybrán.', 'err'); presmeruj("/?r=zakaznici&uklid=1&mes=$mes"); }
         try { $n = zakaznici_smaz($smazat); flash("Smazáno $n zákazníků bez masáží."); }
         catch (Throwable $e) { flash('Smazání selhalo: ' . $e->getMessage(), 'err'); }
-        presmeruj("/?r=uklid_zakaznici&mes=$mes");
+        presmeruj("/?r=zakaznici&uklid=1&mes=$mes");
     }
 
     $rows = $kandidati();
@@ -76,12 +77,12 @@ function stranka_uklid_zakaznici(array $u): void
     <p class="muted small">Zákazníci, kteří u vás nikdy nebyli na masáži, nemají objednanou budoucí rezervaci ani aktivní poukaz a jsou v kartotéce déle než zvolenou dobu (typicky importované kontakty, které se nikdy neobjednaly). Vzoroví zákazníci se sem nepočítají.</p>
     <p class="muted small">V kartotéce déle než:
       <?php foreach ([6 => '6 měsíců', 12 => '1 rok', 24 => '2 roky', 0 => 'bez omezení'] as $k => $t): ?>
-        <a href="/?r=uklid_zakaznici&mes=<?= $k ?>"<?= $mes === $k ? ' class="on"' : '' ?>><?= $t ?></a> · <?php endforeach ?></p>
+        <a href="/?r=zakaznici&uklid=1&mes=<?= $k ?>"<?= $mes === $k ? ' class="on"' : '' ?>><?= $t ?></a> · <?php endforeach ?></p>
 
     <?php if (!$rows): ?>
       <p class="flash ok">Nikdo takový tu není. ✓</p>
     <?php else: ?>
-      <form method="post" action="/?r=uklid_zakaznici&mes=<?= $mes ?>"><?= csrf_pole() ?><input type="hidden" name="akce" value="smaz"><input type="hidden" name="mes" value="<?= $mes ?>">
+      <form method="post" action="/?r=zakaznici&uklid=1&mes=<?= $mes ?>"><?= csrf_pole() ?><input type="hidden" name="akce" value="smaz"><input type="hidden" name="mes" value="<?= $mes ?>">
       <p><label><input type="checkbox" onclick="document.querySelectorAll('.uz').forEach(c=>c.checked=this.checked)"> <b>Vybrat všechny (<?= count($rows) ?>)</b></label></p>
       <table class="tbl">
         <tr><th></th><th>Jméno</th><th>Telefon</th><th>E-mail</th><th>Zdroj</th><th>V kartotéce od</th><th>Žádostí</th></tr>

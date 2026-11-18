@@ -91,7 +91,7 @@ uzavri_probehle();
 $stranky = [
     'dnes' => 'stranka_prehled', 'dnes_stary' => 'stranka_dnes', 'kalendar' => 'stranka_kalendar',
     'rez_nova' => 'stranka_rez_nova', 'rezervace' => 'stranka_rezervace',
-    'zakaznici' => 'stranka_zakaznici', 'zakaznik' => 'stranka_zakaznik', 'hledat' => 'stranka_hledat', 'uklid_zakaznici' => 'stranka_uklid_zakaznici',
+    'zakaznici' => 'stranka_zakaznici', 'zakaznik' => 'stranka_zakaznik', 'hledat' => 'stranka_hledat',
     'poukazy' => 'stranka_poukazy', 'poukaz' => 'stranka_poukaz', 'poukaz_novy' => 'stranka_poukaz_novy',
     'nastaveni' => 'stranka_nastaveni', 'emaily' => 'stranka_emaily',
     'masterny' => 'stranka_masterny', 'odmena' => 'stranka_odmena',
