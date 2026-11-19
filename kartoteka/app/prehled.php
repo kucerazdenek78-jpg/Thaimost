@@ -4,6 +4,7 @@
 // Bloky masáží se dají přetahovat mezi masérnami (když tam ve stejný čas někdo je, prohodí se), dvojklikem se mění masérka
 // (plan.php). Na tablety se rezervace posílají samy (tablet_auto). Čára „teď“ ukazuje aktuální čas v každém sloupci.
 // Ostatní POST akce (ukončení masáže, hromadné stavy) obsluhuje dál stranka_dnes(); starý podrobný přehled je na /?r=dnes_stary.
+require_once __DIR__ . '/push.php';   // Web Push: zapnutí upozornění na poptávky (VAPID klíč)
 
 /**
  * Volná okna jedné masérny. $bloky = [[od, do], …] v minutách od půlnoci.
@@ -183,6 +184,41 @@ function stranka_prehled(array $u): void
       <div class="flash warn">⚠ <b><?= count($nevesel) ?> dnešní rezervace se nevejde do žádné masérny</b> (např. <?= h(date('H:i', strtotime($nevesel[0]['zacatek']))) ?> <?= h(jmeno_z($nevesel[0])) ?>). <a class="btn small" href="/?r=kalendar&pohled=masterny">Otevřít kalendář masérn</a></div>
     <?php endif ?>
     <?php ukoncene_dnes_banner(); pap_dnes_banner(); ?>
+
+    <div id="push-ovladani" class="push-ovladani" hidden></div>
+    <script>
+    (function () {
+      if (!('serviceWorker' in navigator) || !('PushManager' in window) || !('Notification' in window)) return;
+      var VAPID = <?= json_encode(vapid_klice()['pub']) ?>;
+      var box = document.getElementById('push-ovladani'); if (!box) return;
+      function u8(s) { var p = '='.repeat((4 - s.length % 4) % 4), b = (s + p).replace(/-/g, '+').replace(/_/g, '/'), r = atob(b), a = new Uint8Array(r.length); for (var i = 0; i < r.length; i++) a[i] = r.charCodeAt(i); return a; }
+      function post(url, data) { return fetch(url, { method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: data ? JSON.stringify(data) : '' }); }
+      function show(html) { box.innerHTML = html; box.hidden = false; }
+      function zapnuto() { show('🔔 Upozornění na nové poptávky jsou <b>zapnutá</b> na tomto zařízení. <button class="btn small" id="p-test">Poslat test</button> <button class="btn small" id="p-off">Vypnout</button>'); }
+      function vypnuto() { show('🔔 Chcete upozornění na nové poptávky i do zavřené aplikace? <button class="btn small primary" id="p-on">Zapnout upozornění</button>'); }
+      navigator.serviceWorker.ready.then(function (reg) {
+        reg.pushManager.getSubscription().then(function (sub) {
+          (sub && Notification.permission === 'granted') ? zapnuto() : vypnuto();
+        });
+        box.addEventListener('click', function (e) {
+          var id = e.target.id;
+          if (id === 'p-on') {
+            Notification.requestPermission().then(function (perm) {
+              if (perm !== 'granted') { show('🔔 Upozornění nejsou povolená v nastavení prohlížeče/aplikace.'); return; }
+              reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: u8(VAPID) }).then(function (s) {
+                post('/api/push_subscribe', s).then(function (r) { return r.json(); }).then(function (o) { o && o.ok ? zapnuto() : show('🔔 Uložení se nepovedlo, zkuste to prosím znovu.'); })
+                  .catch(function () { show('🔔 Uložení se nepovedlo, zkuste to prosím znovu.'); });
+              }).catch(function () { show('🔔 Přihlášení k odběru se nepovedlo (zkuste aplikaci nainstalovat na plochu).'); });
+            });
+          } else if (id === 'p-test') {
+            post('/api/push_test').then(function (r) { return r.json(); }).then(function (o) { if (!o || !o.poslano) show('🔔 Test odeslán. Pokud nic nepřišlo, zkontrolujte povolení notifikací. <button class="btn small" id="p-off">Vypnout</button>'); });
+          } else if (id === 'p-off') {
+            reg.pushManager.getSubscription().then(function (s) { if (s) { var ep = s.endpoint; s.unsubscribe(); post('/api/push_unsubscribe', { endpoint: ep }); } vypnuto(); });
+          }
+        });
+      });
+    })();
+    </script>
 
     <?php if ($zadosti): ?>
     <section class="card" id="zadosti">

@@ -1,6 +1,7 @@
 <?php
 require_once __DIR__ . '/poukaz_pdf.php';
 require_once __DIR__ . '/sluzby_web.php';   // texty a ceny služeb pro web   // motivy poukazu (dárkový / vánoční)
+require_once __DIR__ . '/push.php';         // Web Push notifikace do nainstalované aplikace Asistent
 // Veřejné API pro web (GitHub Pages). Jen to, co web potřebuje – nic z kartotéky nevrací.
 
 function api_odpoved(array $data, int $kod = 200): void
@@ -65,6 +66,13 @@ function api_route(string $cesta): void
     if ($cesta === '/api/poukaz' && $m === 'POST') api_poukaz();
     if ($cesta === '/api/moje' && $m === 'POST') api_moje();
 
+    // Push notifikace do nainstalované aplikace (same-origin, pro přihlášené pracovníky)
+    if ($cesta === '/api/push_klic' && $m === 'GET') api_odpoved(['ok' => true, 'klic' => vapid_klice()['pub']]);
+    if ($cesta === '/api/push_subscribe' && $m === 'POST') api_push_subscribe();
+    if ($cesta === '/api/push_unsubscribe' && $m === 'POST') api_push_unsubscribe();
+    if ($cesta === '/api/push_info' && $m === 'GET') api_push_info();
+    if ($cesta === '/api/push_test' && $m === 'POST') api_push_test();
+
     api_odpoved(['ok' => false, 'chyba' => 'Neznámá akce.'], 404);
 }
 
@@ -110,7 +118,69 @@ function api_zajem(): void
         . "Termín je potvrzený až ve chvíli, kdy se vám ozveme. Na recepci vám zavoláme nebo napíšeme co nejdřív.\n\n"
         . "Thajské masáže Most\n+420 778 429 329 · salon@thaimost.cz\nwww.thaimost.cz\n");
 
+    try { push_vsem(); } catch (Throwable $e) { /* push nikdy neshodí odpověď webu */ }
     api_odpoved(['ok' => true]);
+}
+
+/** Posílá push jen na same-origin požadavky (ochrana proti CSRF). */
+function push_stejny_origin(): bool
+{
+    $o = $_SERVER['HTTP_ORIGIN'] ?? '';
+    if ($o === '') return true;   // same-origin POST nemusí Origin posílat
+    return parse_url($o, PHP_URL_HOST) === parse_url(rtrim(cfg()['url'], '/'), PHP_URL_HOST);
+}
+
+/** Přihlášení zařízení pracovníka k push notifikacím. */
+function api_push_subscribe(): void
+{
+    if (!push_stejny_origin()) api_odpoved(['ok' => false], 403);
+    $u = uzivatel();
+    if (!$u) api_odpoved(['ok' => false, 'chyba' => 'Nepřihlášeno'], 401);
+    $sub = api_vstup();
+    $endpoint = (string)($sub['endpoint'] ?? '');
+    $keys = is_array($sub['keys'] ?? null) ? $sub['keys'] : [];
+    if (!preg_match('~^https://~', $endpoint)) api_odpoved(['ok' => false, 'chyba' => 'Neplatný endpoint'], 422);
+    q("INSERT INTO push_odbery(uzivatel_id,endpoint,p256dh,auth,zarizeni) VALUES(?,?,?,?,?)
+       ON CONFLICT(endpoint) DO UPDATE SET uzivatel_id=excluded.uzivatel_id, p256dh=excluded.p256dh, auth=excluded.auth, zarizeni=excluded.zarizeni, posledni_chyba=''",
+        [$u['id'], $endpoint, (string)($keys['p256dh'] ?? ''), (string)($keys['auth'] ?? ''), mb_substr((string)($_SERVER['HTTP_USER_AGENT'] ?? ''), 0, 200)]);
+    api_odpoved(['ok' => true]);
+}
+
+/** Odhlášení zařízení (po vypnutí v aplikaci nebo expiraci). */
+function api_push_unsubscribe(): void
+{
+    if (!push_stejny_origin()) api_odpoved(['ok' => false], 403);
+    $endpoint = (string)(api_vstup()['endpoint'] ?? '');
+    if ($endpoint !== '') q('DELETE FROM push_odbery WHERE endpoint=?', [$endpoint]);
+    api_odpoved(['ok' => true]);
+}
+
+/** Obsah notifikace – service worker si ho vyzvedne při příchodu push (contentless). */
+function api_push_info(): void
+{
+    $u = uzivatel();
+    $vychozi = ['ok' => true, 'title' => 'Thai Most', 'body' => 'Nová poptávka – otevřete kartotéku', 'url' => '/?r=dnes', 'tag' => 'tm-poptavka'];
+    if (!$u) api_odpoved($vychozi);
+    $n = (int)qv("SELECT COUNT(*) FROM rezervace WHERE stav='zadost' AND zdroj='web'");
+    if ($n <= 0) api_odpoved(['ok' => true, 'title' => 'Thai Most', 'body' => 'Otevřete kartotéku', 'url' => '/?r=dnes', 'tag' => 'tm-poptavka']);
+    $p = q1("SELECT z.jmeno, z.prijmeni, s.nazev FROM rezervace r JOIN zakaznici z ON z.id=r.zakaznik_id
+             LEFT JOIN varianty v ON v.id=r.varianta_id LEFT JOIN sluzby s ON s.id=v.sluzba_id
+             WHERE r.stav='zadost' AND r.zdroj='web' ORDER BY r.id DESC LIMIT 1");
+    $body = $n === 1
+        ? trim(($p['jmeno'] ?? '') . ' ' . ($p['prijmeni'] ?? '')) . (($p['nazev'] ?? '') !== '' ? ' – ' . $p['nazev'] : '')
+        : "$n nových poptávek z webu čeká";
+    api_odpoved(['ok' => true, 'title' => 'Nová poptávka z webu', 'body' => $body ?: 'Otevřete kartotéku', 'url' => '/?r=dnes', 'tag' => 'tm-poptavka']);
+}
+
+/** Zkušební notifikace na zařízení přihlášeného pracovníka. */
+function api_push_test(): void
+{
+    if (!push_stejny_origin()) api_odpoved(['ok' => false], 403);
+    $u = uzivatel();
+    if (!$u) api_odpoved(['ok' => false], 401);
+    $n = 0;
+    foreach (q('SELECT * FROM push_odbery WHERE uzivatel_id=?', [$u['id']])->fetchAll() as $s) { try { if (push_posli($s) < 300) $n++; } catch (Throwable $e) {} }
+    api_odpoved(['ok' => true, 'poslano' => $n]);
 }
 
 /** Objednávka dárkového poukazu z webu. */
