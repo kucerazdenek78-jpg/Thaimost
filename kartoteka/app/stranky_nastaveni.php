@@ -398,6 +398,7 @@ function stranka_emaily(array $u): void
 /** Sekce „Aplikace Asistent“: instalace do telefonu (Android/Chrome), QR kód pro otevření v telefonu. */
 function aplikace_karta(): void
 {
+    require_once __DIR__ . '/push.php';   // Web Push: zapnutí upozornění na poptávky (VAPID klíč)
     $url = rtrim(cfg()['url'] ?? '', '/') . '/?r=ai&app=1'; ?>
     <section class="card aplikace">
       <h2>📲 Aplikace Asistent do telefonu</h2>
@@ -408,6 +409,7 @@ function aplikace_karta(): void
           <p><button type="button" class="btn primary" id="appInstal" hidden>⬇ Nainstalovat aplikaci</button>
              <span id="appHotovo" class="tag zdarma" hidden>✅ Aplikace je nainstalovaná</span>
              <a class="btn" href="/?r=ai&amp;app=1">Otevřít aplikaci</a></p>
+          <div id="push-ovladani" class="push-ovladani" hidden style="margin:10px 0;padding:10px 12px;background:#f3ede4;border-radius:10px"></div>
           <ol class="small" id="appNavod">
             <li>V telefonu s Androidem otevřete v <b>Chromu</b> odkaz níže (nebo naskenujte QR kód fotoaparátem).</li>
             <li>Přihlaste se a zaškrtněte <b>Zůstat přihlášen</b>.</li>
@@ -429,6 +431,39 @@ function aplikace_karta(): void
       window.addEventListener('beforeinstallprompt',function(x){x.preventDefault();ev=x;b.hidden=false});
       window.addEventListener('appinstalled',function(){b.hidden=true;ok.hidden=false});
       b.addEventListener('click',function(){if(!ev)return;ev.prompt();ev.userChoice.then(function(){ev=null;b.hidden=true})});
+    })();
+    </script>
+    <script>
+    (function () {
+      if (!('serviceWorker' in navigator) || !('PushManager' in window) || !('Notification' in window)) return;
+      var VAPID = <?= json_encode(vapid_klice()['pub']) ?>;
+      var box = document.getElementById('push-ovladani'); if (!box) return;
+      function u8(s) { var p = '='.repeat((4 - s.length % 4) % 4), b = (s + p).replace(/-/g, '+').replace(/_/g, '/'), r = atob(b), a = new Uint8Array(r.length); for (var i = 0; i < r.length; i++) a[i] = r.charCodeAt(i); return a; }
+      function post(url, data) { return fetch(url, { method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: data ? JSON.stringify(data) : '' }); }
+      function show(html) { box.innerHTML = html; box.hidden = false; }
+      function zapnuto() { show('🔔 Upozornění na nové poptávky jsou <b>zapnutá</b> na tomto zařízení. <button type="button" class="btn small" id="p-test">Poslat test</button> <button type="button" class="btn small" id="p-off">Vypnout</button>'); }
+      function vypnuto() { show('🔔 <b>Upozornění na nové poptávky</b> – ať vám přistane notifikace do telefonu i do zavřené aplikace. <button type="button" class="btn small primary" id="p-on">Zapnout upozornění</button>'); }
+      navigator.serviceWorker.ready.then(function (reg) {
+        reg.pushManager.getSubscription().then(function (sub) {
+          (sub && Notification.permission === 'granted') ? zapnuto() : vypnuto();
+        });
+        box.addEventListener('click', function (e) {
+          var id = e.target.id;
+          if (id === 'p-on') {
+            Notification.requestPermission().then(function (perm) {
+              if (perm !== 'granted') { show('🔔 Upozornění nejsou povolená v nastavení prohlížeče/aplikace.'); return; }
+              reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: u8(VAPID) }).then(function (s) {
+                post('/api/push_subscribe', s).then(function (r) { return r.json(); }).then(function (o) { o && o.ok ? zapnuto() : show('🔔 Uložení se nepovedlo, zkuste to prosím znovu.'); })
+                  .catch(function () { show('🔔 Uložení se nepovedlo, zkuste to prosím znovu.'); });
+              }).catch(function () { show('🔔 Přihlášení k odběru se nepovedlo (nejlépe funguje v aplikaci nainstalované na ploše).'); });
+            });
+          } else if (id === 'p-test') {
+            post('/api/push_test').then(function (r) { return r.json(); }).then(function (o) { if (!o || !o.poslano) show('🔔 Test odeslán. Pokud nic nepřišlo, zkontrolujte povolení notifikací u aplikace. <button type="button" class="btn small" id="p-off">Vypnout</button>'); });
+          } else if (id === 'p-off') {
+            reg.pushManager.getSubscription().then(function (s) { if (s) { var ep = s.endpoint; s.unsubscribe(); post('/api/push_unsubscribe', { endpoint: ep }); } vypnuto(); });
+          }
+        });
+      });
     })();
     </script>
 <?php
