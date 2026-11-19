@@ -48,8 +48,15 @@ function stranka_nastaveni(array $u): void
                 q('INSERT INTO maserky(jmeno,poradi) VALUES(?, (SELECT COALESCE(MAX(poradi),0)+1 FROM maserky))', [trim($_POST['nova_maserka'])]);
             flash('Masérky uloženy.');
         } elseif ($akce === 'cenik') {
+            // smazání položek ceníku (jen admin / hlavní pracovník) – zpracovat dřív než update
+            $smazane = [];
+            if (smi_upravit_tym($u)) foreach (array_keys($_POST['smazat_v'] ?? []) as $id) {
+                $r = varianta_smaz((int)$id);
+                if ($r['stav'] !== 'nic') { $smazane[(int)$id] = true; flash($r['zprava'], $r['stav'] === 'skryto' ? 'err' : ''); }
+            }
             // varianty: název varianty, minuty, cena, masérky…
             foreach ($_POST['v'] ?? [] as $id => $v) {
+                if (isset($smazane[(int)$id])) continue;   // smazané/skryté neupravovat
                 $pop = trim((string)($v['popis'] ?? ''));
                 q('UPDATE varianty SET cena=?, minuty=?, aktivni=?, maserky=?, maserky_min=?, wellness_mistnost=?' . ($pop !== '' ? ', popis=?' : '') . ' WHERE id=?',
                     array_merge([(int)$v['cena'], ($v['minuty'] ?? '') !== '' ? (int)$v['minuty'] : null, !empty($v['aktivni']) ? 1 : 0,
@@ -254,7 +261,7 @@ function stranka_nastaveni(array $u): void
                 </div>
               </div>
               <table class="tbl plain cs-var">
-                <tr><th>Položka ceníku</th><th>Minut</th><th>Kč</th><th title="Kolik masérek služba potřebuje">Masérek</th><th title="Jak dlouho od začátku jsou masérky potřeba – prázdné = celou dobu">Masérky min</th><th title="Zabírá celou dvoulůžkovou / wellness masérnu">Celá wellness</th><th>Aktivní</th></tr>
+                <tr><th>Položka ceníku</th><th>Minut</th><th>Kč</th><th title="Kolik masérek služba potřebuje">Masérek</th><th title="Jak dlouho od začátku jsou masérky potřeba – prázdné = celou dobu">Masérky min</th><th title="Zabírá celou dvoulůžkovou / wellness masérnu">Celá wellness</th><th>Aktivní</th><?php if (smi_upravit_tym($u)): ?><th title="Zaškrtněte a uložte ceník – položku smaže (použitou v rezervacích jen skryje)">Smazat</th><?php endif ?></tr>
                 <?php foreach ($varC[$sid] ?? [] as $c): ?>
                   <tr><td><input name="v[<?= $c['id'] ?>][popis]" value="<?= h($c['popis']) ?>" maxlength="120" style="min-width:9em"></td>
                       <td><input type="number" name="v[<?= $c['id'] ?>][minuty]" value="<?= h($c['minuty'] ?? '') ?>" style="width:4.5em"></td>
@@ -262,11 +269,12 @@ function stranka_nastaveni(array $u): void
                       <td><select name="v[<?= $c['id'] ?>][maserky]"><?= moznosti([0 => '0', 1 => '1', 2 => '2'], (int)$c['maserky']) ?></select></td>
                       <td><input type="number" name="v[<?= $c['id'] ?>][maserky_min]" value="<?= h($c['maserky_min'] ?? '') ?>" style="width:4.5em" placeholder="celou"></td>
                       <td><input type="checkbox" name="v[<?= $c['id'] ?>][wellness_mistnost]" value="1" <?= $c['wellness_mistnost'] ? 'checked' : '' ?>></td>
-                      <td><input type="checkbox" name="v[<?= $c['id'] ?>][aktivni]" value="1" <?= $c['aktivni'] ? 'checked' : '' ?>></td></tr>
+                      <td><input type="checkbox" name="v[<?= $c['id'] ?>][aktivni]" value="1" <?= $c['aktivni'] ? 'checked' : '' ?>></td><?php if (smi_upravit_tym($u)): ?>
+                      <td><input type="checkbox" class="cs-del" name="smazat_v[<?= $c['id'] ?>]" value="1" title="Smazat položku „<?= h($c['popis']) ?>“"></td><?php endif ?></tr>
                 <?php endforeach ?>
                 <tr class="cs-nova"><td><input name="nv[<?= $sid ?>][popis]" placeholder="+ nová položka, např. 90 min" maxlength="120" style="min-width:9em"></td>
                     <td><input type="number" name="nv[<?= $sid ?>][minuty]" placeholder="min" style="width:4.5em"></td>
-                    <td><input type="number" name="nv[<?= $sid ?>][cena]" placeholder="Kč" style="width:5.5em"></td><td colspan="4" class="muted small">vyplňte a uložte ceník</td></tr>
+                    <td><input type="number" name="nv[<?= $sid ?>][cena]" placeholder="Kč" style="width:5.5em"></td><td colspan="<?= smi_upravit_tym($u) ? 5 : 4 ?>" class="muted small">vyplňte a uložte ceník</td></tr>
               </table>
             </details>
           <?php endforeach ?>
@@ -316,6 +324,20 @@ function stranka_nastaveni(array $u): void
             img.src = url;
           });
         });
+        // mazání položek ceníku: zvýraznit řádek a při uložení se zeptat
+        (function () {
+          var form = document.getElementById('cenik'); if (!form) return;
+          form.querySelectorAll('.cs-del').forEach(function (ch) {
+            ch.addEventListener('change', function () {
+              var tr = ch.closest('tr'); if (tr) tr.style.opacity = ch.checked ? '.5' : '';
+            });
+          });
+          form.addEventListener('submit', function (e) {
+            var n = form.querySelectorAll('.cs-del:checked').length;
+            if (n && !confirm('Smazat ' + n + ' ' + (n === 1 ? 'položku' : (n < 5 ? 'položky' : 'položek'))
+                + ' ceníku? Položku použitou v rezervacích jen skryju (kvůli historii).')) e.preventDefault();
+          });
+        })();
         </script>
       </div>
       <div>

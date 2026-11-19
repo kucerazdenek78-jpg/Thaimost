@@ -52,6 +52,31 @@ function sluzba_pridej_variantu(int $sid, string $popis, $minuty, $cena): bool
     return true;
 }
 
+/**
+ * Smaže položku ceníku (variantu). Když je použitá u rezervací, nelze ji tvrdě smazat
+ * (rozbila by se historie a FK), proto ji jen zneaktivní (zmizí z webu i z nových objednávek).
+ * Vrací ['stav' => 'smazano'|'skryto'|'nic', 'zprava' => '…'].
+ */
+function varianta_smaz(int $id): array
+{
+    $v = q1('SELECT v.id, v.popis, s.nazev FROM varianty v JOIN sluzby s ON s.id=v.sluzba_id WHERE v.id=?', [$id]);
+    if (!$v) return ['stav' => 'nic', 'zprava' => ''];
+    $popis = trim($v['popis']) !== '' ? $v['popis'] : 'položka';
+    $kde = "„{$popis}“ u „{$v['nazev']}“";
+    $pouzito = (int)qv('SELECT COUNT(*) FROM rezervace WHERE varianta_id=?', [$id]);
+    if ($pouzito > 0) {
+        q('UPDATE varianty SET aktivni=0 WHERE id=?', [$id]);
+        zapis_log('varianta_skryta', "$id $popis (použito u $pouzito rezervací)");
+        return ['stav' => 'skryto', 'zprava' => "Položku $kde nelze smazat – je u $pouzito "
+            . ($pouzito === 1 ? 'rezervace' : ($pouzito < 5 ? 'rezervací' : 'rezervací'))
+            . ". Nechal jsem ji kvůli historii, ale skryl z webu i z nových objednávek."];
+    }
+    q('UPDATE ai_navrhy SET varianta_id=NULL WHERE varianta_id=?', [$id]);
+    q('DELETE FROM varianty WHERE id=?', [$id]);
+    zapis_log('varianta_smazana', "$id $popis");
+    return ['stav' => 'smazano', 'zprava' => "Položka ceníku $kde smazána."];
+}
+
 /** Překlady služby: ['en' => ['nazev' => …, 'popis' => …, 'pozn' => …], 'de' => …]. */
 function sluzba_preklady(array $s): array
 {
