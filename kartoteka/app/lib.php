@@ -666,3 +666,43 @@ function limit_ip(string $akce, int $max): bool
     else q('INSERT INTO limit_ip(klic,pocet,okno) VALUES(?,1,?)', [$klic, $okno]);
     return true;
 }
+
+// Zámek přihlášení: po 5 chybných heslech k jednomu loginu se přihlášení na ten login na 2 minuty zamkne
+// (bez ohledu na to, z jaké IP pokusy jdou). Chyby starší 15 minut se nepočítají, úspěšné přihlášení počítadlo smaže.
+// Ukládá se do tabulky limit_ip (klic „zamek:…“, okno = čas poslední chyby).
+const ZAMEK_LOGINU_CHYB = 5;
+const ZAMEK_LOGINU_SEKUND = 120;
+
+function zamek_loginu_klic(string $login): string
+{
+    return 'zamek:' . hash('sha256', mb_strtolower(trim($login)) . __FILE__);
+}
+
+/** Kolik sekund ještě zbývá do odemčení (0 = není zamčeno). */
+function zamek_loginu_zbyva(string $login): int
+{
+    if (trim($login) === '') return 0;
+    $r = q1('SELECT pocet, okno FROM limit_ip WHERE klic=?', [zamek_loginu_klic($login)]);
+    if (!$r || $r['pocet'] < ZAMEK_LOGINU_CHYB) return 0;
+    $zbyva = (int)strtotime($r['okno']) + ZAMEK_LOGINU_SEKUND - time();
+    if ($zbyva <= 0) { q('DELETE FROM limit_ip WHERE klic=?', [zamek_loginu_klic($login)]); return 0; }
+    return $zbyva;
+}
+
+/** Zapíše chybný pokus; vrátí true, když se tím login právě zamkl. */
+function zamek_loginu_chyba(string $login): bool
+{
+    if (trim($login) === '') return false;
+    $klic = zamek_loginu_klic($login);
+    $ted = date('Y-m-d H:i:s');
+    $r = q1('SELECT pocet, okno FROM limit_ip WHERE klic=?', [$klic]);
+    if ($r && (int)strtotime($r['okno']) < time() - 900) { q('DELETE FROM limit_ip WHERE klic=?', [$klic]); $r = null; }
+    if ($r) q('UPDATE limit_ip SET pocet=pocet+1, okno=? WHERE klic=?', [$ted, $klic]);
+    else q('INSERT INTO limit_ip(klic,pocet,okno) VALUES(?,1,?)', [$klic, $ted]);
+    return (($r['pocet'] ?? 0) + 1) >= ZAMEK_LOGINU_CHYB;
+}
+
+function zamek_loginu_smaz(string $login): void
+{
+    q('DELETE FROM limit_ip WHERE klic=?', [zamek_loginu_klic($login)]);
+}

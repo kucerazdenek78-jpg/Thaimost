@@ -18,10 +18,13 @@ function stranka_login(): void
     $chyba = '';
     if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         over_csrf();
+        $zadanyLogin = trim((string)($_POST['login'] ?? ''));
         if (!limit_ip('login', 20)) $chyba = 'Příliš mnoho pokusů. Zkuste to za hodinu.';
+        elseif (($zbyva = zamek_loginu_zbyva($zadanyLogin)) > 0) $chyba = 'Po ' . ZAMEK_LOGINU_CHYB . ' chybných pokusech je přihlášení na chvíli zamčené. Zkuste to znovu za ' . (int)ceil($zbyva / 60) . ' min.';
         else {
-            $u = q1('SELECT * FROM uzivatele WHERE login=? AND aktivni=1', [trim($_POST['login'] ?? '')]);
+            $u = q1('SELECT * FROM uzivatele WHERE login=? AND aktivni=1', [$zadanyLogin]);
             if ($u && password_verify($_POST['heslo'] ?? '', $u['heslo_hash'])) {
+                zamek_loginu_smaz($zadanyLogin);
                 $kam = $_SESSION['po_prihlaseni'] ?? '';
                 session_regenerate_id(true);
                 $_SESSION['uid'] = $u['id'];
@@ -30,7 +33,9 @@ function stranka_login(): void
                 q('INSERT INTO log(kdo,akce) VALUES(?,?)', [$u['jmeno'], 'prihlaseni' . (!empty($_POST['trvale']) ? ' (trvale)' : '')]);
                 presmeruj(preg_match('~^/\?r=[a-z_]+[^\s]*$~', $kam) ? $kam : '/?r=dnes');
             }
-            $chyba = 'Špatné jméno nebo heslo.';
+            $chyba = zamek_loginu_chyba($zadanyLogin)
+                ? 'Špatné jméno nebo heslo. Po ' . ZAMEK_LOGINU_CHYB . ' chybných pokusech je přihlášení na ' . (int)(ZAMEK_LOGINU_SEKUND / 60) . ' minuty zamčené.'
+                : 'Špatné jméno nebo heslo.';
         }
     }
     $zadnyUzivatel = !qv('SELECT COUNT(*) FROM uzivatele');
