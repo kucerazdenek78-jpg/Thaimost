@@ -395,21 +395,40 @@
     const btn = form.querySelector("button[type=submit]"); btn.disabled = true; btn.textContent = T("Odesílám…");
     const done = $("#bDone");
     const hotovo = html => { done.innerHTML = html; done.style.display = "block"; done.scrollIntoView({ behavior: "smooth", block: "start" }); };
-    window.ThaiApi.post("/api/zajem", {
+    const data = {
       varianta_id: sel.value, den: den.value, okno: $("#bOkno").value, atmosfera: ($("#bAtm") || {}).value || "",
       jmeno: $("#bJmeno").value.trim(), prijmeni: $("#bPrijmeni").value.trim(), telefon: $("#bTel").value.trim(),
       email: $("#bMail").value.trim(), poznamka: ($("#bPozn").value.trim() + (JAZYK ? " [" + JAZYK + "]" : "")).trim(), gdpr: 1, web: $("#bWeb").value
-    }).then(r => {
-      if (!r.ok) throw new Error(r.chyba || "chyba");
-      form.querySelectorAll(".step").forEach(x => x.style.display = "none");
+    };
+    const prijato = () => { form.querySelectorAll(".step").forEach(x => x.style.display = "none");
       hotovo(`<span class="eyebrow">${window.Voucher.esc(T("Přijato"))}</span><h3>${window.Voucher.esc(T("Děkujeme, ozveme se vám"))}</h3>
-        <p>${T("Recepce vám zavolá na <b>{tel}</b> a domluví přesný čas. Termín je závazný až po našem potvrzení.", { tel: window.Voucher.esc($("#bTel").value.trim()) })}</p>
-        <div class="btns"><a class="btn btn-gold" href="tel:+420778429329">${window.Voucher.esc(T("Zavolat hned"))}</a></div>`);
+        <p>${T("Recepce vám zavolá na <b>{tel}</b> a domluví přesný čas. Termín je závazný až po našem potvrzení.", { tel: window.Voucher.esc(data.telefon) })}</p>
+        <div class="btns"><a class="btn btn-gold" href="tel:+420778429329">${window.Voucher.esc(T("Zavolat hned"))}</a></div>`); };
+    const zavolejte = nadpis => { btn.disabled = false; btn.textContent = T("Odeslat");
+      hotovo(`<span class="eyebrow">${window.Voucher.esc(T("Nepodařilo se"))}</span><h3>${window.Voucher.esc(nadpis)}</h3>
+        <p>${T("Zavolejte nám prosím na <a href=\"tel:+420778429329\">+420 778 429 329</a>, rádi vám termín domluvíme.")}</p>`); };
+    // Záloha pro výpadek rezervačního systému: když je masage.dvere.app nedostupný, pošle poptávku
+    // nezávislou cestou (Formsubmit) na e-mail salonu, ať se neztratí. Neběží u chyb validace.
+    const zalohaEmail = () => {
+      const masaz = (sel.options[sel.selectedIndex] || {}).text || ("#" + data.varianta_id);
+      const oknoEl = $("#bOkno"), okno = (oknoEl.options[oknoEl.selectedIndex] || {}).text || data.okno;
+      return fetch("https://formsubmit.co/ajax/salon@thaimost.cz", {
+        method: "POST", headers: { "Content-Type": "application/json", "Accept": "application/json" },
+        body: JSON.stringify({
+          _subject: "Záložní poptávka z webu (rezervační systém byl nedostupný)", _template: "table", _captcha: "false",
+          "Jméno a příjmení": (data.jmeno + " " + data.prijmeni).trim(), "Telefon": data.telefon, "E-mail": data.email || "—",
+          "Masáž": masaz, "Kdy by se hodilo": [data.den, okno].filter(Boolean).join(" · "), "Poznámka": data.poznamka || "—",
+          "Upozornění": "Tato poptávka dorazila záložní cestou, protože rezervační systém masage.dvere.app byl v tu chvíli nedostupný. NENÍ uložená v kartotéce – ozvěte se zákazníkovi a termín zapište ručně."
+        })
+      }).then(r => r.ok).catch(() => false);
+    };
+    window.ThaiApi.post("/api/zajem", data).then(r => {
+      if (!r.ok) throw new Error(r.chyba || "chyba");
+      prijato();
     }).catch(ex => {
-      btn.disabled = false; btn.textContent = T("Odeslat");
       const nedostupne = ex.message === "timeout" || ex.message === "Failed to fetch";
-      hotovo(`<span class="eyebrow">${window.Voucher.esc(T("Nepodařilo se"))}</span><h3>${window.Voucher.esc(nedostupne ? T("Objednávání je dočasně nedostupné") : serverMsg(ex.message))}</h3>
-        <p>${T("Zavolejte nám prosím na <a href=\"tel:+420778429329\">+420 778 429 329</a>, rádi vám termín domluvíme.")}</p>`);
+      if (nedostupne) zalohaEmail().then(ok => ok ? prijato() : zavolejte(T("Objednávání je dočasně nedostupné")));
+      else zavolejte(serverMsg(ex.message));
     });
   });
 })();
