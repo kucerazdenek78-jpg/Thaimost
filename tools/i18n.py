@@ -419,7 +419,7 @@ def build_page(lang, d, missing):
             last.insert_after(soup.new_tag("meta", property="og:locale:alternate", content=OG_ALL[l]))
     # slovník pro skripty před i18n.js
     sc = soup.find("script", src=re.compile(r"i18n\.js"))
-    new = soup.new_tag("script", src=f"../assets/i18n/{lang}.js?v=20261116v")
+    new = soup.new_tag("script", src=f"../assets/i18n/{lang}.js?v=20261119v")
     sc.insert_before(new)
     sc.insert_before(NavigableString("\n"))
     out = ROOT / lang

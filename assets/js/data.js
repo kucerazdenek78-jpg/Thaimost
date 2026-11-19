@@ -89,12 +89,12 @@ window.THAI = {
       ceny: [["60 min", 800]], foto: "tehotenska.jpg" },
     { id: "whirlpool", kat: "wellness", nazev: "Whirlpool a sauna",
       popis: "Privátní relaxace jen pro vás ve whirlpoolu a sauně. Vířivá lázeň uvolní svaly, sauna prohřeje; ke všem procedurám karafa vody zdarma, k dispozici i sklenka šampaňského.",
-      ceny: [["Sauna + sprcha", 400], ["90 min whirlpool", 1100], ["90 min whirlpool + sauna", 1150], ["120 min párová (2 asistentky + šampaňské + whirlpool + sauna)", 2600]], foto: "whirlpool.jpg", top: true },
+      ceny: [["Whirlpool + sauna", 600], ["90 min whirlpool", 1100], ["90 min whirlpool + sauna", 1300], ["60 min párová masáž (2 masérky) + šampaňské + whirlpool + sauna 90 minut", 2700]], foto: "whirlpool.jpg", top: true },
     { id: "fiji", kat: "wellness", nazev: "Fiji rituál",
       popis: "Smyslný tělový rituál inspirovaný Fidži – kokosový peeling, hřejivý zábal s tělovým máslem a lávovými kameny a lehká olejová masáž. Pokožka zůstane hebká, vyživená a provoněná tropy.",
-      ceny: [["90 min", 1500]], foto: "fiji.jpg", top: true },
+      ceny: [["90 min", 1550]], foto: "fiji.jpg", top: true },
     { id: "cukr", kat: "wellness", nazev: "Cukrový vánek z ráje",
       popis: "Luxusní rituál: peeling z fidžijské cukrové třtiny, lávové kameny, vyživující zábal a relaxační olejová masáž i s masáží hlavy. Odstraní odumřelé buňky, hydratuje pokožku a přinese hluboký klid.",
-      ceny: [["90 min", 1500]], foto: "cukr.jpg" }
+      ceny: [["90 min", 1550]], foto: "cukr.jpg" }
   ]
 };
