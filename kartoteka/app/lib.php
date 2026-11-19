@@ -598,7 +598,9 @@ function poukaz_podle_kodu(string $k): ?array
 {
     $klic = preg_replace('~[^A-Z0-9]~', '', strtoupper($k));
     if ($klic === '') return null;
-    return q1("SELECT * FROM poukazy WHERE REPLACE(REPLACE(REPLACE(REPLACE(UPPER(kod),'-',''),' ',''),'/',''),'.','')=? ORDER BY id LIMIT 1", [$klic]);
+    $ocisti = fn($sl) => "REPLACE(REPLACE(REPLACE(REPLACE(UPPER($sl),'-',''),' ',''),'/',''),'.','')";
+    // najde podle vlastního kódu poukazu i podle čísla předtištěného (fyzického) poukazu
+    return q1("SELECT * FROM poukazy WHERE {$ocisti('kod')}=? OR (cislo_tisteny<>'' AND {$ocisti('cislo_tisteny')}=?) ORDER BY id LIMIT 1", [$klic, $klic]);
 }
 
 /** Kód poukazu tak, jak se ukládá a hledá: velká písmena, bez mezer (i ručně opsané kódy z vytištěných poukazů). */

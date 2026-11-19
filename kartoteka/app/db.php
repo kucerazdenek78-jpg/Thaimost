@@ -26,7 +26,7 @@ function q(string $sql, array $p = []): PDOStatement
 function q1(string $sql, array $p = []): ?array { $r = q($sql, $p)->fetch(); return $r ?: null; }
 function qv(string $sql, array $p = []) { $r = q($sql, $p)->fetchColumn(); return $r === false ? null : $r; }
 
-const DB_VERZE = 22;
+const DB_VERZE = 23;
 
 /** Migrace běží v jedné transakci a po získání zámku se verze ověří znovu (souběžné první požadavky). */
 function migrate(PDO $pdo): void
@@ -82,6 +82,10 @@ function migrate(PDO $pdo): void
             )");
             $pdo->exec("CREATE INDEX hodnz_zak ON hodnoceni_zakaznik(zakaznik_id)");
             $pdo->exec("CREATE INDEX hodnz_rez ON hodnoceni_zakaznik(rezervace_id)");
+        }
+        if ($ver < 23) {   // v23: číslo předtištěného (fyzického) poukazu – u objednávek z webu vyzvednutých na recepci
+            $pdo->exec("ALTER TABLE poukazy ADD COLUMN cislo_tisteny TEXT NOT NULL DEFAULT ''");
+            $pdo->exec("CREATE INDEX poukaz_cislo_tisteny ON poukazy(cislo_tisteny)");
         }
         $pdo->exec('PRAGMA user_version = ' . DB_VERZE);
         $pdo->exec('COMMIT');

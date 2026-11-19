@@ -10,7 +10,7 @@ function stranka_poukazy(array $u): void
     // přesný kód (opsaný z vytištěného poukazu) → rovnou karta poukazu
     if ($hl !== '' && ($nal = poukaz_podle_kodu($hl))) presmeruj("/?r=poukaz&id=$nal[id]");
     $p = [];
-    if ($hl !== '') { $kde .= ' AND (kod LIKE ? OR objednal_jmeno LIKE ? OR pro_koho LIKE ? OR objednal_tel LIKE ?)'; $p = ["%$hl%", "%$hl%", "%$hl%", '%' . preg_replace('~\D~', '', $hl) . '%']; }
+    if ($hl !== '') { $kde .= ' AND (kod LIKE ? OR cislo_tisteny LIKE ? OR objednal_jmeno LIKE ? OR pro_koho LIKE ? OR objednal_tel LIKE ?)'; $p = ["%$hl%", "%$hl%", "%$hl%", "%$hl%", '%' . preg_replace('~\D~', '', $hl) . '%']; }
     $rows = q("SELECT * FROM poukazy WHERE $kde ORDER BY vytvoreno DESC LIMIT 300", $p)->fetchAll();
     // propadlé označit
     q("UPDATE poukazy SET stav='propadle' WHERE stav IN ('zaplaceno','vydano') AND platnost_do IS NOT NULL AND platnost_do < ?", [date('Y-m-d')]);
@@ -18,7 +18,7 @@ function stranka_poukazy(array $u): void
     hlavicka('Poukazy', 'poukazy'); ?>
     <div class="cal-nav">
       <h1>Dárkové poukazy</h1>
-      <form class="grow"><input type="hidden" name="r" value="poukazy"><input type="hidden" name="f" value="<?= h($f) ?>"><input name="q" value="<?= h($hl) ?>" placeholder="kód poukazu, jméno, telefon" autocapitalize="characters"></form>
+      <form class="grow"><input type="hidden" name="r" value="poukazy"><input type="hidden" name="f" value="<?= h($f) ?>"><input name="q" value="<?= h($hl) ?>" placeholder="kód, číslo poukazu, jméno, telefon" autocapitalize="characters"></form>
       <button type="button" class="btn" onclick="document.body.classList.add('tisk-seznam');print();document.body.classList.remove('tisk-seznam')">🖨 Vytisknout seznam</button>
       <a class="btn primary" href="/?r=poukaz_novy">+ Vystavit poukaz</a>
     </div>
@@ -29,7 +29,7 @@ function stranka_poukazy(array $u): void
       <tr><th>Kód</th><th>Stav</th><th>Hodnota</th><th>Zůstatek</th><th>Pro</th><th>Objednal</th><th>Platnost</th><th>Vytvořeno</th></tr>
       <?php foreach ($rows as $pk): ?>
         <tr onclick="location='/?r=poukaz&id=<?= $pk['id'] ?>'">
-          <td><a href="/?r=poukaz&id=<?= $pk['id'] ?>"><?= h($pk['kod']) ?></a><?= ($pk['motiv'] ?? '') === 'vanocni' ? ' 🎄' : '' ?></td>
+          <td><a href="/?r=poukaz&id=<?= $pk['id'] ?>"><?= h($pk['kod']) ?></a><?= ($pk['motiv'] ?? '') === 'vanocni' ? ' 🎄' : '' ?><?php if (trim((string)($pk['cislo_tisteny'] ?? '')) !== ''): ?><br><span class="muted small">🏠 č. <?= h($pk['cislo_tisteny']) ?></span><?php endif ?></td>
           <td><span class="stav p-<?= h($pk['stav']) ?>"><?= h(STAVY_POUKAZU[$pk['stav']]) ?></span></td>
           <td><?= h($pk['sluzba_text'] ?: kc($pk['hodnota'])) ?></td>
           <td><?= kc($pk['zustatek']) ?></td>
@@ -158,11 +158,22 @@ function stranka_poukaz(array $u): void
             if (in_array($_POST['stav'], ['zaplaceno', 'vydano'], true) && poukaz_razitko($id) && empty($p['razitko_zak_id'])) flash('Kupující dostal razítko na věrnostní kartičku za nákup poukazu.');
             zapis_log('poukaz_stav', "$p[kod] $_POST[stav]");
             flash('Stav změněn.');
+        } elseif ($akce === 'vydat_recepce') {
+            // osobní vyzvednutí na recepci: zapsání čísla předtištěného poukazu = zaplaceno hotově + aktivní (vydáno)
+            $cislo = trim($_POST['cislo_tisteny'] ?? '');
+            if ($cislo === '') flash('Zadejte číslo předtištěného poukazu.', 'err');
+            else {
+                $plat = trim((string)$p['platba']) !== '' ? $p['platba'] : 'hotově';
+                q("UPDATE poukazy SET cislo_tisteny=?, platba=?, stav='vydano' WHERE id=?", [$cislo, $plat, $id]);
+                if (poukaz_razitko($id) && empty($p['razitko_zak_id'])) flash('Kupující dostal razítko na věrnostní kartičku za nákup poukazu.');
+                zapis_log('poukaz_vydan_recepce', "$p[kod] č. $cislo");
+                flash("Vydáno na recepci pod číslem předtištěného poukazu $cislo – zaplaceno hotově, poukaz je aktivní.");
+            }
         } elseif ($akce === 'uprava') {
             $platnost = preg_match('~^\d{4}-\d{2}-\d{2}$~', $_POST['platnost_do'] ?? '') ? $_POST['platnost_do'] : null;
             $zid = telefon_norm($_POST['zakaznik_tel'] ?? '') ? zakaznik_najdi_nebo_zaloz(telefon_norm($_POST['zakaznik_tel']), '', '') : null;
-            q('UPDATE poukazy SET platnost_do=?, poznamka=?, zakaznik_id=COALESCE(?, zakaznik_id), pro_koho=?, od_koho=?, venovani=? WHERE id=?',
-                [$platnost, trim($_POST['poznamka'] ?? ''), $zid, trim($_POST['pro_koho'] ?? ''), trim($_POST['od_koho'] ?? ''), mb_substr(trim($_POST['venovani'] ?? ''), 0, 200), $id]);
+            q('UPDATE poukazy SET platnost_do=?, poznamka=?, zakaznik_id=COALESCE(?, zakaznik_id), pro_koho=?, od_koho=?, venovani=?, cislo_tisteny=? WHERE id=?',
+                [$platnost, trim($_POST['poznamka'] ?? ''), $zid, trim($_POST['pro_koho'] ?? ''), trim($_POST['od_koho'] ?? ''), mb_substr(trim($_POST['venovani'] ?? ''), 0, 200), trim($_POST['cislo_tisteny'] ?? ''), $id]);
             if (isset($_POST['motiv']) && poukaz_motiv_dostupny((string)$_POST['motiv'])) q('UPDATE poukazy SET motiv=? WHERE id=?', [$_POST['motiv'], $id]);
             flash('Uloženo.');
         } elseif ($akce === 'email') {
@@ -211,6 +222,7 @@ function stranka_poukaz(array $u): void
             <?php if ($p['venovani']): ?><dt>Věnování</dt><dd>„<?= h($p['venovani']) ?>“</dd><?php endif ?>
             <dt>Objednal</dt><dd><?= h($p['objednal_jmeno']) ?> · <a href="tel:<?= h($p['objednal_tel']) ?>"><?= h(telefon_cz($p['objednal_tel'])) ?></a><?= $p['objednal_email'] ? ' · ' . h($p['objednal_email']) : '' ?></dd>
             <dt>Převzetí / platba</dt><dd><?= h($p['prevzeti'] ?: '—') ?> / <?= h($p['platba'] ?: '—') ?></dd>
+            <?php if (trim((string)($p['cislo_tisteny'] ?? '')) !== ''): ?><dt>Číslo předtištěného poukazu</dt><dd><b><?= h($p['cislo_tisteny']) ?></b></dd><?php endif ?>
             <dt>Razítko za nákup</dt><dd><?php if ($p['razitko_zak_id'] ?? null): $rz = q1('SELECT id, jmeno, prijmeni FROM zakaznici WHERE id=?', [$p['razitko_zak_id']]); ?>✓ <a href="/?r=zakaznik&amp;id=<?= (int)$p['razitko_zak_id'] ?>"><?= h(trim(($rz['jmeno'] ?? '') . ' ' . ($rz['prijmeni'] ?? ''))) ?></a> <span class="muted small">(kupující)</span><?php else: ?><span class="muted small"><?= in_array($p['stav'], ['objednano'], true) ? 'dostane kupující po zaplacení' : 'bez razítka (kupující nemá telefon)' ?></span><?php endif ?></dd>
             <dt>VS pro platbu převodem</dt><dd><b><?= h($p['vs'] ?: '—') ?></b> <span class="muted small">(částka <?= kc($p['hodnota']) ?>)</span>
               <?php foreach (q("SELECT id, prijato, castka_hal FROM platby WHERE poukaz_id=? AND stav='sparovano'", [$p['id']])->fetchAll() as $pl): ?>
@@ -233,6 +245,9 @@ function stranka_poukaz(array $u): void
             <label>Od koho<input name="od_koho" value="<?= h($p['od_koho']) ?>"></label>
           </div>
           <label>Vzkaz / věnování na poukazu<textarea name="venovani" rows="2" maxlength="200"><?= h($p['venovani']) ?></textarea></label>
+          <div class="grid3">
+            <label>Číslo předtištěného poukazu<input name="cislo_tisteny" value="<?= h($p['cislo_tisteny'] ?? '') ?>" placeholder="fyzický poukaz z recepce"></label>
+          </div>
           <label>Poznámka (interní)<textarea name="poznamka" rows="2"><?= h($p['poznamka']) ?></textarea></label>
           <button class="btn">Uložit</button>
         </form>
@@ -245,6 +260,16 @@ function stranka_poukaz(array $u): void
       </div>
       <div>
         <section class="card side">
+          <?php if (in_array($p['stav'], ['objednano', 'zaplaceno'], true)): ?>
+          <form method="post" class="vydat-recepce">
+            <?= csrf_pole() ?><input type="hidden" name="akce" value="vydat_recepce">
+            <h3>🏠 Vydat na recepci</h3>
+            <p class="muted small">Zákazník si poukaz vyzvedl osobně a platí hotově. Zapište číslo předtištěného poukazu, který jste mu dali – tím se označí jako zaplacený hotově a aktivní.</p>
+            <label>Číslo předtištěného poukazu<input name="cislo_tisteny" value="<?= h($p['cislo_tisteny'] ?? '') ?>" required placeholder="např. 0247"></label>
+            <button class="btn primary" style="width:100%">✓ Vydat – zaplaceno hotově</button>
+          </form>
+          <hr>
+          <?php endif ?>
           <?php if (in_array($p['stav'], ['zaplaceno', 'vydano'], true)): ?>
           <form method="post" class="pk-uplatnit">
             <?= csrf_pole() ?><input type="hidden" name="akce" value="stav"><input type="hidden" name="stav" value="uplatneno">
