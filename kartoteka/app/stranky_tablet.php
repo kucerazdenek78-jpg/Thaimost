@@ -667,7 +667,11 @@ function stranka_poplach(array $u): void
     $rows = q("SELECT s.id, s.rezervace_id, s.neni_ona, m.nazev AS mistnost, z.prijmeni, z.jmeno, ma.jmeno AS maserka
         FROM sezeni s JOIN mistnosti m ON m.id=s.mistnost_id JOIN rezervace r ON r.id=s.rezervace_id JOIN zakaznici z ON z.id=r.zakaznik_id
         LEFT JOIN maserky ma ON ma.id=s.maserka_id WHERE s.stav='cekani' AND s.neni_ona IS NOT NULL ORDER BY s.neni_ona")->fetchAll();
-    echo json_encode(array_map(fn($r) => ['id' => (int)$r['id'], 'rez' => (int)$r['rezervace_id'], 'mistnost' => $r['mistnost'],
-        'zakaznik' => trim($r['prijmeni'] ?: $r['jmeno']), 'maserka' => $r['maserka'] ?: '', 'cas' => substr($r['neni_ona'], 11, 5)], $rows), JSON_UNESCAPED_UNICODE);
+    $alarmy = array_map(fn($r) => ['id' => (int)$r['id'], 'rez' => (int)$r['rezervace_id'], 'mistnost' => $r['mistnost'],
+        'zakaznik' => trim($r['prijmeni'] ?: $r['jmeno']), 'maserka' => $r['maserka'] ?: '', 'cas' => substr($r['neni_ona'], 11, 5)], $rows);
+    // je nějaký tablet právě připojený? (tablet se hlásí každých pár sekund; poslední spojení < 60 s) – podle toho recepce kontroluje poplach často, nebo jen občas
+    $tablet = (bool) qv("SELECT 1 FROM mistnosti WHERE aktivni=1 AND posledni_spojeni IS NOT NULL AND posledni_spojeni > ? LIMIT 1",
+        [date('Y-m-d H:i:s', time() - 60)]);
+    echo json_encode(['a' => $alarmy, 't' => $tablet], JSON_UNESCAPED_UNICODE);
     exit;
 }

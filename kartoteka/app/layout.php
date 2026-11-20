@@ -98,8 +98,11 @@ function kresli(a){
  var bt=box.querySelector('#pl-ticho');if(bt)bt.onclick=function(){a.forEach(function(x){ticho[x.id]=1});kresli(a)};
  if(velky){pisk();if(!pip)pip=setInterval(function(){document.title=document.title===tit?'🚨 TABLET HLÁSÍ CHYBU':tit;if(Object.keys(ticho).length===0||a.some(function(x){return !ticho[x.id]}))pisk()},2500)}
  else if(pip){clearInterval(pip);pip=null;document.title=tit}}
-async function tik(){try{var r=await fetch('/?r=poplach',{credentials:'same-origin'});if(r.ok)kresli(await r.json())}catch(e){}}
-tik();setInterval(tik,4000);
+var pollTimer=null,pollMs=20000;
+async function tik(){try{var r=await fetch('/?r=poplach',{credentials:'same-origin'});if(r.ok){var d=await r.json();var alarmy=Array.isArray(d)?d:(d.a||[]);kresli(alarmy);
+ var ms=(d&&d.t)?20000:60000;   // tablet připojen → kontrola po 20 s; jinak jen ověřovací tep po 60 s (ať se pozná, až se tablet připojí)
+ if(ms!==pollMs){pollMs=ms;if(pollTimer)clearInterval(pollTimer);pollTimer=setInterval(tik,pollMs);}}}catch(e){}}
+tik();pollTimer=setInterval(tik,pollMs);
 })();
 </script>
 <?php endif ?>
