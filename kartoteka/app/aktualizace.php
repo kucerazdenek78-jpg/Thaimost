@@ -2,8 +2,9 @@
 // Aktualizace souborů kartotéky z GitHubu přes soubor (když nejde terminál kontejneru), stejně jako vzorová data:
 // do data/ (nebo nasazeni-tmp/) se nahraje aktualizace.json  {"commit": "<sha commitu>", "soubory": {"app/lib.php": "<sha256 souboru>", …}}
 // Při nejbližším načtení stránky se všechny soubory stáhnou z raw.githubusercontent.com (pevný commit), ověří se
-// jejich SHA-256 a teprve když sedí VŠECHNY, zapíší se (staré verze do nasazeni-tmp/zaloha-<datum>/). Výsledek je
-// v data/aktualizace-vysledek.txt, soubor aktualizace.json se smaže. Soubor může vložit jen ten, kdo má přístup k NAS.
+// jejich SHA-256 a teprve když sedí VŠECHNY, zapíší se (staré verze do zálohy). Výsledek je v aktualizace-vysledek.txt.
+// Spouštěcí soubor se zkusí smazat; když to práva nedovolí (Synology ACL), hotový commit se označí v aktualizace-hotovo.txt,
+// aby se nasazení nespouštělo pořád dokola. Soubor může vložit jen ten, kdo má přístup k NAS.
 
 const AKTUALIZACE_REPO = 'kucerazdenek78-jpg/Thaimost';
 
@@ -15,11 +16,14 @@ function aktualizace_spust(): void
     if (!is_file($f)) { $dir = dirname(__DIR__) . '/nasazeni-tmp'; $f = "$dir/aktualizace.json"; }
     if (!is_file($f)) return;
     $zadani = json_decode((string)file_get_contents($f), true);
-    if (!@unlink($f)) return;   // nejde smazat = nespouštět (jinak by běželo pořád dokola)
+    $commit = (string)($zadani['commit'] ?? '');
+    // Spouštěč se zkusí smazat; když to nejde (práva), nasazený commit se poznačí zvlášť, ať se nespouští dokola.
+    $hotovoF = "$dir/aktualizace-hotovo.txt";
+    $smazano = @unlink($f);
+    if (!$smazano && $commit !== '' && is_file($hotovoF) && trim((string)@file_get_contents($hotovoF)) === $commit) return;
     $vysl = "$dir/aktualizace-vysledek.txt";
     $log = function (string $t) use ($vysl) { @file_put_contents($vysl, date('Y-m-d H:i:s') . "  $t\n", FILE_APPEND); };
     try {
-        $commit = (string)($zadani['commit'] ?? '');
         $soubory = $zadani['soubory'] ?? [];
         if (!preg_match('~^[0-9a-f]{7,40}$~', $commit) || !is_array($soubory) || !$soubory) throw new RuntimeException('špatné zadání (commit, soubory)');
         $root = dirname(__DIR__);
@@ -33,14 +37,16 @@ function aktualizace_spust(): void
             if (!hash_equals(strtolower((string)$sha), hash('sha256', $obsah))) throw new RuntimeException("nesedí SHA-256: $cesta");
             $stazeno[$cesta] = $obsah;
         }
+        // záloha je best-effort: nasazeni-tmp, nebo data/, jinak bez zálohy – nasazení kvůli ní nepadá
         $zal = "$root/nasazeni-tmp/zaloha-" . date('Ymd-His');
-        if (!is_dir($zal) && !@mkdir($zal, 0775, true)) throw new RuntimeException('nejde založit zálohu');
+        if (!@mkdir($zal, 0775, true) && !is_dir($zal)) { $zal = "$dir/zaloha-" . date('Ymd-His'); if (!@mkdir($zal, 0775, true) && !is_dir($zal)) $zal = ''; }
         foreach ($stazeno as $cesta => $obsah) {
             $cil = "$root/$cesta";
-            if (is_file($cil)) @copy($cil, $zal . '/' . basename($cesta));
-            if (@file_put_contents($cil, $obsah) === false) throw new RuntimeException("zápis selhal: $cesta (zbytek nezapsán, záloha v $zal)");
+            if ($zal !== '' && is_file($cil)) @copy($cil, $zal . '/' . basename($cesta));
+            if (@file_put_contents($cil, $obsah) === false) throw new RuntimeException("zápis selhal: $cesta (zbytek nezapsán" . ($zal !== '' ? ", záloha v $zal" : '') . ")");
         }
-        $log("OK commit $commit: " . implode(', ', array_keys($stazeno)) . " (záloha $zal)");
+        @file_put_contents($hotovoF, $commit);   // nasazené označíme (kdyby nešel spouštěč smazat)
+        $log("OK commit $commit: " . implode(', ', array_keys($stazeno)) . ($zal !== '' ? " (záloha $zal)" : " (bez zálohy)"));
     } catch (Throwable $e) {
         $log('CHYBA: ' . $e->getMessage());
     }
