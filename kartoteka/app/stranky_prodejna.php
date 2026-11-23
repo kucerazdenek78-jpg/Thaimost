@@ -1,10 +1,11 @@
 <?php
 // Jednoduchý „Prodejna" režim pro recepci během přechodu na online objednávky – běží jako „čtečka"
-// na služebním telefonu/tabletu na recepci: BEZ přihlášení, chráněno jen PINem (nastaví admin ve Správě → Aplikace).
+// na služebním telefonu/tabletu na recepci: BEZ přihlášení a BEZ navigace kartotéky, chráněno jen PINem
+// (nastaví admin ve Správě → Aplikace).
 //  1) naskenovat QR poukazu a označit ho jako uplatněný,
-//  2) objednávky (žádosti) z webu – tlačítko „Vyřešeno" (ručně vyřízeno, neplánuje do kalendáře),
+//  2) objednávky (žádosti) z webu – tlačítko „Vyřešeno" (ručně vyřízeno, NEplánuje do kalendáře – online plánování
+//     bude až ve fázi 2 od nového roku); vyřízené zůstanou vidět označené jako „vyřízeno" (lze vrátit),
 //  3) poukazy objednané z webu k vyzvednutí – zapsat fyzické číslo předtištěného poukazu.
-// Běží nad stejnými daty jako velká kartotéka; až se online objednávky zapnou naplno, přestane se používat.
 
 const PRODEJNA_COOKIE = 'tmk_prodejna';
 
@@ -30,6 +31,32 @@ function prodejna_cookie(string $hodnota, int $expirace): void
     if (headers_sent()) return;
     $https = ($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? '') === 'https' || !empty($_SERVER['HTTPS']);
     setcookie(PRODEJNA_COOKIE, $hodnota, ['expires' => $expirace, 'path' => '/', 'httponly' => true, 'samesite' => 'Lax', 'secure' => $https]);
+}
+
+/** Samostatná hlavička čtečky – BEZ navigace kartotéky (jen styl a flash). */
+function prodejna_hlava(): void
+{
+    ?><!doctype html>
+<html lang="cs"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<title>Prodejna · Thai Most</title>
+<link rel="stylesheet" href="/style.css?v=24">
+<link rel="manifest" href="/prodejna-manifest.json">
+<meta name="theme-color" content="#6b4a2b">
+<style>body.prodejna-app{background:var(--bg,#f6f1ea)}body.prodejna-app > main{max-width:680px;margin:0 auto;padding:12px 14px 40px}</style>
+</head><body class="prodejna-app">
+<main>
+<?php foreach (flash() as [$typ, $msg]): ?><div class="flash <?= h($typ) ?>"><?= h($msg) ?></div><?php endforeach ?>
+<?php
+}
+
+function prodejna_pata(): void
+{
+    ?>
+</main>
+<script>if('serviceWorker' in navigator)navigator.serviceWorker.register('/sw-asistent.js').catch(function(){});</script>
+</body></html><?php
 }
 
 function stranka_prodejna(): void
@@ -79,14 +106,19 @@ function stranka_prodejna(): void
         } elseif ($akce === 'vyreseno') {
             $id = (int)($_POST['rez_id'] ?? 0);
             q("UPDATE rezervace SET stav='vyreseno' WHERE id=? AND stav='zadost'", [$id]);
-            flash('Žádost označena jako vyřešená.');
+            flash('Objednávka označena jako vyřízená.');
+            presmeruj('/?r=prodejna');
+        } elseif ($akce === 'vratit') {
+            $id = (int)($_POST['rez_id'] ?? 0);
+            q("UPDATE rezervace SET stav='zadost' WHERE id=? AND stav='vyreseno' AND zdroj='web'", [$id]);
+            flash('Vráceno mezi nevyřízené.');
             presmeruj('/?r=prodejna');
         }
     }
 
     // --- zamčeno: zadání PINu ---
     if (!$odemceno) {
-        hlavicka('Prodejna', 'prodejna');
+        prodejna_hlava();
         ?>
         <style>
         .pd-lock{max-width:360px;margin:8vh auto 0;text-align:center}
@@ -109,7 +141,7 @@ function stranka_prodejna(): void
           <?php endif ?>
         </div>
         <?php
-        paticka();
+        prodejna_pata();
         return;
     }
 
@@ -117,12 +149,15 @@ function stranka_prodejna(): void
     $zadosti = q("SELECT r.*, z.jmeno, z.prijmeni, z.telefon, s.nazev AS sluzba, v.popis AS var_popis
         FROM rezervace r JOIN zakaznici z ON z.id=r.zakaznik_id LEFT JOIN varianty v ON v.id=r.varianta_id
         LEFT JOIN sluzby s ON s.id=v.sluzba_id WHERE r.stav='zadost' AND r.zdroj='web' ORDER BY r.vytvoreno DESC")->fetchAll();
+    $vyrizene = q("SELECT r.*, z.jmeno, z.prijmeni, z.telefon, s.nazev AS sluzba, v.popis AS var_popis
+        FROM rezervace r JOIN zakaznici z ON z.id=r.zakaznik_id LEFT JOIN varianty v ON v.id=r.varianta_id
+        LEFT JOIN sluzby s ON s.id=v.sluzba_id WHERE r.stav='vyreseno' AND r.zdroj='web' ORDER BY r.vytvoreno DESC LIMIT 30")->fetchAll();
     $pouk = q("SELECT * FROM poukazy WHERE zdroj='web' AND stav IN ('zaplaceno','vydano') AND TRIM(COALESCE(cislo_tisteny,''))=''
         ORDER BY vytvoreno DESC")->fetchAll();
     $skenKod = trim($_GET['kod'] ?? '');
     $skenP = $skenKod !== '' ? poukaz_podle_kodu($skenKod) : null;
 
-    hlavicka('Prodejna', 'prodejna');
+    prodejna_hlava();
     ?>
     <style>
     .prodejna{max-width:640px;margin:0 auto}
@@ -138,12 +173,15 @@ function stranka_prodejna(): void
     .pd-pocet.pd-upoz{background:#c0392b;color:#fff}
     .pd-poukaz,.pd-nenalezen{margin-top:12px;padding:12px;border:1px solid var(--line,#e5ddd0);border-radius:12px;background:var(--paper,#faf7f1)}
     .pd-vyr .btn{white-space:nowrap}
-    .pd-paticka{text-align:center;margin:18px 0 4px}
+    .pd-hotovo{opacity:.62}
+    .pd-hotovo .pd-stav{color:#3f7d53;font-weight:700}
+    .pd-vyr-nadpis{margin:14px 0 2px;font-size:.92rem;color:var(--muted,#7a6a55);font-weight:700}
+    .pd-paticka{text-align:center;margin:22px 0 4px}
     @media(max-width:520px){.pd-radek{flex-direction:column}.pd-cislo input{width:100%}.pd-cislo{width:100%}}
     </style>
     <div class="prodejna">
     <h1>🛍️ Prodejna</h1>
-    <p class="muted small">Jednoduchý režim pro recepci. Až se naplno zapnou online objednávky, vše se bude dělat ve velké kartotéce.</p>
+    <p class="muted small">Jednoduchý režim pro recepci. Online plánování masáží bude až od nového roku – teď objednávky jen vyřizujete (voláte zákazníkům).</p>
 
     <section class="pd-blok">
       <h2>📷 Poukaz – uplatnit</h2>
@@ -169,7 +207,7 @@ function stranka_prodejna(): void
 
     <section class="pd-blok">
       <h2>📥 Objednávky z webu <span class="pd-pocet<?= $zadosti ? ' pd-upoz' : '' ?>"><?= count($zadosti) ?></span></h2>
-      <?php if (!$zadosti): ?><p class="muted">Žádné nové objednávky.</p><?php else: ?>
+      <?php if (!$zadosti): ?><p class="muted">Žádné nevyřízené objednávky.</p><?php else: ?>
         <?php foreach ($zadosti as $z): ?>
           <div class="pd-radek">
             <div class="pd-info">
@@ -181,6 +219,18 @@ function stranka_prodejna(): void
               <br><span class="muted small"><?= h(datum_cz($z['vytvoreno'])) ?></span>
             </div>
             <form method="post" class="pd-vyr"><?= csrf_pole() ?><input type="hidden" name="akce" value="vyreseno"><input type="hidden" name="rez_id" value="<?= (int)$z['id'] ?>"><button class="btn">✅ Vyřešeno</button></form>
+          </div>
+        <?php endforeach ?>
+      <?php endif ?>
+      <?php if ($vyrizene): ?>
+        <p class="pd-vyr-nadpis">✓ Vyřízené</p>
+        <?php foreach ($vyrizene as $z): ?>
+          <div class="pd-radek pd-hotovo">
+            <div class="pd-info">
+              <span class="pd-stav">✓ vyřízeno</span> · <b><?= h(trim(($z['jmeno'] ?? '') . ' ' . ($z['prijmeni'] ?? ''))) ?></b> · <a href="tel:<?= h($z['telefon']) ?>"><?= h($z['telefon']) ?></a><br>
+              <span class="muted small"><?= h((string)($z['sluzba'] ?? '')) ?><?= ($z['var_popis'] ?? '') ? ' – ' . h($z['var_popis']) : '' ?> · <?= h(datum_cz($z['vytvoreno'], false)) ?></span>
+            </div>
+            <form method="post" class="pd-vyr"><?= csrf_pole() ?><input type="hidden" name="akce" value="vratit"><input type="hidden" name="rez_id" value="<?= (int)$z['id'] ?>"><button class="btn" title="Vrátit mezi nevyřízené">↩ Vrátit</button></form>
           </div>
         <?php endforeach ?>
       <?php endif ?>
@@ -209,8 +259,6 @@ function stranka_prodejna(): void
     <script src="/skener.js?v=2"></script>
     <script>
     (function(){
-      // vlastní manifest, ať instalace na plochu otevře rovnou Prodejnu
-      var ml=document.querySelector('link[rel=manifest]'); if(ml) ml.href='/prodejna-manifest.json';
       var b=document.getElementById('pdScan'), i=document.getElementById('pdKod');
       function go(code){ code=(code||'').trim(); if(code) location='/?r=prodejna&kod='+encodeURIComponent(code); }
       if(b) b.addEventListener('click', function(){ if(window.ThaiScan) ThaiScan.open(function(t){
@@ -222,5 +270,5 @@ function stranka_prodejna(): void
     })();
     </script>
     <?php
-    paticka();
+    prodejna_pata();
 }

@@ -41,9 +41,12 @@ function stranka_web(array $u): void
     $webPoukazy = array_values(array_filter(
         q("SELECT * FROM poukazy WHERE zdroj='web' AND stav IN ('objednano','zaplaceno') ORDER BY vytvoreno DESC")->fetchAll(),
         fn($p) => $p['stav'] === 'objednano' || !poukaz_chce_email($p)));
+    $vyrizene = q("SELECT r.*, z.jmeno, z.prijmeni, z.telefon, s.nazev AS sluzba, v.popis AS var_popis
+        FROM rezervace r JOIN zakaznici z ON z.id=r.zakaznik_id LEFT JOIN varianty v ON v.id=r.varianta_id
+        LEFT JOIN sluzby s ON s.id=v.sluzba_id WHERE r.stav='vyreseno' ORDER BY r.vytvoreno DESC LIMIT 30")->fetchAll();
     hlavicka('Přišlo', 'web'); ?>
     <h1 style="margin:.2em 0 0">📥 Přišlo z webu</h1>
-    <p class="muted small">Nové žádosti o termín a objednávky poukazů z webu. Jakmile je vyřídíte, odtud zmizí.</p>
+    <p class="muted small">Nové žádosti o termín a objednávky poukazů z webu. Žádosti se zatím jen vyřizují (zavoláte zákazníkovi) – online plánování masáží přibude ve 2. fázi od nového roku. Vyřízené zůstanou vidět dole.</p>
     <?php if (!$zadosti && !$webPoukazy): ?>
       <p class="flash ok" style="margin-top:12px">Nic nového z webu. ✓</p>
     <?php endif ?>
@@ -85,6 +88,21 @@ function stranka_web(array $u): void
             <span class="muted small">· objednáno <?= h(datum_cz(substr($p['vytvoreno'], 0, 10), false)) ?></span>
           </div>
           <a class="btn primary" href="/?r=poukaz&id=<?= (int)$p['id'] ?>"><?= $email ? 'Otevřít poukaz' : '🏠 Vydat na recepci' ?></a>
+        </div>
+      <?php endforeach ?>
+    </section>
+    <?php endif ?>
+
+    <?php if ($vyrizene): ?>
+    <section class="card" id="vyrizene" style="opacity:.82">
+      <h2>✓ Vyřízené z webu <span class="muted">(<?= count($vyrizene) ?>)</span></h2>
+      <p class="muted small" style="margin-top:-4px">Žádosti, které už na Prodejně někdo vyřídil (zavolal zákazníkovi). Vrátit je mezi nevyřízené lze na Prodejně.</p>
+      <?php foreach ($vyrizene as $r): ?>
+        <div class="row-item">
+          <div>
+            <span style="color:#3f7d53;font-weight:700">✓ vyřízeno</span> · <b><?= h(jmeno_z($r)) ?></b> · <a href="tel:<?= h($r['telefon']) ?>"><?= h(telefon_cz($r['telefon'])) ?></a><br>
+            <span class="muted small"><?= h(trim($r['sluzba'] . ' – ' . $r['var_popis'], ' –')) ?> · <?= h(datum_cz($r['vytvoreno'], false)) ?></span>
+          </div>
         </div>
       <?php endforeach ?>
     </section>
