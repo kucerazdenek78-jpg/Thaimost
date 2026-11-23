@@ -20,7 +20,7 @@ if (isset($apky[$path])) {
     http_response_code(404);
     exit('APK zatím není nahraná.');
 }
-if ($path !== '/' && preg_match('~^/[a-z0-9_-]+\.(css|js|json|svg|png|ico|jpg|jpeg|webp)$~i', $path) && is_file(__DIR__ . $path)) {
+if ($path !== '/' && preg_match('~^/[a-z0-9_-]+\.(css|js|json|svg|png|ico|jpg|jpeg|webp|pdf)$~i', $path) && is_file(__DIR__ . $path)) {
     return false;
 }
 require __DIR__ . '/index.php';

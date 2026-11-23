@@ -12,11 +12,15 @@ function hlavicka(string $titul, string $aktivni = ''): void
     $u = uzivatel();
     $zadosti = $u ? (int)qv("SELECT COUNT(*) FROM rezervace WHERE stav='zadost'") : 0;
     $poukazyCekaji = $u ? (int)qv("SELECT COUNT(*) FROM poukazy WHERE stav='objednano'") : 0;
+    // „Přišlo" = žádosti o termín z webu + objednávky poukazů z webu (vlastní položka menu před Masérnami)
+    $webPoukazyCekaji = $u ? (int)qv("SELECT COUNT(*) FROM poukazy WHERE zdroj='web' AND stav IN ('objednano','zaplaceno')") : 0;
+    $prislo = $zadosti + $webPoukazyCekaji;
     // Zjednodušené menu pro recepci: Masérny / Kalendář / Zákazníci (+ Správa jen pro vedoucí a admina).
     // Poukazy a Karty jsou podmenu Zákazníků; Volné termíny se otevírají z Kalendáře; Tým, Směny, Uživatelé, Volna a Nastavení jsou ve Správě.
     $konfl = ($u && smi_upravit_tym($u)) ? count(konflikty_dostupnosti()) : 0;
     $menu = [
-        'dnes' => ['/?r=dnes', '<i class="mi">🛏️</i>Masérny' . ($zadosti ? " <b class=\"cnt\">$zadosti</b>" : '')],
+        'web' => ['/?r=web', '<i class="mi">📥</i>Přišlo' . ($prislo ? " <b class=\"cnt\">$prislo</b>" : '')],
+        'dnes' => ['/?r=dnes', '<i class="mi">🛏️</i>Masérny'],
         'kalendar' => ['/?r=kalendar&pohled=masterny', '<i class="mi">📅</i>Kalendář'],
         'zakaznici' => ['/?r=zakaznici', '<i class="mi">👥</i>Zákazníci' . ($poukazyCekaji ? " <b class=\"cnt\">$poukazyCekaji</b>" : '')],
     ];

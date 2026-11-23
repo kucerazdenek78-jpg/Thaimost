@@ -32,6 +32,70 @@ function prehled_okna(array $bloky, int $od, int $do, int $nejkratsi, int $pm, i
 /** „až 50 min“ / „3 h a víc“ – dlouhá okna nemá smysl vypisovat na minuty. */
 function prehled_delka(int $min): string { return $min >= 180 ? '3 h a víc' : 'až ' . $min . ' min'; }
 
+/** „Přišlo" – samostatné menu: nové žádosti o termín a objednávky poukazů z webu (dřív byly na Masérnách). */
+function stranka_web(array $u): void
+{
+    $zadosti = q("SELECT r.*, z.jmeno, z.prijmeni, z.telefon, s.nazev AS sluzba, v.popis AS var_popis
+        FROM rezervace r JOIN zakaznici z ON z.id=r.zakaznik_id LEFT JOIN varianty v ON v.id=r.varianta_id
+        LEFT JOIN sluzby s ON s.id=v.sluzba_id WHERE r.stav='zadost' ORDER BY r.vytvoreno")->fetchAll();
+    $webPoukazy = array_values(array_filter(
+        q("SELECT * FROM poukazy WHERE zdroj='web' AND stav IN ('objednano','zaplaceno') ORDER BY vytvoreno DESC")->fetchAll(),
+        fn($p) => $p['stav'] === 'objednano' || !poukaz_chce_email($p)));
+    hlavicka('Přišlo', 'web'); ?>
+    <h1 style="margin:.2em 0 0">📥 Přišlo z webu</h1>
+    <p class="muted small">Nové žádosti o termín a objednávky poukazů z webu. Jakmile je vyřídíte, odtud zmizí.</p>
+    <?php if (!$zadosti && !$webPoukazy): ?>
+      <p class="flash ok" style="margin-top:12px">Nic nového z webu. ✓</p>
+    <?php endif ?>
+
+    <?php if ($zadosti): ?>
+    <section class="card" id="zadosti">
+      <h2>Žádosti z webu <span class="muted">(<?= count($zadosti) ?>)</span></h2>
+      <?php foreach ($zadosti as $r): $z = q1('SELECT * FROM zakaznici WHERE id=?', [$r['zakaznik_id']]); ?>
+        <div class="row-item">
+          <div>
+            <b><?= h(jmeno_z($r)) ?></b> · <a href="tel:<?= h($r['telefon']) ?>"><?= h(telefon_cz($r['telefon'])) ?></a>
+            <?= stitky_html(zakaznik_stitky($z, zakaznik_statistika((int)$z['id']))) ?><br>
+            <?= h($r['sluzba'] . ' – ' . $r['var_popis']) ?> · <b>hodí se:</b> <?= h($r['preferovano'] ?: '—') ?><?= ($r['atmosfera'] ?? '') !== '' ? ' · ' . atmosfera_html($r['atmosfera']) : '' ?>
+            <?php if (trim((string)($r['poukaz_kod'] ?? '')) !== ''): ?><br>🎁 <b>poukaz k uplatnění:</b> <?= poukaz_kod_html($r['poukaz_kod']) ?><?php endif ?>
+            <?php if ($r['poznamka_zakaznik']): ?><br><span class="muted">„<?= h($r['poznamka_zakaznik']) ?>“</span><?php endif ?>
+          </div>
+          <a class="btn primary" href="/?r=rezervace&id=<?= $r['id'] ?>">Naplánovat</a>
+        </div>
+      <?php endforeach ?>
+    </section>
+    <?php endif ?>
+
+    <?php if ($webPoukazy): ?>
+    <section class="card" id="web-poukazy">
+      <h2>🎁 Poukazy z webu <span class="muted">(<?= count($webPoukazy) ?>)</span></h2>
+      <p class="muted small" style="margin-top:-4px">Objednávky poukazů z webu, které ještě nejsou vyřízené. Osobní vyzvednutí drží v seznamu, dokud poukaz nevydáte na recepci (zapíšete číslo předtištěného poukazu) – i když je zaplacené převodem.</p>
+      <?php foreach ($webPoukazy as $p):
+          $email = poukaz_chce_email($p);
+          if ($p['stav'] === 'zaplaceno') $stav = '✅ zaplaceno převodem · 🏠 čeká na vyzvednutí na recepci';
+          elseif ($email) $stav = '✉️ e-mailem · čeká na platbu (' . (poukaz_platba_prevodem($p) ? 'převodem' : 'hotově') . ')';
+          else $stav = '🏠 na recepci · platí hotově při vyzvednutí'; ?>
+        <div class="row-item">
+          <div>
+            <b><?= h(trim($p['objednal_jmeno']) ?: 'bez jména') ?></b>
+            <?php if (trim((string)$p['objednal_tel']) !== ''): ?> · <a href="tel:<?= h($p['objednal_tel']) ?>"><?= h(telefon_cz($p['objednal_tel'])) ?></a><?php endif ?>
+            · <b><?= number_format((int)$p['hodnota'], 0, ',', ' ') ?> Kč</b>
+            <span class="muted small">(<?= h($p['kod']) ?>)</span><br>
+            <?= $stav ?><?php if (trim((string)$p['pro_koho']) !== ''): ?> · pro <?= h($p['pro_koho']) ?><?php endif ?>
+            <span class="muted small">· objednáno <?= h(datum_cz(substr($p['vytvoreno'], 0, 10), false)) ?></span>
+          </div>
+          <a class="btn primary" href="/?r=poukaz&id=<?= (int)$p['id'] ?>"><?= $email ? 'Otevřít poukaz' : '🏠 Vydat na recepci' ?></a>
+        </div>
+      <?php endforeach ?>
+    </section>
+    <?php endif ?>
+    <script>
+    // lehká samoobnova kvůli novým položkám z webu (když se zrovna needituje)
+    setInterval(function(){var a=document.activeElement; if(!a||!/INPUT|TEXTAREA|SELECT/.test(a.tagName)) location.reload();}, 60000);
+    </script>
+    <?php paticka();
+}
+
 function stranka_prehled(array $u): void
 {
     if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -93,14 +157,7 @@ function stranka_prehled(array $u): void
     $konf = konflikty_dostupnosti();
     $nevesel = $plan[''] ?? [];
 
-    // --- k vyřízení ---
-    $zadosti = q("SELECT r.*, z.jmeno, z.prijmeni, z.telefon, s.nazev AS sluzba, v.popis AS var_popis
-        FROM rezervace r JOIN zakaznici z ON z.id=r.zakaznik_id LEFT JOIN varianty v ON v.id=r.varianta_id
-        LEFT JOIN sluzby s ON s.id=v.sluzba_id WHERE r.stav='zadost' ORDER BY r.vytvoreno")->fetchAll();
-    // objednané (čekají na platbu) + osobní vyzvednutí zaplacené převodem, které ještě nikdo nevydal na recepci
-    $webPoukazy = array_values(array_filter(
-        q("SELECT * FROM poukazy WHERE zdroj='web' AND stav IN ('objednano','zaplaceno') ORDER BY vytvoreno DESC")->fetchAll(),
-        fn($p) => $p['stav'] === 'objednano' || !poukaz_chce_email($p)));
+    // --- k vyřízení --- (žádosti a poukazy z webu se přesunuly do samostatného menu „Přišlo" → stranka_web)
     $kontrola = ke_kontrole();
     $neodeslane = (int)qv("SELECT COUNT(*) FROM emaily WHERE stav<>'odeslano'");
 
@@ -183,47 +240,6 @@ function stranka_prehled(array $u): void
       <div class="flash warn">⚠ <b><?= count($nevesel) ?> dnešní rezervace se nevejde do žádné masérny</b> (např. <?= h(date('H:i', strtotime($nevesel[0]['zacatek']))) ?> <?= h(jmeno_z($nevesel[0])) ?>). <a class="btn small" href="/?r=kalendar&pohled=masterny">Otevřít kalendář masérn</a></div>
     <?php endif ?>
     <?php ukoncene_dnes_banner(); pap_dnes_banner(); ?>
-
-    <?php if ($zadosti): ?>
-    <section class="card" id="zadosti">
-      <h2>Žádosti z webu <span class="muted">(<?= count($zadosti) ?>)</span></h2>
-      <?php foreach ($zadosti as $r): $z = q1('SELECT * FROM zakaznici WHERE id=?', [$r['zakaznik_id']]); ?>
-        <div class="row-item">
-          <div>
-            <b><?= h(jmeno_z($r)) ?></b> · <a href="tel:<?= h($r['telefon']) ?>"><?= h(telefon_cz($r['telefon'])) ?></a>
-            <?= stitky_html(zakaznik_stitky($z, zakaznik_statistika((int)$z['id']))) ?><br>
-            <?= h($r['sluzba'] . ' – ' . $r['var_popis']) ?> · <b>hodí se:</b> <?= h($r['preferovano'] ?: '—') ?><?= ($r['atmosfera'] ?? '') !== '' ? ' · ' . atmosfera_html($r['atmosfera']) : '' ?>
-            <?php if ($r['poznamka_zakaznik']): ?><br><span class="muted">„<?= h($r['poznamka_zakaznik']) ?>“</span><?php endif ?>
-          </div>
-          <a class="btn primary" href="/?r=rezervace&id=<?= $r['id'] ?>">Naplánovat</a>
-        </div>
-      <?php endforeach ?>
-    </section>
-    <?php endif ?>
-
-    <?php if ($webPoukazy): ?>
-    <section class="card" id="web-poukazy">
-      <h2>🎁 Poukazy z webu <span class="muted">(<?= count($webPoukazy) ?>)</span></h2>
-      <p class="muted small" style="margin-top:-4px">Objednávky poukazů z webu, které ještě nejsou vyřízené. Osobní vyzvednutí drží v seznamu, dokud poukaz nevydáte na recepci (zapíšete číslo předtištěného poukazu) – i když je zaplacené převodem.</p>
-      <?php foreach ($webPoukazy as $p):
-          $email = poukaz_chce_email($p);
-          if ($p['stav'] === 'zaplaceno') $stav = '✅ zaplaceno převodem · 🏠 čeká na vyzvednutí na recepci';
-          elseif ($email) $stav = '✉️ e-mailem · čeká na platbu (' . (poukaz_platba_prevodem($p) ? 'převodem' : 'hotově') . ')';
-          else $stav = '🏠 na recepci · platí hotově při vyzvednutí'; ?>
-        <div class="row-item">
-          <div>
-            <b><?= h(trim($p['objednal_jmeno']) ?: 'bez jména') ?></b>
-            <?php if (trim((string)$p['objednal_tel']) !== ''): ?> · <a href="tel:<?= h($p['objednal_tel']) ?>"><?= h(telefon_cz($p['objednal_tel'])) ?></a><?php endif ?>
-            · <b><?= number_format((int)$p['hodnota'], 0, ',', ' ') ?> Kč</b>
-            <span class="muted small">(<?= h($p['kod']) ?>)</span><br>
-            <?= $stav ?><?php if (trim((string)$p['pro_koho']) !== ''): ?> · pro <?= h($p['pro_koho']) ?><?php endif ?>
-            <span class="muted small">· objednáno <?= h(datum_cz(substr($p['vytvoreno'], 0, 10), false)) ?></span>
-          </div>
-          <a class="btn primary" href="/?r=poukaz&id=<?= (int)$p['id'] ?>"><?= $email ? 'Otevřít poukaz' : '🏠 Vydat na recepci' ?></a>
-        </div>
-      <?php endforeach ?>
-    </section>
-    <?php endif ?>
 
     <?php if (!$skupiny): ?>
       <p class="flash warn">Nejsou nastavené masérny. Přidejte je v Správa → Tým → Masérny a tablety.</p>
@@ -412,7 +428,7 @@ function stranka_prehled(array $u): void
           if (!sila && blokuje()) return;
           const d = new DOMParser().parseFromString(await r.text(), 'text/html');
           const volne = !cinny() && !document.querySelector('details.vyrizeni[open]');
-          ['#board'].concat(volne ? ['#zadosti'] : []).forEach(q => {
+          ['#board'].forEach(q => {
             const n = d.querySelector(q), o = document.querySelector(q);
             if (!n !== !o) { if (volne && !blokuje()) location.reload(); }
             else if (n && n.innerHTML !== o.innerHTML) o.innerHTML = n.innerHTML;

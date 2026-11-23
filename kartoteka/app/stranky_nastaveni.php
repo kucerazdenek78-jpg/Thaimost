@@ -409,26 +409,26 @@ function stranka_emaily(array $u): void
     <?php paticka();
 }
 
-/** Sekce „Aplikace Asistent“: instalace do telefonu (Android/Chrome), QR kód pro otevření v telefonu. */
+/** Sekce „Aplikace“: instalace celé kartotéky do telefonu/PC (Android/Chrome), QR kód pro otevření v telefonu. */
 function aplikace_karta(): void
 {
     require_once __DIR__ . '/push.php';   // Web Push: zapnutí upozornění na poptávky (VAPID klíč)
-    $url = rtrim(cfg()['url'] ?? '', '/') . '/?r=ai&app=1'; ?>
+    $url = rtrim(cfg()['url'] ?? '', '/') . '/?r=dnes&pwa=1'; ?>
     <section class="card aplikace">
-      <h2>📲 Aplikace Asistent do telefonu</h2>
+      <h2>📲 Aplikace do telefonu / PC (celý systém)</h2>
       <div class="aplikace-in">
-        <img src="/asistent-192.png" alt="" width="72" height="72">
+        <img src="/kartoteka-192.png" alt="" width="72" height="72" onerror="this.src='/asistent-192.png'">
         <div class="grow">
-          <p style="margin-top:0">Asistent jako samostatná aplikace s ikonou na ploše: ptáte se hlasem nebo psaním, asistent připraví rezervace, přesuny, potvrzení žádostí i volna masérek a vy je jen odklepnete „Provést“.</p>
+          <p style="margin-top:0">Celá kartotéka jako samostatná aplikace s ikonou na ploše. Otevře se rovnou na <b>Masérnách</b>; AI asistent je uvnitř jako plovoucí ikona 🤖 v rohu.</p>
           <p><button type="button" class="btn primary" id="appInstal" hidden>⬇ Nainstalovat aplikaci</button>
              <span id="appHotovo" class="tag zdarma" hidden>✅ Aplikace je nainstalovaná</span>
-             <a class="btn" href="/?r=ai&amp;app=1">Otevřít aplikaci</a></p>
+             <a class="btn" href="/?r=dnes&amp;pwa=1">Otevřít aplikaci</a></p>
           <div id="push-ovladani" class="push-ovladani" hidden style="margin:10px 0;padding:10px 12px;background:#f3ede4;border-radius:10px"></div>
           <ol class="small" id="appNavod">
-            <li>V telefonu s Androidem otevřete v <b>Chromu</b> odkaz níže (nebo naskenujte QR kód fotoaparátem).</li>
+            <li>Na telefonu (Android) nebo na PC otevřete v <b>Chromu</b> odkaz níže (na telefonu lze naskenovat QR fotoaparátem).</li>
             <li>Přihlaste se a zaškrtněte <b>Zůstat přihlášen</b>.</li>
-            <li>V Chromu klepněte na <b>⋮ → Nainstalovat aplikaci</b> (případně „Přidat na plochu“). Ikona 🤖 Asistent se objeví na ploše.</li>
-            <li>Napoprvé u 🎤 povolte mikrofon.</li>
+            <li>V Chromu klepněte na <b>⋮ → Nainstalovat aplikaci</b> (příp. „Přidat na plochu“). Ikona <b>Kartotéka Thai Most</b> se objeví na ploše a otevře se rovnou na Masérnách.</li>
+            <li><span class="muted">Pokud už máte starou ikonu „Asistent", odinstalujte ji a nainstalujte znovu – aby se projevil nový název a start na Masérnách.</span></li>
           </ol>
           <p class="small">Odkaz: <code><?= h($url) ?></code></p>
         </div>
@@ -451,7 +451,8 @@ function aplikace_karta(): void
         <div style="font-size:48px;line-height:1">🛍️</div>
         <div class="grow">
           <p style="margin-top:0"><b>Prodejna</b> – malá „čtečka" na služební telefon na recepci: poukazy z webu, objednávky z webu a sken QR poukazu. <b>Bez přihlášení</b>, otevře se jen na PIN.</p>
-          <p><a class="btn primary" href="/prodejna.apk" download>⬇ Stáhnout Prodejnu (APK)</a></p>
+          <p><a class="btn primary" href="/prodejna.apk" download>⬇ Stáhnout Prodejnu (APK)</a>
+             <a class="btn" href="/prodejna-navod.pdf" target="_blank">📄 Návod pro recepci (PDF)</a></p>
           <p class="small">Odkaz: <code><?= h(rtrim(cfg()['url'] ?? '', '/')) ?>/prodejna.apk</code></p>
           <?php if (je_admin()): $pPin = (string)nastaveni('prodejna_pin', ''); ?>
           <form method="post" style="margin-top:8px;padding:10px 12px;background:#f3ede4;border-radius:10px">

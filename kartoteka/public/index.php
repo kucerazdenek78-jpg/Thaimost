@@ -70,18 +70,20 @@ if ($r === 'tablet_api') {
 if ($r === 'logout') { session_start_safe(); trvale_prihlaseni_zrus(); session_destroy(); presmeruj('/?r=login'); }
 // Prodejna: režim „čtečka“ na recepci bez přihlášení, chráněný jen PINem (nastaví admin ve Správě → Aplikace)
 if ($r === 'prodejna') { stranka_prodejna(); exit; }
-// manifest instalovatelné aplikace Asistent (Android: Chrome → Nainstalovat aplikaci)
+// manifest instalovatelné aplikace (Android/PC: Chrome → Nainstalovat aplikaci). Otevírá se rovnou na hlavní kartotéku
+// (Masérny) s plovoucí ikonou 🤖 Asistenta v rohu – ne do chatu asistenta.
 if ($r === 'manifest') {
     header('Content-Type: application/manifest+json; charset=utf-8');
+    $ikony = 'https://cdn.jsdelivr.net/gh/kucerazdenek78-jpg/Thaimost@20462c0/kartoteka/public/';
     echo json_encode([
-        'name' => 'Asistent Thai Most', 'short_name' => 'Asistent', 'id' => '/?r=ai&app=1',
-        'description' => 'AI asistent kartotéky Thai Most – plánování rezervací hlasem i psaním',
-        'start_url' => '/?r=ai&app=1', 'scope' => '/', 'display' => 'standalone', 'orientation' => 'portrait',
+        'name' => 'Kartotéka Thai Most', 'short_name' => 'Kartotéka', 'id' => '/?r=dnes&pwa=1',
+        'description' => 'Kartotéka salonu Thai Most – masérny, kalendář, zákazníci, poukazy a správa (s AI asistentem)',
+        'start_url' => '/?r=dnes&pwa=1', 'scope' => '/', 'display' => 'standalone', 'orientation' => 'any',
         'background_color' => '#f6f1ea', 'theme_color' => '#6b4a2b', 'lang' => 'cs',
         'icons' => [
-            ['src' => '/asistent-192.png', 'sizes' => '192x192', 'type' => 'image/png'],
-            ['src' => '/asistent-512.png', 'sizes' => '512x512', 'type' => 'image/png'],
-            ['src' => '/asistent-maskable-512.png', 'sizes' => '512x512', 'type' => 'image/png', 'purpose' => 'maskable'],
+            ['src' => $ikony . 'kartoteka-192.png', 'sizes' => '192x192', 'type' => 'image/png'],
+            ['src' => $ikony . 'kartoteka-512.png', 'sizes' => '512x512', 'type' => 'image/png'],
+            ['src' => $ikony . 'kartoteka-maskable-512.png', 'sizes' => '512x512', 'type' => 'image/png', 'purpose' => 'maskable'],
         ],
     ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
     exit;
@@ -91,7 +93,7 @@ $u = vyzaduj_prihlaseni();
 uzavri_probehle();
 
 $stranky = [
-    'dnes' => 'stranka_prehled', 'dnes_stary' => 'stranka_dnes', 'kalendar' => 'stranka_kalendar',
+    'web' => 'stranka_web', 'dnes' => 'stranka_prehled', 'dnes_stary' => 'stranka_dnes', 'kalendar' => 'stranka_kalendar',
     'rez_nova' => 'stranka_rez_nova', 'rezervace' => 'stranka_rezervace',
     'zakaznici' => 'stranka_zakaznici', 'zakaznik' => 'stranka_zakaznik', 'hledat' => 'stranka_hledat',
     'poukazy' => 'stranka_poukazy', 'poukaz' => 'stranka_poukaz', 'poukaz_novy' => 'stranka_poukaz_novy',
