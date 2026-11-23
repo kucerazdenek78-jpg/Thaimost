@@ -6,8 +6,8 @@ function stranka_poukazy(array $u): void
     $f = $_GET['f'] ?? 'aktivni';
     $kde = ['aktivni' => "stav IN ('objednano','zaplaceno','vydano')", 'objednano' => "stav='objednano'", 'vse' => '1=1',
             'uplatnene' => "stav IN ('uplatneno','propadle','zruseno')",
-            // platné poukazy vystavené na recepci bez vyplněného čísla předtištěného poukazu – k zpětnému doplnění
-            'bezcisla' => "zdroj='recepce' AND stav IN ('vydano','zaplaceno') AND TRIM(COALESCE(cislo_tisteny,''))=''"][$f] ?? "stav IN ('objednano','zaplaceno','vydano')";
+            // poukazy k vyzvednutí na prodejně (ne e-mailem) bez vyplněného 4místného čísla – z recepce i z webu
+            'bezcisla' => "stav IN ('objednano','zaplaceno','vydano') AND TRIM(COALESCE(cislo_tisteny,''))='' AND COALESCE(prevzeti,'') NOT LIKE '%mail%'"][$f] ?? "stav IN ('objednano','zaplaceno','vydano')";
     $hl = trim($_GET['q'] ?? '');
     // přesný kód (opsaný z vytištěného poukazu) → rovnou karta poukazu
     if ($hl !== '' && ($nal = poukaz_podle_kodu($hl))) presmeruj("/?r=poukaz&id=$nal[id]");
@@ -27,7 +27,7 @@ function stranka_poukazy(array $u): void
     <?php if ($nPlateb = platby_ke_sparovani()): ?><p class="flash warn">💳 <?= $nPlateb ?> platb<?= $nPlateb === 1 ? 'a čeká' : ($nPlateb < 5 ? 'y čekají' : ' čeká') ?> na spárování s poukazem – <a href="/?r=nastaveni&amp;sekce=platby">otevřít Platby</a></p><?php endif ?>
     <p class="muted small"><?php foreach (['aktivni' => 'aktivní', 'objednano' => 'čekají na platbu', 'uplatnene' => 'uplatněné / propadlé', 'bezcisla' => '🏠 k doplnění čísla', 'vse' => 'vše'] as $k => $t): ?>
       <a href="/?r=poukazy&f=<?= $k ?>"<?= $f === $k ? ' class="on"' : '' ?>><?= $t ?></a> · <?php endforeach ?></p>
-    <?php if ($f === 'bezcisla'): ?><p class="muted small">Platné poukazy vystavené na recepci (<?= count($rows) ?>), které nemají vyplněné číslo předtištěného poukazu (🏠). Klikni na poukaz a číslo doplň, nebo vytiskni seznam a doplň ručně do sloupce vpravo.</p><?php endif ?>
+    <?php if ($f === 'bezcisla'): ?><p class="muted small">Poukazy k vyzvednutí na prodejně (<?= count($rows) ?>) – z recepce i z webu – které ještě nemají vyplněné 4místné číslo předtištěného poukazu (🏠). Klikni na poukaz a číslo doplň, nebo vytiskni seznam a doplň ručně do sloupce vpravo.</p><?php endif ?>
     <table class="tbl">
       <tr><th>Kód</th><th>Stav</th><th>Hodnota</th><th>Zůstatek</th><th>Pro</th><th>Objednal</th><th>Platnost</th><th>Vytvořeno</th><?php if ($f === 'bezcisla'): ?><th>Doplnit číslo</th><?php endif ?></tr>
       <?php foreach ($rows as $pk): ?>
