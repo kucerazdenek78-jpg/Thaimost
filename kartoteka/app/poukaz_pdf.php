@@ -236,7 +236,7 @@ function poukaz_motiv_smaz(string $m): void
  * commit (adresa se nemění) a každý soubor se před uložením ověří podle SHA-256, takže nelze podstrčit jiný obsah.
  * Soubory, které už na disku jsou, se nestahují. Při změně podkladů se tady změní commit a součty.
  */
-const POUKAZ_ZDROJ = 'https://raw.githubusercontent.com/kucerazdenek78-jpg/thaimost/ddec7319fb8742fd1128a56e5ad935af2466d164/kartoteka/';
+const POUKAZ_ZDROJ = 'https://raw.githubusercontent.com/kucerazdenek78-jpg/thaimost/5381a38586c2c9e062eff7e1da9967de983b8667/kartoteka/';
 const POUKAZ_PODKLADY = [   // cesta v kartotéce => SHA-256
     'app/poukaz/sablona.pdf' => '3cca0433bba07b83f97a5e76f325769d2a2a2512da78c9e3f7238c917c4207c5',
     'app/poukaz/pismo.ttf' => '795ff699ad2fdcfa5ce3585f35e0e8938b739d2cb30ae55961aeccd7fe514a19',
@@ -244,6 +244,15 @@ const POUKAZ_PODKLADY = [   // cesta v kartotéce => SHA-256
     'app/poukaz/darkovy-poukaz-original.pdf' => '2379a9a63d8d6f0dd0116bc4fecaccedf010f657e78d82d6aa531cf441abff6c',
     'public/poukaz-pozadi.jpg' => '0ad6943bfd6834cc3bdca949f16c3c1d1fad0de53447c1164dd57bf59b437ec1',
     'app/qrcode.php' => '839337a00e1ab8be1916ab20702d724aa41cdd7991dd7fc8187ffbc602998b4e',   // knihovna QR (MIT)
+    // vzhledy poukazu (JPEG 210×100 mm) – stáhnou se při prvním použití (nelze přes textový deploy)
+    'app/poukaz/motivy/poukaz-darkovy-1.jpg' => '5841f41e97d3fdf021bc0c3b13de346a680a8e0a7fa5a89d27751585a5521379',
+    'app/poukaz/motivy/poukaz-darkovy-2.jpg' => '6035a25952e06398f742a68d11a887caa37d2be283028af5240c2c11a111e657',
+    'app/poukaz/motivy/poukaz-darkovy-3.jpg' => '3ab4cafc43d5494ebd8835e59572f184b169e6cd2a832043ec617e6b283e262d',
+    'app/poukaz/motivy/poukaz-darkovy-4.jpg' => 'fd374500d64b7ee77b7617dd5b88a4465b3522c3b5f327eb9664549e0cbc657e',
+    'app/poukaz/motivy/poukaz-vanocni-1.jpg' => 'bfc999c9aedef37d6adc44668430d436067fe6ec68c9c6c9283a9ff6f44a0231',
+    'app/poukaz/motivy/poukaz-vanocni-2.jpg' => 'ad1f42c6c8b057ae71625d5b043ce47b92764da2c4fb547395c4ef134a597332',
+    'app/poukaz/motivy/poukaz-vanocni-3.jpg' => '83317e33adebaad1609c1d53065faf52e5d6aeb5834fdc75fa1f9ebd54fa91d6',
+    'app/poukaz/motivy/poukaz-vanocni-4.jpg' => 'd5c9022e822ea8baccc9646b8aaaa85336c5438957a10a0209aad20572f611cd',
 ];
 
 /** Zajistí, že všechny podklady poukazu jsou na disku; chybějící stáhne a ověří. Při neúspěchu vyhodí výjimku s návodem. */
