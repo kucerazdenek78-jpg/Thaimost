@@ -248,29 +248,32 @@ function stranka_prodejna(): void
     })();
     </script>
     <script>
-    // Upozornění na nové objednávky i když je appka zavřená (Web Push). Funguje nejlíp v nainstalované appce na Androidu.
+    // Upozornění na nové objednávky i když je appka zavřená (Web Push). Natvrdo zapnuté:
+    // při každém otevření se čtečka znovu přihlásí k odběru, takže upozornění běží dál, i kdyby je někdo omylem vypnul.
     (function(){
       if(!('serviceWorker'in navigator)||!('PushManager'in window)||!('Notification'in window))return;
-      var box=document.getElementById('pdPush'); if(!box)return;
+      var box=document.getElementById('pdPush');
       function u8(s){var p='='.repeat((4-s.length%4)%4),b=(s+p).replace(/-/g,'+').replace(/_/g,'/'),r=atob(b),a=new Uint8Array(r.length);for(var i=0;i<r.length;i++)a[i]=r.charCodeAt(i);return a;}
       function post(u,d){return fetch(u,{method:'POST',credentials:'include',headers:{'Content-Type':'application/json'},body:d?JSON.stringify(d):''});}
-      function show(h){box.innerHTML=h;box.style.display='block';}
-      function on(){show('🔔 Upozornění na nové objednávky jsou <b>zapnutá</b> na tomto telefonu. <button type="button" class="btn small" id="pdpt">Test</button> <button type="button" class="btn small" id="pdpo">Vypnout</button>');}
-      function off(){show('🔔 <b>Upozornění na nové objednávky</b> – ať telefon zapípá, i když je appka zavřená. <button type="button" class="btn small primary" id="pdpon">Zapnout upozornění</button>');}
+      function hide(){ if(box){box.style.display='none';box.innerHTML='';} }
+      function subscribe(reg){
+        fetch('/api/push_klic').then(function(r){return r.json();}).then(function(o){
+          reg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:u8(o.klic)})
+            .then(function(s){ post('/api/push_subscribe',s); }).catch(function(){});
+        }).catch(function(){});
+      }
       navigator.serviceWorker.register('/sw-asistent.js').catch(function(){});
       navigator.serviceWorker.ready.then(function(reg){
-        reg.pushManager.getSubscription().then(function(s){(s&&Notification.permission==='granted')?on():off();});
-        box.addEventListener('click',function(e){var id=e.target.id;
-          if(id==='pdpon'){ Notification.requestPermission().then(function(p){
-            if(p!=='granted'){show('🔔 Upozornění nejsou povolená v nastavení telefonu/appky.');return;}
-            fetch('/api/push_klic').then(function(r){return r.json();}).then(function(o){
-              reg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:u8(o.klic)}).then(function(s){
-                post('/api/push_subscribe',s).then(function(r){return r.json();}).then(function(o){o&&o.ok?on():show('🔔 Uložení se nepovedlo, zkuste to znovu.');}).catch(function(){show('🔔 Uložení se nepovedlo, zkuste to znovu.');});
-              }).catch(function(){show('🔔 Přihlášení k odběru se nepovedlo (nejlíp v nainstalované appce na ploše).');});
-            }); });
-          } else if(id==='pdpt'){ post('/api/push_test'); }
-          else if(id==='pdpo'){ reg.pushManager.getSubscription().then(function(s){ if(s){var ep=s.endpoint;s.unsubscribe();post('/api/push_unsubscribe',{endpoint:ep});} off(); }); }
-        });
+        if(Notification.permission==='granted'){ subscribe(reg); hide(); return; }   // už povoleno → tiše (znovu)přihlásit, box pryč
+        if(Notification.permission==='denied'){ hide(); return; }                     // zablokováno v prohlížeči → nic neukazovat
+        // poprvé: prohlížeč vyžaduje jedno klepnutí pro povolení notifikací
+        if(box){
+          box.style.display='block';
+          box.innerHTML='🔔 <b>Zapnout upozornění na nové objednávky</b> – ať telefon zapípá, i když je appka zavřená. <button type="button" class="btn small primary" id="pdpon">Zapnout</button>';
+          box.addEventListener('click',function(e){ if(e.target.id!=='pdpon')return;
+            Notification.requestPermission().then(function(p){ if(p==='granted') subscribe(reg); hide(); });
+          });
+        }
       });
     })();
     </script>
