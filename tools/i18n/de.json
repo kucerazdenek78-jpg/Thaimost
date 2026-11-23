@@ -421,5 +421,6 @@
  "Ilustrační video": "Beispielvideo",
  "Dárkový poukaz – kód <span class=\"hint\">(nepovinné, máte‑li poukaz; můžete uvést i dva)</span>": "Geschenkgutschein – Code <span class=\"hint\">(optional, falls Sie einen Gutschein haben; Sie können auch zwei angeben)</span>",
  "např. TM-26-ABCD, i dva oddělte čárkou": "z. B. TM-26-ABCD, wobei die beiden Teile durch ein Komma getrennt werden",
- "🎁 Dárkový poukaz – kód <span class=\"hint\">(nepovinné, pokud chcete uplatnit poukaz; můžete uvést i dva)</span>": "🎁 Geschenkgutschein – Code <span class=\"hint\">(optional, falls Sie einen Gutschein einlösen möchten; Sie können auch zwei angeben)</span>"
+ "🎁 Dárkový poukaz – kód <span class=\"hint\">(nepovinné, pokud chcete uplatnit poukaz; můžete uvést i dva)</span>": "🎁 Geschenkgutschein – Code <span class=\"hint\">(optional, falls Sie einen Gutschein einlösen möchten; Sie können auch zwei angeben)</span>",
+ "např. 2233 (číslo z poukazu), i dva oddělte čárkou": "z. B. 2233 (Nummer aus dem Gutschein), wobei die beiden Zahlen durch ein Komma getrennt werden müssen"
 }
