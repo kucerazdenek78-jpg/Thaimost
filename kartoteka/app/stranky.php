@@ -925,6 +925,7 @@ function stranka_rezervace(array $u): void
             <?php if ($r['preferovano']): ?><dt>Hodí se mu</dt><dd><?= h($r['preferovano']) ?></dd><?php endif ?>
             <?php if (($r['atmosfera'] ?? '') !== ''): ?><dt>Atmosféra</dt><dd><?= atmosfera_html($r['atmosfera']) ?> <span class="muted small">(tematická masérna<?= tematicka_maserna_je() ? '' : ' – <b class="warn">žádná není nastavená, Tým → Masérny</b>' ?>)</span></dd><?php endif ?>
             <?php if ($r['poznamka_zakaznik']): ?><dt>Poznámka</dt><dd><?= nl2br(h($r['poznamka_zakaznik'])) ?></dd><?php endif ?>
+            <?php if (trim((string)($r['poukaz_kod'] ?? '')) !== ''): ?><dt>🎁 Poukaz k uplatnění</dt><dd><?= poukaz_kod_html($r['poukaz_kod']) ?></dd><?php endif ?>
             <dt>Masérka</dt><dd><?= h(($r['maserka'] ?? '—') . ($r['maserka2'] ? ' + ' . $r['maserka2'] : '')) ?><?= $r['masaz_konec'] ? ' <span class="muted small">(masáž do ' . h(date('H:i', strtotime($r['masaz_konec']))) . ', pak bez masérek)</span>' : '' ?></dd>
             <dt>Platba</dt><dd><?= h(PLATBY[$r['platba']] ?? '') ?> · <?= kc($r['cena']) ?></dd>
             <dt>Zdroj</dt><dd><?= h($r['zdroj']) ?> · vytvořeno <?= h(datum_cz($r['vytvoreno'])) ?><?= $r['zmenil'] ? ' · naposledy ' . h($r['zmenil']) : '' ?></dd>

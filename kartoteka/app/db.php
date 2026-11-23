@@ -26,7 +26,7 @@ function q(string $sql, array $p = []): PDOStatement
 function q1(string $sql, array $p = []): ?array { $r = q($sql, $p)->fetch(); return $r ?: null; }
 function qv(string $sql, array $p = []) { $r = q($sql, $p)->fetchColumn(); return $r === false ? null : $r; }
 
-const DB_VERZE = 24;
+const DB_VERZE = 25;
 
 /** Migrace běží v jedné transakci a po získání zámku se verze ověří znovu (souběžné první požadavky). */
 function migrate(PDO $pdo): void
@@ -99,6 +99,7 @@ function migrate(PDO $pdo): void
                 vytvoreno TEXT NOT NULL DEFAULT (datetime('now','localtime'))
             )");
         }
+        if ($ver < 25) $pdo->exec("ALTER TABLE rezervace ADD COLUMN poukaz_kod TEXT NOT NULL DEFAULT ''");   // v25: kód(y) dárkového poukazu, který chce zákazník u žádosti z webu uplatnit
         $pdo->exec('PRAGMA user_version = ' . DB_VERZE);
         $pdo->exec('COMMIT');
     } catch (Throwable $e) {

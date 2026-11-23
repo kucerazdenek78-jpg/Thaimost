@@ -617,6 +617,24 @@ const STAVY_POUKAZU = [
     'zruseno' => 'Zrušeno',
 ];
 
+/** Kód(y) poukazu, které chce zákazník u žádosti uplatnit (z webu). Každý kód dohledá v kartotéce –
+ *  když existuje, ukáže odkaz na poukaz se stavem a zůstatkem; jinak odkaz do hledání poukazů. */
+function poukaz_kod_html(string $kod): string
+{
+    $kusy = preg_split('~[\s,;]+~', trim($kod), -1, PREG_SPLIT_NO_EMPTY) ?: [];
+    $out = [];
+    foreach (array_slice($kusy, 0, 3) as $k) {
+        if (($p = poukaz_podle_kodu($k))) {
+            $out[] = '<a href="/?r=poukaz&id=' . (int)$p['id'] . '"><b>' . h($p['kod']) . '</b></a> <span class="muted small">'
+                . h(STAVY_POUKAZU[$p['stav']] ?? $p['stav']) . ' · zůstatek ' . kc($p['zustatek'])
+                . ($p['platnost_do'] ? ' · platí do ' . date('j. n. Y', strtotime($p['platnost_do'])) : '') . '</span>';
+        } else {
+            $out[] = '<a href="/?r=poukazy&amp;q=' . urlencode($k) . '">' . h($k) . '</a> <span class="muted small">v kartotéce nenalezen (starší řada?)</span>';
+        }
+    }
+    return implode('<br>', $out);
+}
+
 // ---------- E-maily ----------
 require_once __DIR__ . '/posta.php';
 require_once __DIR__ . '/platby.php';

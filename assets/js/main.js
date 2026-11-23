@@ -398,7 +398,8 @@
     const data = {
       varianta_id: sel.value, den: den.value, okno: $("#bOkno").value, atmosfera: ($("#bAtm") || {}).value || "",
       jmeno: $("#bJmeno").value.trim(), prijmeni: $("#bPrijmeni").value.trim(), telefon: $("#bTel").value.trim(),
-      email: $("#bMail").value.trim(), poznamka: ($("#bPozn").value.trim() + (JAZYK ? " [" + JAZYK + "]" : "")).trim(), gdpr: 1, web: $("#bWeb").value
+      email: $("#bMail").value.trim(), poznamka: ($("#bPozn").value.trim() + (JAZYK ? " [" + JAZYK + "]" : "")).trim(),
+      poukaz: (($("#bPoukaz") || {}).value || "").trim(), gdpr: 1, web: $("#bWeb").value
     };
     const prijato = () => { form.querySelectorAll(".step").forEach(x => x.style.display = "none");
       hotovo(`<span class="eyebrow">${window.Voucher.esc(T("Přijato"))}</span><h3>${window.Voucher.esc(T("Děkujeme, ozveme se vám"))}</h3>
@@ -417,7 +418,7 @@
         body: JSON.stringify({
           _subject: "Záložní poptávka z webu (rezervační systém byl nedostupný)", _template: "table", _captcha: "false",
           "Jméno a příjmení": (data.jmeno + " " + data.prijmeni).trim(), "Telefon": data.telefon, "E-mail": data.email || "—",
-          "Masáž": masaz, "Kdy by se hodilo": [data.den, okno].filter(Boolean).join(" · "), "Poznámka": data.poznamka || "—",
+          "Masáž": masaz, "Kdy by se hodilo": [data.den, okno].filter(Boolean).join(" · "), "Poznámka": data.poznamka || "—", "Poukaz k uplatnění": data.poukaz || "—",
           "Upozornění": "Tato poptávka dorazila záložní cestou, protože rezervační systém masage.dvere.app byl v tu chvíli nedostupný. NENÍ uložená v kartotéce – ozvěte se zákazníkovi a termín zapište ručně."
         })
       }).then(r => r.ok).catch(() => false);

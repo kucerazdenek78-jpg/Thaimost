@@ -102,14 +102,17 @@ function api_zajem(): void
 
     $zid = zakaznik_najdi_nebo_zaloz($tel, $jmeno, $prijmeni, $email, 'web');
     q("UPDATE zakaznici SET gdpr_souhlas=COALESCE(gdpr_souhlas, ?) WHERE id=?", [nyni(), $zid]);
-    q("INSERT INTO rezervace(zakaznik_id,varianta_id,stav,zdroj,preferovano,poznamka_zakaznik,cena,atmosfera)
-       VALUES(?,?,'zadost','web',?,?,?,?)", [$zid, $var, $pref, $d['poznamka'] ?? '', $v['cena'], $atm]);
+    // kód(y) dárkového poukazu, který chce zákazník uplatnit (nepovinné, může uvést i dva) – recepce to vidí předem
+    $poukaz_kod = mb_substr(trim(preg_replace('~[\x00-\x1F\x7F]+~', ' ', (string)($d['poukaz'] ?? ''))), 0, 60);
+    q("INSERT INTO rezervace(zakaznik_id,varianta_id,stav,zdroj,preferovano,poznamka_zakaznik,cena,atmosfera,poukaz_kod)
+       VALUES(?,?,'zadost','web',?,?,?,?,?)", [$zid, $var, $pref, $d['poznamka'] ?? '', $v['cena'], $atm, $poukaz_kod]);
     $rid = (int)db()->lastInsertId();
 
     $kdo = "$jmeno $prijmeni, " . telefon_cz($tel) . ($email ? ", $email" : '');
     $txtSalon = "Nová žádost z webu:\n\n$kdo\n$v[nazev] – $v[popis]\nKdy by se hodilo: $pref\n"
         . ($atmTxt !== '' ? "Atmosféra (tematická masérna): $atmTxt\n" : '')
         . (($d['poznamka'] ?? '') !== '' ? "Poznámka: $d[poznamka]\n" : '')
+        . ($poukaz_kod !== '' ? "Chce uplatnit poukaz: $poukaz_kod\n" : '')
         . "\nVyřídit: " . rtrim(cfg()['url'], '/') . "/?r=rezervace&id=$rid\n";
     foreach (posta_upozorneni() as $adr) posli_email($adr, "Nová žádost o termín – $jmeno $prijmeni", $txtSalon, null, 'interni');
     if ($email) posli_email($email, 'Thai Most – přijali jsme vaši žádost o termín',
