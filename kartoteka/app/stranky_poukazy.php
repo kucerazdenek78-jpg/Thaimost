@@ -93,11 +93,13 @@ function stranka_poukaz_novy(array $u): void
       <?php $vars = q("SELECT v.id, v.popis, v.cena, s.nazev FROM varianty v JOIN sluzby s ON s.id=v.sluzba_id WHERE v.aktivni=1 AND s.aktivni=1 AND v.cena>0 ORDER BY s.poradi, v.poradi")->fetchAll(); ?>
       <label>Kód z vytištěného poukazu <span class="muted small">(opište kód z poukazu; prázdné = kartotéka vytvoří nový a poukaz vytisknete z kartotéky)</span>
         <input name="kod" maxlength="40" autocapitalize="characters" autocomplete="off" placeholder="např. TM-0123" style="text-transform:uppercase"></label>
-      <?php if (poukaz_motiv_dostupny('vanocni')): $mv = poukaz_motiv_vychozi(); ?>
-      <div class="seg pk-typ pk-motiv" role="radiogroup" aria-label="Motiv poukazu">
-        <?php foreach (POUKAZ_MOTIVY as $m => $nazev): ?><label><input type="radio" name="motiv" value="<?= $m ?>"<?= $m === $mv ? ' checked' : '' ?>> <?= $m === 'vanocni' ? '🎄 ' : '🎁 ' ?><?= h($nazev) ?> poukaz</label><?php endforeach ?>
-      </div>
-      <?php endif ?>
+      <?php $mv = poukaz_motiv_vychozi(); ?>
+      <label>Vzhled poukazu <span class="muted small">(pro poukaz posílaný e-mailem; na prodejně se dává předtištěný)</span>
+        <select name="motiv">
+          <?php foreach (POUKAZ_MOTIVY as $sk => $sknaz): ?><optgroup label="<?= $sk === 'vanocni' ? '🎄 Vánoční' : '🎁 Dárkové' ?>">
+            <?php foreach (poukaz_vzhledy_skupiny($sk) as $k => $nazev): ?><option value="<?= h($k) ?>"<?= $k === $mv ? ' selected' : '' ?>><?= h($nazev) ?></option><?php endforeach ?>
+          </optgroup><?php endforeach ?>
+        </select></label>
       <div class="seg pk-typ" role="radiogroup">
         <label><input type="radio" name="typ" value="castka" checked> Na částku</label>
         <label><input type="radio" name="typ" value="masaz"> Na konkrétní masáž</label>
@@ -242,7 +244,11 @@ function stranka_poukaz(array $u): void
           <div class="grid3">
             <label>Platnost do<input type="date" name="platnost_do" value="<?= h($p['platnost_do'] ?? '') ?>"></label>
             <label>Držitel – komu poukaz patří (telefon)<input name="zakaznik_tel" value="<?= h($zak ? telefon_cz($zak['telefon']) : '') ?>"></label>
-            <?php if (poukaz_motiv_dostupny('vanocni')): ?><label>Motiv poukazu<select name="motiv"><?= moznosti(array_map(fn($n) => "$n poukaz", POUKAZ_MOTIVY), poukaz_motiv($p)) ?></select></label><?php endif ?>
+            <?php $mvy = poukaz_motiv($p); ?><label>Vzhled poukazu<select name="motiv">
+              <?php foreach (POUKAZ_MOTIVY as $sk => $sknaz): ?><optgroup label="<?= $sk === 'vanocni' ? '🎄 Vánoční' : '🎁 Dárkové' ?>">
+                <?php foreach (poukaz_vzhledy_skupiny($sk) as $k => $nazev): ?><option value="<?= h($k) ?>"<?= $k === $mvy ? ' selected' : '' ?>><?= h($nazev) ?></option><?php endforeach ?>
+              </optgroup><?php endforeach ?>
+            </select></label>
           </div>
           <div class="grid3">
             <label>Věnováno (pro koho)<input name="pro_koho" value="<?= h($p['pro_koho']) ?>"></label>

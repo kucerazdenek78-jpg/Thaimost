@@ -46,9 +46,11 @@ function api_route(string $cesta): void
             'platby_min' => platby_nastaveno() ? platby_interval() : 0,    // web: za jak dlouho se platba spáruje (0 = ručně)
             'ucet' => salon_ucet() !== '' && ucet_iban(salon_ucet()) !== '' ? salon_ucet() : '', 'iban' => ucet_iban(salon_ucet()),   // platba poukazu převodem (Nastavení)
             'platnost_mes' => poukaz_platnost_mes(),
-            // motivy poukazu pro web: obrázky podkladů (vánoční jen když je nahraný) a co je teď přednastavené
-            'motivy' => array_filter(['darkovy' => poukaz_motiv_jpg('darkovy') ? rtrim(cfg()['url'], '/') . poukaz_motiv_url('darkovy') : '',
-                                      'vanocni' => poukaz_motiv_jpg('vanocni') ? rtrim(cfg()['url'], '/') . poukaz_motiv_url('vanocni') : ''], fn($x) => true),
+            // vzhledy poukazu pro web: náhledy podkladů (8 vzhledů) + zpětně klíče darkovy/vanocni (= varianta 1) a výchozí vzhled
+            'motivy' => (function () { $u = rtrim(cfg()['url'], '/'); $o = [];
+                foreach (POUKAZ_VZHLEDY as $k => $v) $o[$k] = $u . poukaz_motiv_url($k);
+                $o['darkovy'] = $o['darkovy-1'] ?? ''; $o['vanocni'] = $o['vanocni-1'] ?? ''; return $o; })(),
+            'vzhledy' => array_map(fn($v) => ['nazev' => $v[0], 'skupina' => $v[1]], POUKAZ_VZHLEDY),
             'motiv' => poukaz_motiv_vychozi(),
             'fotky' => (object)sluzby_fotky_web(),
             'sluzby' => (object)sluzby_web()]);   // texty (cs + en/de) a ceny služeb z Nastavení → Ceník   // vlastní fotky služeb (Nastavení → Ceník) místo ilustračních
@@ -215,7 +217,7 @@ function api_poukaz(): void
 
     $popis = ($d['sluzba'] ?? '') !== '' ? $d['sluzba'] : kc($hodnota);
     $txtPoukaz = ["Objednávka poukazu – $jmeno ($popis)",
-        "Nová objednávka poukazu z webu č. $cislo (VS $cislo), motiv: " . POUKAZ_MOTIVY[$motiv] . ":\n\n"
+        "Nová objednávka poukazu z webu č. $cislo (VS $cislo), vzhled: " . poukaz_motiv_nazev($motiv) . ":\n\n"
         . "Poukaz: $popis, hodnota " . kc($hodnota) . "\nObjednal: $jmeno, " . telefon_cz($tel) . ($email ? ", $email" : '') . "\n"
         . "Převzetí: " . ($d['prevzeti'] ?? '') . "\nPlatba: " . ($d['platba'] ?? '') . "\n"
         . (($d['poznamka'] ?? '') !== '' ? "Poznámka: $d[poznamka]\n" : '')

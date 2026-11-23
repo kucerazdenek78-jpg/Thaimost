@@ -15,42 +15,47 @@
   }
 
   const W = 595.276, H = 283.465;
-  const POLE = { jmeno: [25.4, 169.9], procedura: [184.3, 329.3], platnost: [343.7, 488.2] };
-  const ZAKLADNI_LINKA = 235.0, VELIKOST = 11, VELIKOST_MIN = 6.5, ODSAZENI = 5.5;
-  const KOD = { right: 518.0, top: 188.7, size: 6.8 };      // bílý kód na zeleném pruhu
-  // řádek o platnosti (stejně jako POUKAZ_INFO v kartotéce): oranžový návrh salonu (dárkový i vánoční) má dole kontakty,
-  // proto světlým písmem úplně dole na hnědém pásu, na střed pod kontakty
-  const INFO = { x: 282.0, top: 279.4, size: 5.3, stred: true, barva: "#f8ecdc" };
-  const QR = { x: 214.0, y: 147.0, size: 33.0 };            // QR v rámečku ve spodním pásu
+  // vzhledy 11/2026: políčka Pro / Od / Platnost ve spodním světlém pruhu (stejné body jako POUKAZ_POLE v kartotéce)
+  const POLE = { pro: [28.0, 153.0], od: [160.0, 285.0], platnost: [292.0, 387.0] };
+  const ZAKLADNI_LINKA = 207.0, VELIKOST = 11, VELIKOST_MIN = 6.5, ODSAZENI = 6.0;
+  const BARVA = "#29201b";                                   // tmavé písmo na světlém pruhu (políčka, číslo)
+  const KOD = { x: 438.0, top: 199.0, size: 10.0 };          // číslo poukazu vlevo od QR (pod popiskem „Číslo poukazu")
+  const QR = { x: 399.0, y: 184.0, size: 31.0 };             // QR v rámečku vpravo ve spodním pruhu
+  // hodnota / služba v hlavičce – dvě třídy: left (světlé písmo vlevo na tmavém), center (tmavé na střed na krémovém)
+  const HERO = { left: { x: 30.0, top: 150.0, size: 15.0, stred: false, barva: "#ead9c0" },
+                 center: { x: 297.638, top: 136.0, size: 14.0, stred: true, barva: "#29201b" } };
+  const TRIDA_CENTER = { "darkovy-3": 1, "vanocni-3": 1 };   // krémové vzhledy = hodnota na střed, jinak vlevo
   // řádek s line-height:1 má základní linku 0,793 výšky písma pod horním okrajem (metriky Gelasio: ascent 1900, descent 700, 2048 j./em)
   const NAD_LINKOU = 0.793;
 
   const pct = (v, z) => (v / z * 100).toFixed(3) + "%";
   const cq = pt => (pt / W * 100).toFixed(3) + "cqw";
 
-  /* d = {typ:'hodnota'|'sluzba', hodnota, sluzba, varianta, komu, kod, platnost} */
+  /* d = {typ:'hodnota'|'sluzba', hodnota, sluzba, varianta, komu, od, kod, platnost, motiv} */
   function texty(d) {
-    const procedura = d.typ === "sluzba" && d.sluzba
+    const hero = d.typ === "sluzba" && d.sluzba
       ? d.sluzba + (d.varianta ? " (" + d.varianta + ")" : "")
-      : (+d.hodnota > 0 ? "Hodnota " + kcCs(d.hodnota) : "");
-    return { jmeno: (d.komu || "").trim(), procedura, platnost: d.platnost ? "do " + d.platnost : "" };
+      : (+d.hodnota > 0 ? "v hodnotě " + kcCs(d.hodnota) : "");
+    return { pro: (d.komu || "").trim(), od: (d.od || "").trim(), platnost: d.platnost ? "do " + d.platnost : "", hero };
   }
 
   function render(d) {
     const t = texty(d);
-    /* podklad: motiv z kartotéky (d.pozadi – dárkový / vánoční nahraný v Nastavení), jinak výchozí návrh z webu */
+    /* podklad: vybraný vzhled z kartotéky (d.pozadi), jinak výchozí návrh z webu */
     const src = d.pozadi || `${window.T ? window.T.root : ""}assets/img/poukaz-pozadi.jpg?v=or1`;
     let h = `<div class="pk"><img src="${esc(src)}" alt="${esc(window.T ? window.T("Dárkový poukaz Thajské masáže Most") : "Dárkový poukaz Thajské masáže Most")}">`;
     for (const k of Object.keys(POLE)) {
       if (!t[k]) continue;
       const [x0, x1] = POLE[k], max = x1 - x0 - 2 * ODSAZENI;
-      h += `<span class="pk-t" data-max="${max}" style="left:${pct(x0 + ODSAZENI, W)};top:${pct(ZAKLADNI_LINKA - NAD_LINKOU * VELIKOST, H)};font-size:${cq(VELIKOST)};max-width:${pct(max, W)}">${esc(t[k])}</span>`;
+      h += `<span class="pk-t" data-max="${max}" style="left:${pct(x0 + ODSAZENI, W)};top:${pct(ZAKLADNI_LINKA - NAD_LINKOU * VELIKOST, H)};font-size:${cq(VELIKOST)};max-width:${pct(max, W)};color:${BARVA}">${esc(t[k])}</span>`;
     }
-    const I = INFO;
-    if (d.platnost) h += `<span class="pk-t pk-info" style="left:${pct(I.x, W)};top:${pct(I.top - NAD_LINKOU * I.size, H)};font-size:${cq(I.size)}${I.stred ? ";transform:translateX(-50%)" : ""}${I.barva ? ";color:" + I.barva : ""}">${esc("Poukaz platí do " + d.platnost + " – do tohoto data je potřeba se objednat, zavolejte na 778 429 329. Masáž na poukaz se nezapočítává do věrnostní kartičky.")}</span>`;
+    /* hodnota / služba v hlavičce */
+    if (t.hero) {
+      const c = TRIDA_CENTER[d.motiv] ? HERO.center : HERO.left, max = c.stred ? W - 80 : 380 - c.x;
+      h += `<span class="pk-t" data-max="${max}" style="left:${pct(c.x, W)};top:${pct(c.top - NAD_LINKOU * c.size, H)};font-size:${cq(c.size)};max-width:${pct(max, W)};color:${c.barva}${c.stred ? ";transform:translateX(-50%)" : ""}">${esc(t.hero)}</span>`;
+    }
     if (d.kod) {
-      const K = KOD;
-      h += `<span class="pk-k" style="right:${pct(W - K.right, W)};top:${pct(K.top - NAD_LINKOU * K.size, H)};font-size:${cq(K.size)}">KÓD&nbsp; ${esc(d.kod)}</span>`;
+      h += `<span class="pk-t" style="left:${pct(KOD.x, W)};top:${pct(KOD.top - NAD_LINKOU * KOD.size, H)};font-size:${cq(KOD.size)};color:${BARVA}">${esc(d.kod)}</span>`;
       const qr = qrSvg(d.kod, 120);
       if (qr) h += `<div class="pk-qr" style="left:${pct(QR.x, W)};top:${pct(QR.y, H)};width:${pct(QR.size, W)};padding:${pct(2, W)}">${qr}</div>`;
     }
