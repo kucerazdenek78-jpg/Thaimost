@@ -10,6 +10,7 @@ require __DIR__ . '/stranky_import.php';
 require __DIR__ . '/stranky_tablet.php';
 require __DIR__ . '/demo.php';
 require __DIR__ . '/dostupnost.php';
+require __DIR__ . '/stranky_prodejna.php';
 require __DIR__ . '/prichody.php';
 require __DIR__ . '/stranky_ai.php';
 
@@ -117,7 +118,7 @@ function stranka_dnes(array $u): void
         s.nazev AS sluzba, v.popis AS var_popis, m.jmeno AS maserka, m2.jmeno AS maserka2
         FROM rezervace r JOIN zakaznici z ON z.id=r.zakaznik_id LEFT JOIN varianty v ON v.id=r.varianta_id
         LEFT JOIN sluzby s ON s.id=v.sluzba_id LEFT JOIN maserky m ON m.id=r.maserka_id LEFT JOIN maserky m2 ON m2.id=r.maserka2_id
-        WHERE r.zacatek >= ? AND r.zacatek < ? AND r.stav NOT IN ('zadost','odmitnuto')
+        WHERE r.zacatek >= ? AND r.zacatek < ? AND r.stav NOT IN ('zadost','odmitnuto','vyreseno')
         ORDER BY r.zacatek", [$dnes, date('Y-m-d', strtotime('+1 day'))])->fetchAll();
     $neodeslane = (int)qv("SELECT COUNT(*) FROM emaily WHERE stav<>'odeslano'");
 
@@ -278,7 +279,7 @@ function stranka_kalendar(array $u): void
     $rez = q("SELECT r.*, z.jmeno, z.prijmeni, s.nazev AS sluzba, v.popis AS var_popis, COALESCE(v.wellness_mistnost, 0) AS w
         FROM rezervace r JOIN zakaznici z ON z.id=r.zakaznik_id LEFT JOIN varianty v ON v.id=r.varianta_id
         LEFT JOIN sluzby s ON s.id=v.sluzba_id
-        WHERE r.zacatek >= ? AND r.zacatek < ? AND r.stav NOT IN ('zadost','odmitnuto')",
+        WHERE r.zacatek >= ? AND r.zacatek < ? AND r.stav NOT IN ('zadost','odmitnuto','vyreseno')",
         [$d, date('Y-m-d', strtotime($d . ' +1 day'))])->fetchAll();
     $poSloupcich = [];
     foreach ($rez as $r) {

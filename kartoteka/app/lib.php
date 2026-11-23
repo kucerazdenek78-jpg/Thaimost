@@ -161,6 +161,7 @@ const STAVY = [
     'zruseno_vcas' => 'Zrušeno včas',
     'zruseno_pozde' => 'Zrušeno pozdě',
     'odmitnuto' => 'Odmítnuto',
+    'vyreseno' => 'Vyřešeno',
 ];
 const PLATBY = [
     '' => '— neurčeno —',
