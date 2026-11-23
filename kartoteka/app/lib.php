@@ -118,6 +118,31 @@ function trvale_prihlaseni_zrus(): void
     if (preg_match('~^(\d+):~', $c, $m)) { try { q('DELETE FROM prihlaseni_trvale WHERE id=?', [(int)$m[1]]); } catch (Throwable $e) {} }
     trvale_cookie('', time() - 3600);
 }
+
+// ---------- Prodejna (čtečka na recepci): odemčení PINem bez přihlášení ----------
+const PRODEJNA_COOKIE = 'tmk_prodejna';
+/** Tajný token čtečky pro trvalé odemčení na zařízení = hash(PIN + sůl). Při změně PINu se staré cookies zneplatní. */
+function prodejna_token(string $pin): string
+{
+    $salt = (string)nastaveni('prodejna_salt', '');
+    return hash('sha256', 'prodejna|' . $pin . '|' . $salt);
+}
+/** Je čtečka na tomto zařízení odemčená? Přihlášený člověk (admin/recepce) vidí Prodejnu vždy. */
+function prodejna_odemceno(string $pin): bool
+{
+    if (uzivatel()) return true;
+    if ($pin === '') return false;
+    if (!empty($_SESSION['prodejna'])) return true;
+    $c = (string)($_COOKIE[PRODEJNA_COOKIE] ?? '');
+    return $c !== '' && hash_equals(prodejna_token($pin), $c);
+}
+function prodejna_cookie(string $hodnota, int $expirace): void
+{
+    if (headers_sent()) return;
+    $https = ($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? '') === 'https' || !empty($_SERVER['HTTPS']);
+    setcookie(PRODEJNA_COOKIE, $hodnota, ['expires' => $expirace, 'path' => '/', 'httponly' => true, 'samesite' => 'Lax', 'secure' => $https]);
+}
+
 /** Role: admin (vše) · hlavni (hlavní pracovník – upravuje masérky) · recepce. */
 function je_admin(?array $u = null): bool { return (($u ?? uzivatel())['role'] ?? '') === 'admin'; }
 function smi_upravit_tym(?array $u = null): bool { return in_array(($u ?? uzivatel())['role'] ?? '', ['admin', 'hlavni'], true); }

@@ -7,31 +7,7 @@
 //     bude až ve fázi 2 od nového roku); vyřízené zůstanou vidět označené jako „vyřízeno" (lze vrátit),
 //  3) poukazy objednané z webu k vyzvednutí – zapsat fyzické číslo předtištěného poukazu.
 
-const PRODEJNA_COOKIE = 'tmk_prodejna';
-
-/** Tajný token čtečky pro trvalé odemčení na zařízení = hash(PIN + sůl). Při změně PINu se staré cookies zneplatní. */
-function prodejna_token(string $pin): string
-{
-    $salt = (string)nastaveni('prodejna_salt', '');
-    return hash('sha256', 'prodejna|' . $pin . '|' . $salt);
-}
-
-/** Je čtečka na tomto zařízení odemčená? Přihlášený člověk (admin/recepce) vidí Prodejnu vždy. */
-function prodejna_odemceno(string $pin): bool
-{
-    if (uzivatel()) return true;
-    if ($pin === '') return false;
-    if (!empty($_SESSION['prodejna'])) return true;
-    $c = (string)($_COOKIE[PRODEJNA_COOKIE] ?? '');
-    return $c !== '' && hash_equals(prodejna_token($pin), $c);
-}
-
-function prodejna_cookie(string $hodnota, int $expirace): void
-{
-    if (headers_sent()) return;
-    $https = ($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? '') === 'https' || !empty($_SERVER['HTTPS']);
-    setcookie(PRODEJNA_COOKIE, $hodnota, ['expires' => $expirace, 'path' => '/', 'httponly' => true, 'samesite' => 'Lax', 'secure' => $https]);
-}
+// Odemykací helpery (PRODEJNA_COOKIE, prodejna_token/odemceno/cookie) jsou v lib.php (sdílí je i API pro push).
 
 /** Samostatná hlavička čtečky – BEZ navigace kartotéky (jen styl a flash). */
 function prodejna_hlava(): void
@@ -183,6 +159,8 @@ function stranka_prodejna(): void
     <h1>🛍️ Prodejna</h1>
     <p class="muted small">Jednoduchý režim pro recepci. Online plánování masáží bude až od nového roku – teď objednávky jen vyřizujete (voláte zákazníkům).</p>
 
+    <div id="pdPush" class="pd-blok" style="display:none;background:#f3ede4"></div>
+
     <section class="pd-blok">
       <h2>📷 Poukaz – uplatnit</h2>
       <button type="button" class="btn big" id="pdScan">📷 Naskenovat QR poukazu</button>
@@ -267,6 +245,33 @@ function stranka_prodejna(): void
       if(i) i.addEventListener('keydown', function(e){ if(e.key==='Enter'){ e.preventDefault(); go(i.value); } });
       // automatická obnova kvůli novým objednávkám (každých 60 s), když se needituje a není otevřený naskenovaný poukaz
       setInterval(function(){ var ae=document.activeElement; if(!/[?&]kod=/.test(location.search) && (!ae||ae.tagName!=='INPUT')) location.reload(); }, 60000);
+    })();
+    </script>
+    <script>
+    // Upozornění na nové objednávky i když je appka zavřená (Web Push). Funguje nejlíp v nainstalované appce na Androidu.
+    (function(){
+      if(!('serviceWorker'in navigator)||!('PushManager'in window)||!('Notification'in window))return;
+      var box=document.getElementById('pdPush'); if(!box)return;
+      function u8(s){var p='='.repeat((4-s.length%4)%4),b=(s+p).replace(/-/g,'+').replace(/_/g,'/'),r=atob(b),a=new Uint8Array(r.length);for(var i=0;i<r.length;i++)a[i]=r.charCodeAt(i);return a;}
+      function post(u,d){return fetch(u,{method:'POST',credentials:'include',headers:{'Content-Type':'application/json'},body:d?JSON.stringify(d):''});}
+      function show(h){box.innerHTML=h;box.style.display='block';}
+      function on(){show('🔔 Upozornění na nové objednávky jsou <b>zapnutá</b> na tomto telefonu. <button type="button" class="btn small" id="pdpt">Test</button> <button type="button" class="btn small" id="pdpo">Vypnout</button>');}
+      function off(){show('🔔 <b>Upozornění na nové objednávky</b> – ať telefon zapípá, i když je appka zavřená. <button type="button" class="btn small primary" id="pdpon">Zapnout upozornění</button>');}
+      navigator.serviceWorker.register('/sw-asistent.js').catch(function(){});
+      navigator.serviceWorker.ready.then(function(reg){
+        reg.pushManager.getSubscription().then(function(s){(s&&Notification.permission==='granted')?on():off();});
+        box.addEventListener('click',function(e){var id=e.target.id;
+          if(id==='pdpon'){ Notification.requestPermission().then(function(p){
+            if(p!=='granted'){show('🔔 Upozornění nejsou povolená v nastavení telefonu/appky.');return;}
+            fetch('/api/push_klic').then(function(r){return r.json();}).then(function(o){
+              reg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:u8(o.klic)}).then(function(s){
+                post('/api/push_subscribe',s).then(function(r){return r.json();}).then(function(o){o&&o.ok?on():show('🔔 Uložení se nepovedlo, zkuste to znovu.');}).catch(function(){show('🔔 Uložení se nepovedlo, zkuste to znovu.');});
+              }).catch(function(){show('🔔 Přihlášení k odběru se nepovedlo (nejlíp v nainstalované appce na ploše).');});
+            }); });
+          } else if(id==='pdpt'){ post('/api/push_test'); }
+          else if(id==='pdpo'){ reg.pushManager.getSubscription().then(function(s){ if(s){var ep=s.endpoint;s.unsubscribe();post('/api/push_unsubscribe',{endpoint:ep});} off(); }); }
+        });
+      });
     })();
     </script>
     <?php

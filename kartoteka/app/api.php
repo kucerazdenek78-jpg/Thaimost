@@ -140,14 +140,16 @@ function api_push_subscribe(): void
 {
     if (!push_stejny_origin()) api_odpoved(['ok' => false], 403);
     $u = uzivatel();
-    if (!$u) api_odpoved(['ok' => false, 'chyba' => 'Nepřihlášeno'], 401);
+    // povoleno přihlášenému pracovníkovi NEBO odemčené čtečce Prodejna (bez přihlášení, jen na PIN)
+    $jeProdejna = !$u && prodejna_odemceno((string)nastaveni('prodejna_pin', ''));
+    if (!$u && !$jeProdejna) api_odpoved(['ok' => false, 'chyba' => 'Nepřihlášeno'], 401);
     $sub = api_vstup();
     $endpoint = (string)($sub['endpoint'] ?? '');
     $keys = is_array($sub['keys'] ?? null) ? $sub['keys'] : [];
     if (!preg_match('~^https://~', $endpoint)) api_odpoved(['ok' => false, 'chyba' => 'Neplatný endpoint'], 422);
     q("INSERT INTO push_odbery(uzivatel_id,endpoint,p256dh,auth,zarizeni) VALUES(?,?,?,?,?)
        ON CONFLICT(endpoint) DO UPDATE SET uzivatel_id=excluded.uzivatel_id, p256dh=excluded.p256dh, auth=excluded.auth, zarizeni=excluded.zarizeni, posledni_chyba=''",
-        [$u['id'], $endpoint, (string)($keys['p256dh'] ?? ''), (string)($keys['auth'] ?? ''), mb_substr((string)($_SERVER['HTTP_USER_AGENT'] ?? ''), 0, 200)]);
+        [$u ? $u['id'] : null, $endpoint, (string)($keys['p256dh'] ?? ''), (string)($keys['auth'] ?? ''), mb_substr(($jeProdejna ? 'Prodejna · ' : '') . (string)($_SERVER['HTTP_USER_AGENT'] ?? ''), 0, 200)]);
     api_odpoved(['ok' => true]);
 }
 
@@ -165,7 +167,16 @@ function api_push_info(): void
 {
     $u = uzivatel();
     $vychozi = ['ok' => true, 'title' => 'Thai Most', 'body' => 'Nová poptávka – otevřete kartotéku', 'url' => '/?r=dnes', 'tag' => 'tm-poptavka'];
-    if (!$u) api_odpoved($vychozi);
+    if (!$u) {
+        // odemčená čtečka Prodejna (bez přihlášení): notifikace míří do Prodejny
+        if (prodejna_odemceno((string)nastaveni('prodejna_pin', ''))) {
+            $n = (int)qv("SELECT COUNT(*) FROM rezervace WHERE stav='zadost' AND zdroj='web'");
+            $np = (int)qv("SELECT COUNT(*) FROM poukazy WHERE zdroj='web' AND stav IN ('objednano','zaplaceno')");
+            $body = $n > 0 ? ($n === 1 ? 'Nová objednávka z webu' : "$n nových objednávek z webu") : ($np > 0 ? 'Nový poukaz z webu k vyřízení' : 'Něco nového z webu');
+            api_odpoved(['ok' => true, 'title' => 'Thai Most – Prodejna', 'body' => $body, 'url' => '/?r=prodejna', 'tag' => 'tm-prodejna']);
+        }
+        api_odpoved($vychozi);
+    }
     $n = (int)qv("SELECT COUNT(*) FROM rezervace WHERE stav='zadost' AND zdroj='web'");
     if ($n <= 0) api_odpoved(['ok' => true, 'title' => 'Thai Most', 'body' => 'Otevřete kartotéku', 'url' => '/?r=dnes', 'tag' => 'tm-poptavka']);
     $p = q1("SELECT z.jmeno, z.prijmeni, s.nazev FROM rezervace r JOIN zakaznici z ON z.id=r.zakaznik_id
@@ -182,9 +193,13 @@ function api_push_test(): void
 {
     if (!push_stejny_origin()) api_odpoved(['ok' => false], 403);
     $u = uzivatel();
-    if (!$u) api_odpoved(['ok' => false], 401);
+    $jeProdejna = !$u && prodejna_odemceno((string)nastaveni('prodejna_pin', ''));
+    if (!$u && !$jeProdejna) api_odpoved(['ok' => false], 401);
+    $odbery = $u
+        ? q('SELECT * FROM push_odbery WHERE uzivatel_id=?', [$u['id']])->fetchAll()
+        : q('SELECT * FROM push_odbery WHERE uzivatel_id IS NULL')->fetchAll();   // čtečky Prodejna
     $n = 0;
-    foreach (q('SELECT * FROM push_odbery WHERE uzivatel_id=?', [$u['id']])->fetchAll() as $s) { try { if (push_posli($s) < 300) $n++; } catch (Throwable $e) {} }
+    foreach ($odbery as $s) { try { if (push_posli($s) < 300) $n++; } catch (Throwable $e) {} }
     api_odpoved(['ok' => true, 'poslano' => $n]);
 }
 
