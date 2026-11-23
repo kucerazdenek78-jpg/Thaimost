@@ -1,0 +1,8 @@
+[{
+  "relation": ["delegate_permission/common.handle_all_urls"],
+  "target": {
+    "namespace": "android_app",
+    "package_name": "cz.thaimost.kartoteka",
+    "sha256_cert_fingerprints": ["37:9C:C9:8D:10:79:2B:16:15:92:3B:ED:77:C8:62:65:2C:C5:79:48:68:1E:82:71:F3:85:E9:3B:B6:2F:C3:68"]
+  }
+}]
