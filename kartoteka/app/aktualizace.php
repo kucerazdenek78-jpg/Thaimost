@@ -29,7 +29,7 @@ function aktualizace_spust(): void
         $root = dirname(__DIR__);
         $stazeno = [];
         foreach ($soubory as $cesta => $sha) {
-            if (!preg_match('~^(app|public)/[A-Za-z0-9_.-]+\.(php|css|js|json)$~', (string)$cesta)) throw new RuntimeException("nepovolená cesta $cesta");
+            if (!preg_match('~^(app|public)/[A-Za-z0-9_.-]+\.(php|css|js|json|apk)$~', (string)$cesta)) throw new RuntimeException("nepovolená cesta $cesta");
             $url = 'https://raw.githubusercontent.com/' . AKTUALIZACE_REPO . "/$commit/kartoteka/$cesta";
             $ctx = stream_context_create(['http' => ['timeout' => 30, 'header' => "User-Agent: thaimost-kartoteka\r\n"]]);
             $obsah = @file_get_contents($url, false, $ctx);
