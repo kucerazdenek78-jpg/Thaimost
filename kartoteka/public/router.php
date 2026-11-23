@@ -6,12 +6,13 @@ if ($path === '/.well-known/assetlinks.json') {
     $f = __DIR__ . '/.well-known/assetlinks.json';
     if (is_file($f)) { header('Content-Type: application/json'); readfile($f); exit; }
 }
-// APK aplikace ke stažení (Android po otevření nabídne instalaci).
-if ($path === '/thaimost.apk') {
-    $f = __DIR__ . '/thaimost.apk';
+// APK aplikací ke stažení (Android po otevření nabídne instalaci).
+$apky = ['/thaimost.apk' => 'ThaiMost-Kartoteka.apk', '/prodejna.apk' => 'ThaiMost-Prodejna.apk'];
+if (isset($apky[$path])) {
+    $f = __DIR__ . $path;
     if (is_file($f)) {
         header('Content-Type: application/vnd.android.package-archive');
-        header('Content-Disposition: attachment; filename="ThaiMost-Kartoteka.apk"');
+        header('Content-Disposition: attachment; filename="' . $apky[$path] . '"');
         header('Content-Length: ' . filesize($f));
         readfile($f);
         exit;

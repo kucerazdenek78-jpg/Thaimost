@@ -128,6 +128,20 @@ function stranka_nastaveni(array $u): void
             if (($_POST['potvrzeni'] ?? '') !== 'SMAZAT') flash('Pro smazání napište SMAZAT.', 'err');
             else { try { $m = zkusebni_smazat($_POST); $m ? flash($m) : flash('Nic nebylo vybráno.', 'err'); } catch (Throwable $e) { flash('Smazání selhalo: ' . $e->getMessage(), 'err'); } }
             presmeruj('/?r=nastaveni#zkusebni');
+        } elseif ($akce === 'prodejna_pin' && $u['role'] === 'admin') {
+            $pin = preg_replace('~\D+~', '', (string)($_POST['prodejna_pin'] ?? ''));
+            if ($pin === '') {
+                q("DELETE FROM nastaveni WHERE klic='prodejna_pin'");
+                flash('PIN zrušen – čtečka Prodejna je vypnutá (bez PINu se neotevře).');
+            } elseif (strlen($pin) < 4) {
+                flash('PIN musí mít aspoň 4 číslice. Neuloženo.', 'err');
+            } else {
+                if ((string)nastaveni('prodejna_salt', '') === '')
+                    q('INSERT INTO nastaveni(klic,hodnota) VALUES(?,?) ON CONFLICT(klic) DO UPDATE SET hodnota=excluded.hodnota', ['prodejna_salt', bin2hex(random_bytes(16))]);
+                q('INSERT INTO nastaveni(klic,hodnota) VALUES(?,?) ON CONFLICT(klic) DO UPDATE SET hodnota=excluded.hodnota', ['prodejna_pin', $pin]);
+                flash('PIN čtečky Prodejna uložen. Zařízení, která byla odemčená starým PINem, se budou muset odemknout znovu.');
+            }
+            presmeruj('/?r=nastaveni#aplikace');
         } elseif ($akce === 'odeslat_emaily') {
             odesli_frontu(); flash('Fronta e-mailů zpracována.');
         }
@@ -419,6 +433,37 @@ function aplikace_karta(): void
           <p class="small">Odkaz: <code><?= h($url) ?></code></p>
         </div>
         <div class="aplikace-qr" id="appQr" data-qr="<?= h($url) ?>" title="Naskenujte telefonem"></div>
+      </div>
+    </section>
+
+    <section class="card aplikace" id="aplikace">
+      <h2>📥 Aplikace ke stažení (APK)</h2>
+      <p class="small muted" style="margin-top:0">Instalace na Android bez Obchodu Play: otevřít odkaz v telefonu → stáhne se APK → klepnout na stažený soubor → povolit instalaci z tohoto zdroje → Instalovat. Aplikace běží na celou obrazovku.</p>
+      <div class="aplikace-in" style="align-items:flex-start">
+        <img src="/kartoteka-192.png" alt="" width="64" height="64" onerror="this.style.display='none'">
+        <div class="grow">
+          <p style="margin-top:0"><b>Kartotéka</b> – celý systém (přihlášení jménem a heslem). Pro recepci a vedení.</p>
+          <p><a class="btn primary" href="/thaimost.apk" download>⬇ Stáhnout Kartotéku (APK)</a></p>
+          <p class="small">Odkaz: <code><?= h(rtrim(cfg()['url'] ?? '', '/')) ?>/thaimost.apk</code></p>
+        </div>
+      </div>
+      <div class="aplikace-in" style="align-items:flex-start;border-top:1px solid var(--line,#e5ddd0);margin-top:12px;padding-top:12px">
+        <div style="font-size:48px;line-height:1">🛍️</div>
+        <div class="grow">
+          <p style="margin-top:0"><b>Prodejna</b> – malá „čtečka" na služební telefon na recepci: poukazy z webu, objednávky z webu a sken QR poukazu. <b>Bez přihlášení</b>, otevře se jen na PIN.</p>
+          <p><a class="btn primary" href="/prodejna.apk" download>⬇ Stáhnout Prodejnu (APK)</a></p>
+          <p class="small">Odkaz: <code><?= h(rtrim(cfg()['url'] ?? '', '/')) ?>/prodejna.apk</code></p>
+          <?php if (je_admin()): $pPin = (string)nastaveni('prodejna_pin', ''); ?>
+          <form method="post" style="margin-top:8px;padding:10px 12px;background:#f3ede4;border-radius:10px">
+            <?= csrf_pole() ?><input type="hidden" name="akce" value="prodejna_pin">
+            <label style="font-weight:600">PIN čtečky Prodejna
+              <input name="prodejna_pin" inputmode="numeric" autocomplete="off" minlength="4" maxlength="12" placeholder="<?= $pPin !== '' ? '•••• (nastaveno – přepište pro změnu)' : 'např. 4 a více číslic' ?>" style="display:block;margin-top:4px;max-width:220px">
+            </label>
+            <p class="small muted" style="margin:6px 0">Stav: <?= $pPin !== '' ? '✅ <b>zapnuto</b> (čtečka se odemyká tímto PINem)' : '⚠️ <b>vypnuto</b> – bez PINu se Prodejna neotevře' ?>. Prázdné pole + Uložit = vypnout.</p>
+            <button class="btn">Uložit PIN</button>
+          </form>
+          <?php endif ?>
+        </div>
       </div>
     </section>
     <script src="/qrcode.js"></script>

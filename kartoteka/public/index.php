@@ -68,6 +68,8 @@ if ($r === 'tablet_api') {
     catch (Throwable $e) { error_log((string)$e); api_odpoved(['ok' => false, 'chyba' => 'Chyba serveru.'], 500); }
 }
 if ($r === 'logout') { session_start_safe(); trvale_prihlaseni_zrus(); session_destroy(); presmeruj('/?r=login'); }
+// Prodejna: režim „čtečka“ na recepci bez přihlášení, chráněný jen PINem (nastaví admin ve Správě → Aplikace)
+if ($r === 'prodejna') { stranka_prodejna(); exit; }
 // manifest instalovatelné aplikace Asistent (Android: Chrome → Nainstalovat aplikaci)
 if ($r === 'manifest') {
     header('Content-Type: application/manifest+json; charset=utf-8');
@@ -100,7 +102,6 @@ $stranky = [
     'volno' => 'stranka_volno', 'den_obs' => 'stranka_den_obs', 'poplach' => 'stranka_poplach', 'dostupnost' => 'stranka_dostupnost', 'import' => 'stranka_import', 'poukaz_tisk' => 'stranka_poukaz_tisk', 'poukaz_pdf' => 'stranka_poukaz_pdf',
     'ai' => 'stranka_ai', 'ai_pravidla' => 'stranka_ai_pravidla', 'ai_log' => 'stranka_ai_log',
     'google' => 'stranka_google', 'google_zpet' => 'stranka_google_zpet',
-    'prodejna' => 'stranka_prodejna',
 ];
 if (!isset($stranky[$r])) { http_response_code(404); $r = 'dnes'; }
 if ($r === 'poplach') gk_priprav_tik();   // automatická synchronizace Google kontaktů (po odeslání odpovědi; jen když je zapnutá a je na čase)

@@ -1,15 +1,63 @@
 <?php
-// Jednoduchý „Prodejna" režim pro recepci během přechodu na online objednávky:
+// Jednoduchý „Prodejna" režim pro recepci během přechodu na online objednávky – běží jako „čtečka"
+// na služebním telefonu/tabletu na recepci: BEZ přihlášení, chráněno jen PINem (nastaví admin ve Správě → Aplikace).
 //  1) naskenovat QR poukazu a označit ho jako uplatněný,
 //  2) objednávky (žádosti) z webu – tlačítko „Vyřešeno" (ručně vyřízeno, neplánuje do kalendáře),
 //  3) poukazy objednané z webu k vyzvednutí – zapsat fyzické číslo předtištěného poukazu.
 // Běží nad stejnými daty jako velká kartotéka; až se online objednávky zapnou naplno, přestane se používat.
 
-function stranka_prodejna(array $u): void
+const PRODEJNA_COOKIE = 'tmk_prodejna';
+
+/** Tajný token čtečky pro trvalé odemčení na zařízení = hash(PIN + sůl). Při změně PINu se staré cookies zneplatní. */
+function prodejna_token(string $pin): string
 {
+    $salt = (string)nastaveni('prodejna_salt', '');
+    return hash('sha256', 'prodejna|' . $pin . '|' . $salt);
+}
+
+/** Je čtečka na tomto zařízení odemčená? Přihlášený člověk (admin/recepce) vidí Prodejnu vždy. */
+function prodejna_odemceno(string $pin): bool
+{
+    if (uzivatel()) return true;
+    if ($pin === '') return false;
+    if (!empty($_SESSION['prodejna'])) return true;
+    $c = (string)($_COOKIE[PRODEJNA_COOKIE] ?? '');
+    return $c !== '' && hash_equals(prodejna_token($pin), $c);
+}
+
+function prodejna_cookie(string $hodnota, int $expirace): void
+{
+    if (headers_sent()) return;
+    $https = ($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? '') === 'https' || !empty($_SERVER['HTTPS']);
+    setcookie(PRODEJNA_COOKIE, $hodnota, ['expires' => $expirace, 'path' => '/', 'httponly' => true, 'samesite' => 'Lax', 'secure' => $https]);
+}
+
+function stranka_prodejna(): void
+{
+    session_start_safe();
+    $pin = (string)nastaveni('prodejna_pin', '');
+    $odemceno = prodejna_odemceno($pin);
+
     if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+        over_csrf();
         $akce = $_POST['akce'] ?? '';
-        if ($akce === 'zapsat_cislo') {
+        if ($akce === 'pin') {
+            if ($pin === '') { flash('Prodejna zatím není zapnutá – admin musí nastavit PIN ve Správě → Aplikace.', 'chyba'); presmeruj('/?r=prodejna'); }
+            if (!limit_ip('prodejna_pin', 15)) { http_response_code(429); exit('Příliš mnoho pokusů, zkuste to prosím za chvíli.'); }
+            if (hash_equals($pin, trim((string)($_POST['pin'] ?? '')))) {
+                $_SESSION['prodejna'] = 1;
+                prodejna_cookie(prodejna_token($pin), time() + 400 * 86400);   // trvalé odemčení na tomto zařízení
+                presmeruj('/?r=prodejna');
+            }
+            flash('Nesprávný PIN.', 'chyba');
+            presmeruj('/?r=prodejna');
+        }
+        if (!$odemceno) { http_response_code(403); exit('Čtečka je zamčená.'); }
+        if ($akce === 'odhlasit') {
+            unset($_SESSION['prodejna']);
+            prodejna_cookie('', time() - 3600);
+            presmeruj('/?r=prodejna');
+        } elseif ($akce === 'zapsat_cislo') {
             $id = (int)($_POST['poukaz_id'] ?? 0);
             $cislo = mb_substr(trim($_POST['cislo'] ?? ''), 0, 40);
             $p = q1('SELECT * FROM poukazy WHERE id=?', [$id]);
@@ -36,6 +84,36 @@ function stranka_prodejna(array $u): void
         }
     }
 
+    // --- zamčeno: zadání PINu ---
+    if (!$odemceno) {
+        hlavicka('Prodejna', 'prodejna');
+        ?>
+        <style>
+        .pd-lock{max-width:360px;margin:8vh auto 0;text-align:center}
+        .pd-lock h1{font-size:1.5rem;margin:.2em 0}
+        .pd-lock .zamek{font-size:3rem;line-height:1}
+        .pd-lock input{font-size:1.6rem;text-align:center;letter-spacing:.35em;width:100%;padding:12px;margin:14px 0}
+        .pd-lock .btn{width:100%;font-size:1.1rem;padding:13px}
+        </style>
+        <div class="pd-lock">
+          <div class="zamek">🔒</div>
+          <h1>Thai Most – Prodejna</h1>
+          <?php if ($pin === ''): ?>
+            <p class="muted">Čtečka zatím není zapnutá. Administrátor ji zapne ve <b>Správě → Aplikace</b> nastavením PINu.</p>
+          <?php else: ?>
+            <p class="muted small">Zadejte PIN čtečky.</p>
+            <form method="post"><?= csrf_pole() ?><input type="hidden" name="akce" value="pin">
+              <input name="pin" inputmode="numeric" autocomplete="off" autofocus placeholder="PIN" aria-label="PIN">
+              <button class="btn primary">Odemknout</button>
+            </form>
+          <?php endif ?>
+        </div>
+        <?php
+        paticka();
+        return;
+    }
+
+    // --- odemčeno: samotná Prodejna ---
     $zadosti = q("SELECT r.*, z.jmeno, z.prijmeni, z.telefon, s.nazev AS sluzba, v.popis AS var_popis
         FROM rezervace r JOIN zakaznici z ON z.id=r.zakaznik_id LEFT JOIN varianty v ON v.id=r.varianta_id
         LEFT JOIN sluzby s ON s.id=v.sluzba_id WHERE r.stav='zadost' AND r.zdroj='web' ORDER BY r.vytvoreno DESC")->fetchAll();
@@ -60,6 +138,7 @@ function stranka_prodejna(array $u): void
     .pd-pocet.pd-upoz{background:#c0392b;color:#fff}
     .pd-poukaz,.pd-nenalezen{margin-top:12px;padding:12px;border:1px solid var(--line,#e5ddd0);border-radius:12px;background:var(--paper,#faf7f1)}
     .pd-vyr .btn{white-space:nowrap}
+    .pd-paticka{text-align:center;margin:18px 0 4px}
     @media(max-width:520px){.pd-radek{flex-direction:column}.pd-cislo input{width:100%}.pd-cislo{width:100%}}
     </style>
     <div class="prodejna">
@@ -80,10 +159,10 @@ function stranka_prodejna(array $u): void
             <?php else: ?>
               <p class="muted small" style="margin:8px 0 0">Tento poukaz nelze uplatnit (stav <?= h(STAVY_POUKAZU[$skenP['stav']] ?? $skenP['stav']) ?>).</p>
             <?php endif ?>
-            <p class="small" style="margin:8px 0 0"><a href="/?r=poukaz&id=<?= (int)$skenP['id'] ?>">otevřít v kartotéce</a> · <a href="/?r=prodejna">zavřít</a></p>
+            <p class="small" style="margin:8px 0 0"><a href="/?r=prodejna">zavřít</a></p>
           </div>
         <?php else: ?>
-          <p class="pd-nenalezen">Kód <b><?= h($skenKod) ?></b> nenalezen v kartotéce (starší papírová série?). <a href="/?r=poukazy&q=<?= urlencode($skenKod) ?>">hledat</a> · <a href="/?r=prodejna">zavřít</a></p>
+          <p class="pd-nenalezen">Kód <b><?= h($skenKod) ?></b> nenalezen v kartotéce (starší papírová série?). <a href="/?r=prodejna">zavřít</a></p>
         <?php endif ?>
       <?php endif ?>
     </section>
@@ -121,6 +200,10 @@ function stranka_prodejna(array $u): void
         <?php endforeach ?>
       <?php endif ?>
     </section>
+
+    <?php if (!uzivatel()): ?>
+    <p class="pd-paticka"><form method="post" style="display:inline"><?= csrf_pole() ?><input type="hidden" name="akce" value="odhlasit"><button class="btn small" type="submit">🔒 Zamknout čtečku</button></form></p>
+    <?php endif ?>
     </div>
 
     <script src="/skener.js?v=2"></script>
