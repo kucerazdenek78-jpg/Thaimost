@@ -28,7 +28,7 @@ function hlavicka(string $titul, string $aktivni = ''): void
     if ($u && smi_upravit_tym($u)) $menu['nastaveni'] = ['/?r=nastaveni', '<i class="mi">⚙️</i>Správa' . (($konfl + $nPlateb) ? ' <b class="cnt">' . ($konfl + $nPlateb) . '</b>' : '')];
     // stránky, které patří pod jinou položku menu
     $patri = ['dnes_stary' => 'dnes', 'volno' => 'kalendar', 'poukazy' => 'zakaznici', 'karty' => 'zakaznici',
-              'tym' => 'nastaveni', 'smeny' => 'nastaveni', 'uzivatele' => 'nastaveni', 'dostupnost' => 'nastaveni', 'posta' => 'nastaveni', 'platby' => 'nastaveni'];
+              'tym' => 'nastaveni', 'smeny' => 'nastaveni', 'uzivatele' => 'nastaveni', 'dostupnost' => 'nastaveni', 'posta' => 'nastaveni', 'platby' => 'nastaveni', 'aplikace' => 'nastaveni'];
     $podmenu = null;
     if (in_array($aktivni, ['zakaznici', 'poukazy', 'karty'], true)) {
         $podmenu = ['zakaznici' => ['/?r=zakaznici', 'Zákazníci'],
@@ -36,11 +36,12 @@ function hlavicka(string $titul, string $aktivni = ''): void
         $podAkt = $aktivni;
     }
     // podmenu Správy (jen vedoucí a admin)
-    if ($u && smi_upravit_tym($u) && in_array($aktivni, ['nastaveni', 'tym', 'smeny', 'uzivatele', 'dostupnost', 'posta', 'platby'], true)) {
+    if ($u && smi_upravit_tym($u) && in_array($aktivni, ['nastaveni', 'tym', 'smeny', 'uzivatele', 'dostupnost', 'posta', 'platby', 'aplikace'], true)) {
         $podmenu = ['nastaveni' => ['/?r=nastaveni', '⚙️ Nastavení'], 'tym' => ['/?r=tym', '👥 Tým'], 'smeny' => ['/?r=smeny', '🗓 Směny'],
                     'dostupnost' => ['/?r=dostupnost', '🌴 Volna' . ($konfl ? " <b class=\"cnt\">$konfl</b>" : '')],
                     'posta' => ['/?r=nastaveni&amp;sekce=posta', '✉️ Pošta'],
-                    'platby' => ['/?r=nastaveni&amp;sekce=platby', '💳 Platby' . ($nPlateb ? " <b class=\"cnt\">$nPlateb</b>" : '')]];
+                    'platby' => ['/?r=nastaveni&amp;sekce=platby', '💳 Platby' . ($nPlateb ? " <b class=\"cnt\">$nPlateb</b>" : '')],
+                    'aplikace' => ['/?r=aplikace', '📲 Aplikace']];
         $podAkt = $aktivni === 'uzivatele' ? 'tym' : $aktivni;
     }
     $aktivni = $patri[$aktivni] ?? $aktivni;

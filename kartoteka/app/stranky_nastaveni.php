@@ -128,20 +128,6 @@ function stranka_nastaveni(array $u): void
             if (($_POST['potvrzeni'] ?? '') !== 'SMAZAT') flash('Pro smazání napište SMAZAT.', 'err');
             else { try { $m = zkusebni_smazat($_POST); $m ? flash($m) : flash('Nic nebylo vybráno.', 'err'); } catch (Throwable $e) { flash('Smazání selhalo: ' . $e->getMessage(), 'err'); } }
             presmeruj('/?r=nastaveni#zkusebni');
-        } elseif ($akce === 'prodejna_pin' && $u['role'] === 'admin') {
-            $pin = preg_replace('~\D+~', '', (string)($_POST['prodejna_pin'] ?? ''));
-            if ($pin === '') {
-                q("DELETE FROM nastaveni WHERE klic='prodejna_pin'");
-                flash('PIN zrušen – čtečka Prodejna je vypnutá (bez PINu se neotevře).');
-            } elseif (strlen($pin) < 4) {
-                flash('PIN musí mít aspoň 4 číslice. Neuloženo.', 'err');
-            } else {
-                if ((string)nastaveni('prodejna_salt', '') === '')
-                    q('INSERT INTO nastaveni(klic,hodnota) VALUES(?,?) ON CONFLICT(klic) DO UPDATE SET hodnota=excluded.hodnota', ['prodejna_salt', bin2hex(random_bytes(16))]);
-                q('INSERT INTO nastaveni(klic,hodnota) VALUES(?,?) ON CONFLICT(klic) DO UPDATE SET hodnota=excluded.hodnota', ['prodejna_pin', $pin]);
-                flash('PIN čtečky Prodejna uložen. Zařízení, která byla odemčená starým PINem, se budou muset odemknout znovu.');
-            }
-            presmeruj('/?r=nastaveni#aplikace');
         } elseif ($akce === 'odeslat_emaily') {
             odesli_frontu(); flash('Fronta e-mailů zpracována.');
         }
@@ -154,7 +140,7 @@ function stranka_nastaveni(array $u): void
 
     hlavicka('Nastavení', 'nastaveni'); ?>
     <h1>Nastavení</h1>
-    <?php aplikace_karta(); ?>
+    <p><a class="btn" href="/?r=aplikace">📲 Aplikace (instalace na PC, APK ke stažení, PIN Prodejny) →</a></p>
     <?php if (je_admin($u)): ?>
     <section class="card"><h2>📇 Zákazníci v telefonu (Google kontakty)</h2>
       <p style="margin-top:0">Zákazníci z kartotéky se sami objeví v kontaktech telefonu i se značkami (⭐ stálý, 🎁 poukaz, 🎉 masáž zdarma, oblíbená masérka), takže při hovoru hned víte, kdo volá.
@@ -409,68 +395,99 @@ function stranka_emaily(array $u): void
     <?php paticka();
 }
 
-/** Sekce „Aplikace“: instalace celé kartotéky do telefonu/PC (Android/Chrome), QR kód pro otevření v telefonu. */
-function aplikace_karta(): void
+/** Stránka „Aplikace“ (podmenu Správy): instalace celého systému na PC + APK ke stažení (Kartotéka, Prodejna) s QR. */
+function stranka_aplikace(array $u): void
 {
+    vyzaduj_tym();   // admin nebo hlavní pracovník
+    if ($_SERVER['REQUEST_METHOD'] === 'POST') {   // CSRF ověřuje index.php
+        if (($_POST['akce'] ?? '') === 'prodejna_pin' && je_admin($u)) {
+            $pin = preg_replace('~\D+~', '', (string)($_POST['prodejna_pin'] ?? ''));
+            if ($pin === '') {
+                q("DELETE FROM nastaveni WHERE klic='prodejna_pin'");
+                flash('PIN zrušen – čtečka Prodejna je vypnutá (bez PINu se neotevře).');
+            } elseif (strlen($pin) < 4) {
+                flash('PIN musí mít aspoň 4 číslice. Neuloženo.', 'err');
+            } else {
+                if ((string)nastaveni('prodejna_salt', '') === '')
+                    q('INSERT INTO nastaveni(klic,hodnota) VALUES(?,?) ON CONFLICT(klic) DO UPDATE SET hodnota=excluded.hodnota', ['prodejna_salt', bin2hex(random_bytes(16))]);
+                q('INSERT INTO nastaveni(klic,hodnota) VALUES(?,?) ON CONFLICT(klic) DO UPDATE SET hodnota=excluded.hodnota', ['prodejna_pin', $pin]);
+                flash('PIN čtečky Prodejna uložen. Zařízení odemčená starým PINem se budou muset odemknout znovu.');
+            }
+        }
+        presmeruj('/?r=aplikace');
+    }
     require_once __DIR__ . '/push.php';   // Web Push: zapnutí upozornění na poptávky (VAPID klíč)
-    $url = rtrim(cfg()['url'] ?? '', '/') . '/?r=dnes&pwa=1'; ?>
+    $base = rtrim(cfg()['url'] ?? '', '/');
+    $pwaUrl = $base . '/?r=dnes&pwa=1';
+    hlavicka('Aplikace', 'aplikace'); ?>
+    <h1 style="margin:.2em 0 0">📲 Aplikace</h1>
+    <p class="muted small">Instalace systému na PC a aplikace ke stažení do telefonu/tabletu.</p>
+
     <section class="card aplikace">
-      <h2>📲 Aplikace do telefonu / PC (celý systém)</h2>
+      <h2>💻 PC – celý systém</h2>
       <div class="aplikace-in">
         <img src="/kartoteka-192.png" alt="" width="72" height="72" onerror="this.src='/asistent-192.png'">
         <div class="grow">
-          <p style="margin-top:0">Celá kartotéka jako samostatná aplikace s ikonou na ploše. Otevře se rovnou na <b>Masérnách</b>; AI asistent je uvnitř jako plovoucí ikona 🤖 v rohu.</p>
-          <p><button type="button" class="btn primary" id="appInstal" hidden>⬇ Nainstalovat aplikaci</button>
+          <p style="margin-top:0">Celá kartotéka jako samostatná aplikace s ikonou na ploše počítače. Otevře se rovnou na <b>Masérnách</b>; AI asistent je uvnitř jako plovoucí ikona 🤖 v rohu.</p>
+          <p><button type="button" class="btn primary" id="appInstal" hidden>⬇ Nainstalovat na PC</button>
              <span id="appHotovo" class="tag zdarma" hidden>✅ Aplikace je nainstalovaná</span>
              <a class="btn" href="/?r=dnes&amp;pwa=1">Otevřít aplikaci</a></p>
           <div id="push-ovladani" class="push-ovladani" hidden style="margin:10px 0;padding:10px 12px;background:#f3ede4;border-radius:10px"></div>
           <ol class="small" id="appNavod">
-            <li>Na telefonu (Android) nebo na PC otevřete v <b>Chromu</b> odkaz níže (na telefonu lze naskenovat QR fotoaparátem).</li>
+            <li>Na PC otevřete tento systém v prohlížeči <b>Chrome</b> (odkaz níže).</li>
             <li>Přihlaste se a zaškrtněte <b>Zůstat přihlášen</b>.</li>
-            <li>V Chromu klepněte na <b>⋮ → Nainstalovat aplikaci</b> (příp. „Přidat na plochu“). Ikona <b>Kartotéka Thai Most</b> se objeví na ploše a otevře se rovnou na Masérnách.</li>
+            <li>V Chromu klepněte vpravo nahoře na <b>⋮ → Nainstalovat aplikaci</b> (nebo ikonu 🖥️ v adresním řádku). Ikona <b>Kartotéka Thai Most</b> se objeví na ploše a otevře se rovnou na Masérnách.</li>
             <li><span class="muted">Pokud už máte starou ikonu „Asistent", odinstalujte ji a nainstalujte znovu – aby se projevil nový název a start na Masérnách.</span></li>
           </ol>
-          <p class="small">Odkaz: <code><?= h($url) ?></code></p>
+          <p class="small">Odkaz: <code><?= h($pwaUrl) ?></code></p>
         </div>
-        <div class="aplikace-qr" id="appQr" data-qr="<?= h($url) ?>" title="Naskenujte telefonem"></div>
       </div>
     </section>
 
-    <section class="card aplikace" id="aplikace">
-      <h2>📥 Aplikace ke stažení (APK)</h2>
-      <p class="small muted" style="margin-top:0">Instalace na Android bez Obchodu Play: otevřít odkaz v telefonu → stáhne se APK → klepnout na stažený soubor → povolit instalaci z tohoto zdroje → Instalovat. Aplikace běží na celou obrazovku.</p>
+    <section class="card aplikace" id="apk">
+      <h2>📱 Aplikace ke stažení (APK, Android)</h2>
+      <p class="small muted" style="margin-top:0">Na telefonu/tabletu <b>naskenujte QR fotoaparátem</b> (nebo otevřete odkaz) → stáhne se APK → klepnout na stažený soubor → povolit instalaci z tohoto zdroje → Instalovat. Aplikace běží na celou obrazovku.</p>
+
       <div class="aplikace-in" style="align-items:flex-start">
-        <img src="/kartoteka-192.png" alt="" width="64" height="64" onerror="this.style.display='none'">
         <div class="grow">
-          <p style="margin-top:0"><b>Kartotéka</b> – celý systém (přihlášení jménem a heslem). Pro recepci a vedení.</p>
+          <h3 style="margin:.2em 0">📋 Kartotéka</h3>
+          <p style="margin:.2em 0">Celý systém (přihlášení jménem a heslem). Pro recepci a vedení – tablet nebo telefon.</p>
           <p><a class="btn primary" href="/thaimost.apk" download>⬇ Stáhnout Kartotéku (APK)</a></p>
-          <p class="small">Odkaz: <code><?= h(rtrim(cfg()['url'] ?? '', '/')) ?>/thaimost.apk</code></p>
+          <p class="small">Odkaz: <code><?= h($base) ?>/thaimost.apk</code></p>
         </div>
+        <div class="aplikace-qr apk-qr" data-qr="<?= h($base) ?>/thaimost.apk" title="Naskenujte telefonem a stáhněte"></div>
       </div>
+
       <div class="aplikace-in" style="align-items:flex-start;border-top:1px solid var(--line,#e5ddd0);margin-top:12px;padding-top:12px">
-        <div style="font-size:48px;line-height:1">🛍️</div>
         <div class="grow">
-          <p style="margin-top:0"><b>Prodejna</b> – malá „čtečka" na služební telefon na recepci: poukazy z webu, objednávky z webu a sken QR poukazu. <b>Bez přihlášení</b>, otevře se jen na PIN.</p>
+          <h3 style="margin:.2em 0">🛍️ Prodejna</h3>
+          <p style="margin:.2em 0">Malá „čtečka" na služební telefon na recepci: poukazy z webu, objednávky z webu a sken QR poukazu. <b>Bez přihlášení</b>, otevře se jen na PIN.</p>
           <p><a class="btn primary" href="/prodejna.apk" download>⬇ Stáhnout Prodejnu (APK)</a>
              <a class="btn" href="/prodejna-navod.pdf" target="_blank">📄 Návod pro recepci (PDF)</a></p>
-          <p class="small">Odkaz: <code><?= h(rtrim(cfg()['url'] ?? '', '/')) ?>/prodejna.apk</code></p>
-          <?php if (je_admin()): $pPin = (string)nastaveni('prodejna_pin', ''); ?>
-          <form method="post" style="margin-top:8px;padding:10px 12px;background:#f3ede4;border-radius:10px">
+          <p class="small">Odkaz: <code><?= h($base) ?>/prodejna.apk</code></p>
+          <?php $pPin = (string)nastaveni('prodejna_pin', ''); if (je_admin($u)): ?>
+          <form method="post" style="margin-top:8px;padding:12px 14px;background:#f3ede4;border-radius:12px;border:1.5px solid var(--gold,#c69c5d)">
             <?= csrf_pole() ?><input type="hidden" name="akce" value="prodejna_pin">
-            <label style="font-weight:600">PIN čtečky Prodejna
-              <input name="prodejna_pin" inputmode="numeric" autocomplete="off" minlength="4" maxlength="12" placeholder="<?= $pPin !== '' ? '•••• (nastaveno – přepište pro změnu)' : 'např. 4 a více číslic' ?>" style="display:block;margin-top:4px;max-width:220px">
+            <label style="font-weight:700;display:block">🔐 PIN čtečky Prodejna
+              <input name="prodejna_pin" inputmode="numeric" autocomplete="off" minlength="4" maxlength="12" placeholder="<?= $pPin !== '' ? '•••• (nastaveno – přepište pro změnu)' : 'zadejte aspoň 4 číslice' ?>" style="display:block;margin-top:5px;max-width:220px;font-size:1.1rem;letter-spacing:.15em">
             </label>
-            <p class="small muted" style="margin:6px 0">Stav: <?= $pPin !== '' ? '✅ <b>zapnuto</b> (čtečka se odemyká tímto PINem)' : '⚠️ <b>vypnuto</b> – bez PINu se Prodejna neotevře' ?>. Prázdné pole + Uložit = vypnout.</p>
-            <button class="btn">Uložit PIN</button>
+            <p class="small" style="margin:7px 0"><?= $pPin !== '' ? '✅ <b>Zapnuto</b> – čtečka se odemyká tímto PINem.' : '⚠️ <b>Vypnuto</b> – bez PINu se Prodejna vůbec neotevře. Nastavte PIN, který dáte obsluze.' ?> <span class="muted">(Prázdné pole + Uložit = vypnout.)</span></p>
+            <button class="btn primary">Uložit PIN</button>
           </form>
+          <?php else: ?>
+          <p class="small muted" style="margin-top:6px">PIN čtečky nastavuje administrátor.</p>
           <?php endif ?>
         </div>
+        <div class="aplikace-qr apk-qr" data-qr="<?= h($base) ?>/prodejna.apk" title="Naskenujte telefonem a stáhněte"></div>
       </div>
     </section>
     <script src="/qrcode.js"></script>
     <script>
     (function(){
-      var e=document.getElementById('appQr');try{var q=qrcode(0,'M');q.addData(e.dataset.qr);q.make();e.innerHTML=q.createSvgTag({cellSize:4,margin:2,scalable:true})}catch(x){e.textContent=e.dataset.qr}
+      document.querySelectorAll('.apk-qr').forEach(function(e){
+        try{var q=qrcode(0,'M');q.addData(e.dataset.qr);q.make();e.innerHTML=q.createSvgTag({cellSize:4,margin:2,scalable:true});}
+        catch(x){e.textContent=e.dataset.qr;}
+      });
       if('serviceWorker' in navigator)navigator.serviceWorker.register('/sw-asistent.js').catch(function(){});
       var b=document.getElementById('appInstal'),ok=document.getElementById('appHotovo'),ev=null;
       if(matchMedia('(display-mode: standalone)').matches){ok.hidden=false}
@@ -513,4 +530,5 @@ function aplikace_karta(): void
     })();
     </script>
 <?php
+    paticka();
 }
