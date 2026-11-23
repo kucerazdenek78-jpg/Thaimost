@@ -100,6 +100,14 @@
   const ROOT = (window.T && T.root) || "";
   /* předtištěné poukazy (na prodejně) – staré návrhy salonu z webu */
   PL.predtistene = { darkovy: ROOT + "assets/img/poukaz-pozadi.jpg", vanocni: ROOT + "assets/img/poukaz-pozadi-vanocni.jpg" };
+  /* nové vzhledy (e-mailem) – náhledy jsou přímo na webu, ať se picker ukáže hned bez čekání na kartotéku */
+  const VZHLEDY = [
+    ["darkovy-1", "Lotos a svíčka", "darkovy"], ["darkovy-2", "Wellness", "darkovy"],
+    ["darkovy-3", "Krémová elegance", "darkovy"], ["darkovy-4", "Teaková s lotosem", "darkovy"],
+    ["vanocni-1", "Vánoční lotos", "vanocni"], ["vanocni-2", "Vánoční wellness", "vanocni"],
+    ["vanocni-3", "Vánoční krémová", "vanocni"], ["vanocni-4", "Vánoční teaková", "vanocni"]
+  ];
+  const vzhledObr = k => ROOT + "assets/img/poukaz-vzhled/" + k + ".jpg";
   /* Platba podle převzetí: osobně v salonu = jen hotově při vyzvednutí; e-mailem = převodem s QR (když má kartotéka účet) */
   function nabidniPrevod() {
     const sel = $("#platba"), osobne = $("#prevzeti").value === "salon", prevod = !!PL.iban && !osobne;
@@ -123,26 +131,25 @@
   function pickerData(prevzeti) {
     if (prevzeti === "email") {
       const grp = { darkovy: [], vanocni: [] };
-      Object.keys(PL.vzhledy || {}).forEach(k => { const v = PL.vzhledy[k]; if (v && grp[v.skupina]) grp[v.skupina].push([k, v.nazev]); });
-      return { groups: [["darkovy", T("Dárkové")], ["vanocni", T("Vánoční")]], grp, obr: PL.motivy,
+      VZHLEDY.forEach(([k, naz, sk]) => grp[sk].push([k, naz, vzhledObr(k)]));
+      return { groups: [["darkovy", T("Dárkové")], ["vanocni", T("Vánoční")]], grp,
         note: T("Vyberte vzhled – pošleme vám ho e-mailem k vytištění.") };
     }
-    return { groups: [["", ""]], grp: { "": [["darkovy", T("Dárkový")], ["vanocni", T("Vánoční")]] }, obr: PL.predtistene,
-      note: T("Na prodejně dostanete náš předtištěný poukaz. Chcete vybrat z nových vzhledů? Zvolte níže zaslání e-mailem.") };
+    return { groups: [["", ""]], grp: { "": [["darkovy", T("Dárkový"), PL.predtistene.darkovy], ["vanocni", T("Vánoční"), PL.predtistene.vanocni]] },
+      note: T("Na prodejně dostanete náš předtištěný poukaz.") };
   }
   function buildPicker() {
-    if (!PL.motivy || !Object.keys(PL.motivy).length) { $("#motivSeg").style.display = "none"; return; }
     const prevzeti = $("#prevzeti").value, pd = pickerData(prevzeti), vybrany = prevzeti === "email" ? st.motiv : st.predtisteny;
     let h = "";
     pd.groups.forEach(([gk, gnaz]) => {
       const items = pd.grp[gk] || []; if (!items.length) return;
-      if (gnaz) h += `<div class="motiv-gh" style="font-size:.8em;letter-spacing:.1em;text-transform:uppercase;color:#9c7a3e;margin:6px 0 4px">${V.esc(gnaz)}</div>`;
-      h += items.map(([k, naz]) => {
+      if (gnaz) h += `<div class="motiv-gh" style="font-size:.8em;letter-spacing:.1em;text-transform:uppercase;color:#9c7a3e;margin:8px 0 4px">${V.esc(gnaz)}</div>`;
+      h += items.map(([k, naz, obr]) => {
         const on = k === vybrany;
-        return `<label class="motiv-opt" style="display:inline-block;width:31%;min-width:118px;margin:0 1% 8px;cursor:pointer;vertical-align:top">
+        return `<label class="motiv-opt" title="${V.esc(naz)}" style="display:inline-block;width:92px;margin:0 7px 7px 0;cursor:pointer;vertical-align:top">
           <input type="radio" name="motiv" value="${V.esc(k)}"${on ? " checked" : ""} style="position:absolute;opacity:0;width:0;height:0">
-          <span style="display:block;border:2px solid ${on ? "#c69c5d" : "#e6d9c4"};border-radius:8px;overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,.12)"><img src="${V.esc(pd.obr[k] || "")}" alt="${V.esc(naz)}" loading="lazy" style="display:block;width:100%;height:auto"></span>
-          <span style="display:block;text-align:center;font-size:.82em;margin-top:3px;color:${on ? "#2b1e16" : "#7a6a5c"}">${V.esc(naz)}</span>
+          <span style="display:block;border:2px solid ${on ? "#c69c5d" : "#e6d9c4"};border-radius:6px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,.12)"><img src="${V.esc(obr)}" alt="${V.esc(naz)}" loading="lazy" style="display:block;width:100%;height:auto"></span>
+          <span style="display:block;text-align:center;font-size:.68em;line-height:1.15;margin-top:2px;color:${on ? "#2b1e16" : "#7a6a5c"}">${V.esc(naz)}</span>
         </label>`;
       }).join("");
     });
@@ -150,6 +157,12 @@
     $("#motivNote").textContent = pd.note;
     $("#motivSeg").style.display = "";
   }
+  /* přepínač Předání (online / prodejna) nahoře řídí nastavení převzetí i picker */
+  function nastavDoruceni(v) {
+    $("#prevzeti").value = v === "salon" ? "salon" : "email";
+    nabidniPrevod(); buildPicker(); if (typeof update === "function") update();
+  }
+  document.querySelectorAll('input[name="doruceni"]').forEach(r => r.addEventListener("change", () => nastavDoruceni(r.value)));
   /* změna výběru vzhledu (delegovaně – dlaždice se překreslují) */
   $("#motivGrid").addEventListener("change", e => {
     const r = e.target.closest('input[name="motiv"]'); if (!r) return;
@@ -161,11 +174,13 @@
     if (!r || !r.ok) return;
     if (r.iban) { PL.ucet = r.ucet; PL.iban = r.iban; nabidniPrevod(); }
     if (r.platnost_mes) PL.mes = +r.platnost_mes;
-    /* vzhledy poukazu: e-mailem nové vzhledy (8), na prodejně předtištěné; výchozí dle sezóny */
-    if (r.motivy) PL.motivy = r.motivy;
-    if (r.vzhledy) PL.vzhledy = r.vzhledy;
-    if (r.motiv) { st.motiv = r.motiv; st.predtisteny = String(r.motiv).indexOf("vanocni") === 0 ? "vanocni" : "darkovy"; }
-    buildPicker();
+    /* výchozí vzhled dle sezóny z kartotéky (vánoční období → vánoční varianta) */
+    if (r.motiv) {
+      const m = String(r.motiv);
+      st.motiv = VZHLEDY.some(v => v[0] === m) ? m : (m.indexOf("vanocni") === 0 ? "vanocni-1" : "darkovy-1");
+      st.predtisteny = m.indexOf("vanocni") === 0 ? "vanocni" : "darkovy";
+      buildPicker();
+    }
     /* služby z kartotéky (Nastavení → Ceník): texty, překlady, ceny a vlastní fotky místo data.js */
     let zmena = false;
     if (r.sluzby && typeof r.sluzby === "object") {
@@ -241,7 +256,7 @@
       komu: $("#komu").value.trim(), od: $("#od").value.trim(), venovani: $("#venovani").value.trim(),
       platnost: platnostDo(),
       motiv: email ? st.motiv : st.predtisteny,
-      pozadi: email ? (PL.motivy[st.motiv] || "") : (PL.predtistene[st.predtisteny] || "")
+      pozadi: email ? vzhledObr(st.motiv) : (PL.predtistene[st.predtisteny] || "")
     };
   }
   function update() {
@@ -270,6 +285,9 @@
   $("#selSluzba").addEventListener("change", e => { st.sluzbaId = e.target.value; fillVar(); update(); });
   $("#selVar").addEventListener("change", e => { st.varIdx = +e.target.value; update(); });
   ["#komu", "#od", "#venovani"].forEach(id => $(id).addEventListener("input", update));
+
+  /* výchozí předání + první vykreslení pickeru i náhledu – nezávisle na kartotéce (API) */
+  nastavDoruceni((document.querySelector('input[name="doruceni"]:checked') || {}).value || "email");
 
   /* „Darovat jako poukaz“ u služby */
   grid.addEventListener("click", e => {

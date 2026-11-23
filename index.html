@@ -661,7 +661,11 @@
     <div class="v-wrap">
       <form class="v-form" id="vForm" novalidate>
         <div class="step">
-          <div class="step-h"><i>1</i>Jaký poukaz</div>
+          <div class="step-h"><i>1</i>Předání a vzhled</div>
+          <div class="seg" id="doruceniSeg">
+            <label><input type="radio" name="doruceni" value="email" checked><b>Online – pošleme e‑mailem</b><span>ke stažení a tisku · výběr z nových vzhledů</span></label>
+            <label><input type="radio" name="doruceni" value="salon"><b>Vyzvednu na prodejně</b><span>předtištěný poukaz</span></label>
+          </div>
           <div id="motivSeg" style="display:none">
             <div class="motiv-grid" id="motivGrid"></div>
             <p class="hint" id="motivNote" style="margin:.5em 0 0"></p>
@@ -699,7 +703,7 @@
             <div class="field"><label for="tel">Telefon *</label><input id="tel" type="tel" autocomplete="tel" required></div>
             <div class="field"><label for="mail">E-mail</label><input id="mail" type="email" autocomplete="email"></div>
           </div>
-          <div class="field"><label for="prevzeti">Převzetí poukazu</label>
+          <div class="field" id="prevzetiField" style="display:none"><label for="prevzeti">Převzetí poukazu</label>
             <select id="prevzeti">
               <option value="salon">Vyzvednu osobně v salonu</option>
               <option value="email">Pošlete mi ho e-mailem k vytištění</option>
@@ -879,8 +883,8 @@
 <script src="assets/js/i18n.js"></script>
 <script src="assets/js/stranky.js"></script>
 <script src="assets/js/api.js"></script>
-<script src="assets/js/voucher.js?v=20261123a"></script>
-<script src="assets/js/main.js?v=20261123a"></script>
+<script src="assets/js/voucher.js?v=20261123b"></script>
+<script src="assets/js/main.js?v=20261123b"></script>
 <script src="assets/js/skener.js?v=2"></script>
 <script src="assets/js/moje.js"></script>
 </body>
