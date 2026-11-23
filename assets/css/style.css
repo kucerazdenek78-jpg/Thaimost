@@ -176,6 +176,9 @@ header.nav{position:sticky;top:0;z-index:50;background:rgba(248,242,233,.88);bac
 .field textarea{resize:vertical;min-height:72px}
 .row2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
 .hint{font-size:.78rem;color:var(--muted)}
+.field-poukaz{background:rgba(198,156,93,.12);border:1.5px solid var(--gold);border-radius:14px;padding:14px 16px;margin:16px 0}
+.field-poukaz label{font-size:.92rem}
+.field-poukaz input{border-color:var(--gold)}
 .check{display:flex;gap:10px;align-items:flex-start;font-size:.85rem;color:var(--muted);margin:14px 0 20px}
 .check input{margin-top:4px;accent-color:var(--teak)}
 .err{color:#a3321f;font-size:.85rem;margin-bottom:10px;display:none}
