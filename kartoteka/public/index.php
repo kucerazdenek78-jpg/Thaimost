@@ -29,6 +29,7 @@ require $root . '/app/plan.php';
 require $root . '/app/poukaz_pdf.php';
 require $root . '/app/prehled.php';
 require $root . '/app/google_kontakty.php';
+require $root . '/app/hlas.php';   // hlasový správce (box v kanceláři) – čtení s klíčem, 27. 11. 2026
 
 // Spouštěč vzorových dat přes soubor (když nejde terminál kontejneru): nahrát do data/ prázdný soubor
 // „vzor-nahrat“ nebo „vzor-smazat“ (File Station). Při nejbližším načtení stránky se akce provede,
@@ -50,6 +51,8 @@ aktualizace_spust();
 $r = preg_replace('~[^a-z_]~', '', $_GET['r'] ?? 'dnes');
 if ($r === 'login') { stranka_login(); exit; }
 if ($r === 'ical') { stranka_ical(); }   // kalendářový odkaz chráněný tokenem, bez přihlášení
+// hlasový správce (box v kanceláři): bez přihlášení, jen s klíčem v hlavičce X-Hlas-Key, jen čtení (app/hlas.php)
+if ($r === 'hlas') { stranka_hlas(); }
 // tablet v masérně: bez přihlášení, pozná se tajným tokenem místnosti (neplatný token = 403/404)
 if ($r === 'tablet') { stranka_tablet(); }
 // věrnostní karta zákazníka (QR): bez přihlášení, pozná se tajným kódem karty
@@ -104,6 +107,7 @@ $stranky = [
     'volno' => 'stranka_volno', 'den_obs' => 'stranka_den_obs', 'poplach' => 'stranka_poplach', 'dostupnost' => 'stranka_dostupnost', 'import' => 'stranka_import', 'poukaz_tisk' => 'stranka_poukaz_tisk', 'poukaz_pdf' => 'stranka_poukaz_pdf',
     'ai' => 'stranka_ai', 'ai_pravidla' => 'stranka_ai_pravidla', 'ai_log' => 'stranka_ai_log',
     'google' => 'stranka_google', 'google_zpet' => 'stranka_google_zpet',
+    'hlas_klic' => 'stranka_hlas_klic',
 ];
 if (!isset($stranky[$r])) { http_response_code(404); $r = 'dnes'; }
 if ($r === 'poplach') gk_priprav_tik();   // automatická synchronizace Google kontaktů (po odeslání odpovědi; jen když je zapnutá a je na čase)
